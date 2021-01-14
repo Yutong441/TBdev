@@ -1,0 +1,103 @@
+get_highlight_font <- function (fontface, fontsize, font_fam){
+        return (grid::gpar (fontface=fontface, fontsize=fontsize, fontfamily=font_fam))
+}
+
+add_grob_text <- function (grob_plot, content, ...){
+        highlight_font <- get_highlight_font (...)
+        return (gridExtra::arrangeGrob (grob_plot, 
+                             left=grid::textGrob (content, 
+                                            x = unit(1, "npc"),
+                                            y = unit(0.95, "npc"),
+                                            gp = highlight_font ) ))
+}
+
+#' Replicate a vector x to a target length target_n
+expand_length <- function (x, target_n){
+        discrep <- length (x) - target_n
+        if (discrep < 0 ){
+                print ('not enough values, replicating the last item to fill')
+                new_x <- c(x, rep (x[length(x)], -discrep) )
+        }else if (discrep > 0){ 
+                print (paste('too many values, only the first', target_n, 'will be used'))
+                new_x <- x [1:target_n]
+        }else{new_x <- x
+        }
+        return (new_x)
+}
+
+#' Same function as `grid.arrange`, with the functionality of integrating
+#' ComplexHeatmap and adding panel labels
+#' 
+#' @param grob_list a list of plots, must be grob objections. Use `is.grob()`
+#' to check. The exception is data frame.
+#' @param save_path where the plots are saved
+#' @param grid_layout, same as the argument in `grid.arrange`
+#' @param margin_width the width of the margin in inches. The default is 0.79in
+#' (2cm). Same unit in `margin_height`, `page_width`, `page_height`
+#' @param plot_width the width of each subplot. If one value is supplied, then
+#' all subplots will have the same width. You may supply a vector each item of
+#' which corresponds to the width of one subplot across the columns.
+#' @param plot_height same concept as plot_width
+#' @importFrom grid pushViewport viewport grid.layout grid.rect grid.draw
+#' popViewport grid.text grid.grabExpr 
+#' @export
+arrange_plots <- function (grob_list, save_path, grid_layout, panel_label=NULL,
+                           margin_width=0.79, margin_height=0.79,
+                           panel_spacing=0.1975, plot_width=9, plot_height=9, 
+                           aes_param=list (highlight_font = list (fontface='bold', fontsize=18),
+                                           font_fam = 'Arial') ){
+        
+        highlight_font <- get_highlight_font (aes_param$highlight_font$fontface, 
+                                              aes_param$highlight_font$fontsize, 
+                                              aes_param$font_fam)
+        plot_width <- expand_length (plot_width, ncol (grid_layout)) # a vector
+        plot_height <- expand_length (plot_height, nrow (grid_layout))
+        # calculate the width and height for all the plots
+        page_width <-  sum (plot_width) # a single scalar
+        page_height <- sum (plot_height)
+        # calculate the margin for the entire page
+        width_pro <- 1 - margin_width/page_width
+        height_pro <- 1 - margin_height/page_height
+
+        # default panel labels: A, B, C, D ... 
+        if (is.null (panel_label)){ panel_label <- LETTERS [1:length (grob_list)]}
+        # cairo_pdf seems to offer better support with UTF-8 encoding
+        grDevices::cairo_pdf (save_path, width=page_width, height=page_height)
+        grid::grid.newpage ()
+        pushViewport(viewport(layout=grid.layout(nrow (grid_layout), ncol(grid_layout)) ,
+                              width=width_pro, height=height_pro))
+
+        # start plotting
+        for (i in 1:length (grob_list)){
+                print (paste ('arranging figure', i))
+                row_pos <- unique (which (grid_layout == i, arr.ind=T) [, 'row'])
+                col_pos <- unique (which (grid_layout == i, arr.ind=T) [, 'col'])
+
+                # calculate the plotting dimensions
+                # calculate the margin for each subplot
+                subplot_width <- sum (plot_width [col_pos])
+                subplot_height <-sum (plot_height[row_pos])
+                width_pro_panel <- 1 - 2*panel_spacing/subplot_width
+                height_pro_panel <- 1 - 2*panel_spacing/subplot_height
+
+                pushViewport (viewport (layout.pos.col=col_pos,layout.pos.row=row_pos))
+                # in order to increase spacing between panels, it is necessary
+                # to draw an empty rectangle
+                grid.rect(gp=grid::gpar(lty=0)) #lty=0 means blank line
+                pushViewport (viewport (layout.pos.col=col_pos,layout.pos.row=row_pos, 
+                                        width=width_pro_panel, height=height_pro_panel))
+
+                # need different functions for ggplot, table and ComplexHeatmap
+                # objects
+                if ( 'ggplot' %in% class (grob_list[[i]] ) ){
+                        grid.draw (grid.grabExpr ( print (grob_list[[i]])))
+                }else if ('data.frame' %in% class (grob_list[[i]] ) ) {
+                        colnames (grob_list [[i]] ) <- gsub ('\\.', ' ', colnames (grob_list [[i]]))
+                        gridExtra::grid.table (grob_list [[i]], rows=NULL)
+                }else{ ComplexHeatmap::draw (grob_list[[i]], newpage=F) }
+                grid.text (panel_label[i], x=unit (0.01, 'npc'), y=unit (0.95, 'npc'), 
+                           gp=highlight_font)
+                popViewport (2)
+        }
+        grDevices::dev.off ()
+}

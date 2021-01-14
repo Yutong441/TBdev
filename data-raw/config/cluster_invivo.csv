@@ -1,0 +1,22 @@
+﻿cluster,assignment,description,broad
+0,eCTB,early CTB,CTB
+1,aSTB1,advanced STB,STB
+2,aSTB2,advanced STB,STB
+3,vCTB2,CTB towards EVT,CTB
+4,aICM,advanced ICM,ICM
+5,iTB,intermediate TB,TB
+6,sCTB,CTB towards STB,CTB
+7,aTB,advanced TB,TB
+8,eEVT,early EVT,EVT
+9,eICM,early ICM,ICM
+10,EPI1,,EPI
+11,eTB,early TB,TB
+12,vCTB1,CTB towards EVT,CTB
+13,eSTB,early STB,STB
+14,PE,,PE
+15,aEVT,advance EVT,EVT
+16,vCTB3,CTB towards EVT,CTB
+17,cleavage,,cleavage
+18,aSTB3,,STB
+19,uCTB,unknown CTB,CTB
+20,EPI2,,EPI
