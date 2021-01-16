@@ -1,0 +1,141 @@
+---
+title: "Batch Correction"
+output: html_document
+vignette: >
+  %\VignetteIndexEntry{Batch Correction}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+fig_width: 12 
+fig_height: 12 
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  warning = FALSE
+)
+```
+
+# Load data
+```{r message=FALSE}
+library (TBdev)
+```
+
+We have processed 6 scRNAseq datasets and stored them under the `data_dir` as
+defined below. Each '.Robj' file contains a Seurat object for that dataset.
+Each dataset has already been normalised.
+```{r}
+root <- '.' #in this case, it is the current directory
+data_dir <- paste (root, 'data', sep='/')
+save_dir <- paste (root, 'result', sep='/')
+
+save_robj <- c('Xiang_R.Robj', 'Liu_R.Robj', 'Blakeley_R.Robj',
+               'Petropoulos_R.Robj', 'Yan_R.Robj', 'Zhou_R.Robj')
+# load all datasets as a single list of Seurat object
+paper_ID <- gsub ('_R.Robj$', '', save_robj)
+all_datasets <- load_all_data (save_robj, data_dir, paper_ID = paper_ID)
+# This function will also create a metadata column 'paper' for the `paper_ID`
+```
+
+# Merge data
+The simplest way to integrate the datasets is to merge all expression matrix
+together, as implemented in `merge_seurat` function.
+```{r}
+merged <- merge_seurat (all_datasets, 
+                        assays = c('RNA')) #which assay to merge
+merged <- run_dim_red (merged, 
+                       find_var_features = T, #call `Seurat::VariableFeatures`
+                       normalize=F, #no need to normalise the dataset again
+                       var_scale=T, #scale the variable features for PCA
+                       run_diff_map=F
+)
+
+# The cell type labels have been stored under the column 'Type'
+# This step is extremely important for the correct order of appearance of cell
+# labels in the figure legend and for assigning colors
+merged <- clean_metadata (merged, cell_type_col='Type', date_col='date')
+merged$cluster <- paste ('C', merged$seurat_clusters, sep='')
+```
+
+Inspect the merging process
+```{r, fig.width = 12, fig.height = 12}
+AP <- list (pointsize=3, legend_point_size=3, fontsize=11, point_fontsize=4,
+            font_fam= 'sans')
+plot_dim_red (merged, group.by = c('Type', 'date', 'paper', 'cluster'), 
+              DR='pca', AP=AP, further_repel=F)
+```
+In this case, the datasets seem to be merged well, as the two pre-implantation
+dataset (Petropoulos and Yan) are merged at a similar position. Likewise, Xiang
+and Zhou, two datasets on pre- and post- implantation trophoblasts, are merged
+together. The Liu dataset does not merge with others, probably because it
+contains first and second trimester placental samples.
+
+```{r, fig.width = 12, fig.height = 12}
+plot_dim_red (merged, group.by = c('Type', 'date', 'paper', 'cluster'), 
+              DR='pca', dims=1:3, AP=AP, further_repel=F, 
+              all_theta=120, #degree of azimuthal rotation
+              vert_just=0.9) #low the axis labels a bit
+```
+
+However, batch effects seem to be present from UMAP
+```{r, fig.width = 12, fig.height = 12}
+plot_dim_red (merged, group.by = c('Type', 'date', 'paper', 'cluster'), 
+              DR='umap', AP=AP, further_repel=F)
+```
+
+```{r, include=FALSE}
+# reduce memory load
+rm (merged)
+```
+
+# Batch correction
+Even though simple merging is successful in this dataset, let us investigate
+whether batch correction implementd in Seurat improves the integration process.
+Because Blakeley dataset contains fewer than 30 cells, which is lower than
+Seurat requirement, the dataset is removed here.
+
+```{r, message=FALSE}
+integrated <- batch_correct (all_datasets[1:6!=3], num_anchor_genes=1000)
+```
+
+```{r, include=FALSE}
+rm (all_datasets)
+```
+
+Clean up the metadata
+```{r}
+integrated <- clean_metadata (integrated, cell_type_col='Type', date_col='date')
+integrated$cluster <- paste ('C', integrated$seurat_clusters, sep='')
+integrated <- run_dim_red (integrated, assay='integrated', find_var_features =
+                           T, normalize=F, var_scale=T, run_diff_map=F)
+```
+
+Note that the batch corrected data are in the 'integrated' assay
+```{r, fig.width = 12, fig.height = 12}
+plot_dim_red (integrated,  
+              group.by = c('Type', 'date', 'paper', 'cluster'), 
+              DR='pca', AP=AP, further_repel=F, 
+              move_y= 1, move_x=1) #shift the arrow axis to avoid view obstrucion
+```
+
+The batch effect seems to have been reduced significantly in UMAP. The
+UMAP matches well with lineage progression.
+```{r, fig.width = 12, fig.height = 12}
+plot_dim_red (integrated, group.by = c('Type', 'date', 'paper', 'cluster'), 
+              DR='umap', AP=AP, further_repel=F)
+```
+
+However, two key problems remain: the stromal cells (STR) overlap with
+syncytiotrophoblast (STB) and Oocyte and 4C overlap with cytotrophoblast (CTB).
+This is not because they are separated along the third dimension:
+```{r, fig.width = 12, fig.height = 12}
+integrated <- Seurat::RunUMAP (integrated, assay='integrated', dims=1:30, n.components=3)
+setwd ('../TBdev')
+devtools::load_all ()
+setwd ('../vignette_test')
+plot_dim_red (integrated, group.by = c('Type', 'date', 'paper', 'cluster'), 
+              DR='umap', dims=1:3, AP=AP, further_repel=F, all_theta=20)
+```
+Based on the above reasons, in the paper accompanying this package, we did not
+use the Seurat batch correction procedure.

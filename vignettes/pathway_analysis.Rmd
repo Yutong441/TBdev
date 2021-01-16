@@ -1,0 +1,102 @@
+---
+title: "Pathway Analysis"
+output: html_document
+vignette: >
+  %\VignetteIndexEntry{Pathway Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+fig_width: 7 
+fig_height: 7 
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  warning = FALSE
+)
+```
+
+```{r message = FALSE}
+library (TBdev)
+```
+
+```{r}
+root <- '.'
+data_dir <- paste (root, 'data', sep='/')
+save_dir <- paste (root, 'result', sep='/')
+all_data <- get (load (paste (data_dir, 'final_merged_tb.Robj', sep='/') ))
+
+# For simplicity we will only use a subset of the dataset, i.e., the in vivo
+# set
+all_data <- all_data [, all_data$date != 'in_vitro']
+```
+
+# Pathway analysis
+Obtain the [module scores](https://science.sciencemag.org/content/352/6282/189) for each pathway for each cell.
+Again due to the computational intensive nature of this calculation, we
+recommend saving the object. 
+You may input a datarame in `all_path` containing the columns 'pathway' and
+`kegg_id`. 
+
+```{r}
+path_seurat <- get_module_score (all_data, 
+                                 save_path=paste (save_dir, 'Data_module_scores.csv', sep='/'),
+                                 append_meta=T #return a Seurat object with metadata
+)
+```
+
+Visualise the pathway scores in heatmap.
+```{r, fig.width = 12, fig.height = 7}
+AP <- list (pointsize=3, legend_point_size=3, fontsize=11, point_fontsize=4,
+            font_fam= 'sans')
+setwd ('../TBdev')
+devtools::load_all ()
+setwd ('../vignette_test')
+seurat_heat (path_seurat, 
+             group.by=c('broad_type','date'),
+             row_scale=T, grid_height=4, 
+             main_width=20, main_height=15,
+             center_scale=T, AP=AP, automatic=F
+)
+```
+
+Alternatively, visualise selected pathways with violin plot.
+```{r}
+seurat_violin (path_seurat, 
+               features=c('MAPK', 'WNT', 'PI3K-AKT', 'steroid'), 
+               group.by='broad_type', 
+               slot_data='counts', #the data is stored in this slot
+               num_col=2, 
+               free_xy='free_y', AP=AP
+)
+```
+
+# Cell cycle analysis
+
+Calculate the phase score according to [Macosco 2015](https://www.cell.com/cell/fulltext/S0092-8674%2815%2900549-8)
+```{r}
+exp_mat_cc <- as.matrix (Seurat::GetAssayData (all_data, assay='RNA', slot='data'))
+ans <- get_phase_score (exp_mat_cc)
+```
+
+Visualise using heatmap
+```{r, fig.width=6, fig.height=10}
+make_cycle_heat (ans, all_data, group.by='broad_type',
+                 main_height=23, main_width=7, grid_height=4, 
+                 AP=AP, automatic=F
+)
+```
+
+Correlate cell cycle with PC
+```{r}
+phase_PC_plot (ans, all_data, corr_feature='broad_type', 
+               num_dim=1, # correlation with the PC1
+               AP=AP
+)
+```
+
+Ridgeplot
+```{r}
+phase_density_plot (ans, all_data, corr_feature='broad_type', AP=AP)
+```

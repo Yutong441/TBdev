@@ -2,10 +2,7 @@
 % Please edit documentation in R/DE_gene.R
 \name{unique_DE_genes}
 \alias{unique_DE_genes}
-\title{Select the top DE genes from each cluster
-If 1 DE gene appears in 2 clusters, the cluster with the highest avg_logFC
-will be chosen
-NB: only upregulated genes will be selected}
+\title{Select the top DE genes from each cluster}
 \usage{
 unique_DE_genes(
   DE_genes,
@@ -27,8 +24,6 @@ unique_DE_genes(
 \item{cluster}{which column has the cluster names/numbers}
 }
 \description{
-Select the top DE genes from each cluster
-If 1 DE gene appears in 2 clusters, the cluster with the highest avg_logFC
-will be chosen
-NB: only upregulated genes will be selected
+If 1 DE gene appears in 2 clusters, the cluster with the
+highest avg_logFC will be chosen. NB: only upregulated genes will be selected
 }

@@ -21,6 +21,10 @@ estimates computed}
 \code{select_types} compared with. If NULL, it would be every types except
 \code{select_types}}
 }
+\value{
+cell similarity matrix of N X M, where N is the sample and M
+is the cell type to compare
+}
 \description{
 Calculate cell-cell similarity using quadratic programming from DeConRNASeq
 }

@@ -34,13 +34,14 @@ override_legend_symbol <- function (AP, color_fill=T){
 #'
 #' @description For dimensionality reduction plots, use a minimalistic theme
 #' without any borders, grids or axis.
+#' @return a list containing the theme setting that can be directory
+#' concatenated with ggplot object
 #'
 #' @importFrom ggplot2 element_text element_blank guide_legend
 #' @examples
 #' ggplot (x, aes (x, y) ) +
 #' geom_point () +
 #' theme_dim_red ()
-#' @export
 theme_dim_red <- function (aes_param, color_fill){
         list (ggplot2::theme(panel.grid.major = element_blank(), 
               panel.grid.minor = element_blank(), 
@@ -126,10 +127,19 @@ custom_tick <- function (vec, x_y='y'){
         }else {return (ggplot2::scale_x_continuous (breaks = breaking) )}
 }
 
+#' Extend the axis scale
+#'
+#' @param vec a vector as either the x or y coordinates of the data
+#' @param x_y whether to extend x or y axis
+#' @param extend_ratio_min how much to extend along the negative dimension of
+#' the axis
+#' @param extend_ratio_max how much to extend along the positive dimension of
+#' the axis
+#' @return `xlim` or `ylim`
 custom_scale <- function (vec, x_y='y', extend_ratio_min=0, extend_ratio_max=0){
         min_vec <- min(vec, na.rm=T)
         max_vec <- max(vec, na.rm=T)
-        min_vec <- min_vec + (max_vec - min_vec)*extend_ratio_min
+        min_vec <- min_vec - (max_vec - min_vec)*extend_ratio_min
         max_vec <- max_vec + (max_vec - min_vec)*extend_ratio_max
         if (x_y == 'y'){return (ggplot2::ylim (c(min_vec, max_vec)) )
         }else {return (ggplot2::xlim (c(min_vec, max_vec)) )}
@@ -137,13 +147,23 @@ custom_scale <- function (vec, x_y='y', extend_ratio_min=0, extend_ratio_max=0){
 
 #' @importFrom gtools mixedsort
 custom_color <- function (feature_vec, aes_param = list (color_vec=NULL, 
-                                                         date_color_vec=NULL) ){
+                                  date_color_vec=NULL), remove_NA=T){
         # determine if the feature corresponds to cell types
         # NB: the `color_vec` refers to the color_vec defined above in this
         # script
-        match_celltypes <- unique (feature_vec) %in% names (aes_param$color_vec)
-        if (mean (match_celltypes) == 1) {new_color_vec <- aes_param$color_vec
+        feature_vec <- feature_vec [!is.na (feature_vec) & feature_vec != 'NA']
+        if (is.factor (feature_vec) & remove_NA){
+                new_level <- levels (feature_vec) [levels (feature_vec) != 'NA']
+                feature_vec <- factor (feature_vec, levels = new_level)
+        }
+        if (length(unique (feature_vec) ) == 0){proceed <- 'not'
         }else{
+                match_celltypes <- unique (feature_vec) %in% names (aes_param$color_vec)
+                if (mean (match_celltypes) == 1){proceed <- T
+                }else{proceed <- F}
+        }
+        if (proceed == T) {new_color_vec <- aes_param$color_vec
+        }else if (proceed == F){
                 # determine if the feature corresponds to dates
                 match_dates <- gsub ('D', '', feature_vec)
                 # handle any exceptions: refer to `date_color_vec` above
@@ -165,16 +185,15 @@ custom_color <- function (feature_vec, aes_param = list (color_vec=NULL,
                         matched <- aes_param$color_vec [names (aes_param$color_vec) %in% unique (feature_vec)]
                         new_color_vec <- c(as.character (matched), rainbow (length (no_match) ))
                         names (new_color_vec) <- c(as.character (names(matched)), as.character (no_match) )
+                        new_names <- partial_relevel (names (new_color_vec), aes_param$cell_order )
+                        new_order <- order (new_names)
+                        new_color_vec <- new_color_vec[new_order]
                 }
         }
-        return (new_color_vec)
+        if (proceed != 'not') {return (new_color_vec)}
 }
 
-#' Customise the colors that correspond to particular features
-#' 
-#' @param feature_vec a vector of features for which colors will be assigned
-#' @param color_fill whether scale_color_* or scale_fill_* is used
-add_custom_color <- function (feature_vec, aes_param, color_fill=F){
+add_custom_color_discrete <- function (feature_vec, aes_param, color_fill=F){
         cus_color <- custom_color (feature_vec, aes_param)
         if (color_fill){
                 ggplot2::scale_fill_manual (values=cus_color, breaks=names (cus_color))
@@ -182,11 +201,33 @@ add_custom_color <- function (feature_vec, aes_param, color_fill=F){
         }
 }
 
+add_custom_color_continuous <- function (feature_vec, aes_param, color_fill=F){
+        if (color_fill){
+                ggplot2::scale_fill_continuous (type=aes_param$palette)
+        }else{ggplot2::scale_color_continuous (type=aes_param$palette)
+        }
+}
+
+#' Customise the colors that correspond to particular features
+#' 
+#' @description This function works for either continuous or discrete scale
+#' @param feature_vec a vector of features for which colors will be assigned
+#' @param color_fill whether `scale_color_*` or `scale_fill_*` is used
+#' @return a `scale_*` object
+add_custom_color <- function (feature_vec, aes_param, color_fill=T){
+        if (!is.numeric (feature_vec)){
+                add_custom_color_discrete (feature_vec, aes_param, color_fill)
+        }else{
+                add_custom_color_continuous (feature_vec, aes_param, color_fill)
+        }
+}
+
+
 #' Obtain arrow object
 #'
 #' @param AP aesthetic parameter determining arrow types, relevant ones are
 #' 'arrow_angle', 'arrow_length', 'arrow_type'
-#' @export
+#' @return a ggplot arrow object
 get_arrow <- function (AP){
         ggplot2::arrow(angle=AP$arrow_angle, length = grid::unit(
                        AP$arrow_length, AP$arrow_length_unit), type= AP$arrow_type)
@@ -203,18 +244,21 @@ get_arrow <- function (AP){
 #' @param aes_param setting for pointsize, font_fam, point_fontsize,
 #' arrow_angle, arrow_length, arrow_length_unit, arrow_type, arrow_thickness,
 #' arrow_linejoin
+#' @param return a list of geoms for the arrow segment and axis labels
 #' @importFrom ggplot2 geom_text 
 #' @export
 arrow_axis <- function (plot_ob, length_ratio=0.05, nudge_ratio=0., move_x=0,
-                        move_y=0, aes_param = list (pointsize=3,
-                                                    font_fam='Arial',
-                                                    point_fontsize=6) 
+                        move_y=0, reverse_x=F, reverse_y=F, 
+                        aes_param = list (pointsize=3, font_fam='Arial',
+                                          point_fontsize=6) 
                         ){
         plot_build <- ggplot2::ggplot_build (plot_ob)
-        origin_x <- plot_build$layout$panel_scales_x[[1]]$range$range[1]
-        end_x <- plot_build$layout$panel_scales_x[[1]]$range$range[2]
-        origin_y <- plot_build$layout$panel_scales_y[[1]]$range$range[1]
-        end_y <- plot_build$layout$panel_scales_y[[1]]$range$range[2]
+        if (reverse_x){rx = -1}else{rx = 1}
+        if (reverse_y){ry = -1}else{ry = 1}
+        origin_x <- rx*plot_build$layout$panel_scales_x[[1]]$range$range[1]
+        end_x <- rx*plot_build$layout$panel_scales_x[[1]]$range$range[2]
+        origin_y <- ry*plot_build$layout$panel_scales_y[[1]]$range$range[1]
+        end_y <- ry*plot_build$layout$panel_scales_y[[1]]$range$range[2]
         x <- gsub ('_', ' ', plot_build$plot$labels$x)
         y <- gsub ('_', ' ', plot_build$plot$labels$y)
 
@@ -223,9 +267,9 @@ arrow_axis <- function (plot_ob, length_ratio=0.05, nudge_ratio=0., move_x=0,
         dist_xy <- max (dist_x, dist_y)
 
         df_arrow <- data.frame (x1=c(origin_x, origin_x), 
-                                  y1=c(origin_y, origin_y), 
-                                  x2=c(origin_x+dist_x, origin_x), 
-                                  y2=c(origin_y, origin_y+dist_y))
+                                y1=c(origin_y, origin_y), 
+                                x2=c(origin_x+dist_x, origin_x), 
+                                y2=c(origin_y, origin_y+dist_y))
 
         # offset
         df_arrow$x1 <- df_arrow$x1 - dist_x*move_x
@@ -247,17 +291,19 @@ arrow_axis <- function (plot_ob, length_ratio=0.05, nudge_ratio=0., move_x=0,
 
                 # x axis
                 geom_text (aes (x=xlabel, y=ylabel, label=axis_labels), data =
-                           df_arrow[1,], nudge_y=0, nudge_x=nudge_ratio*dist_x, 
+                           df_arrow[1,], nudge_y=0, nudge_x=rx*nudge_ratio*dist_x, 
                            size=aes_param$point_fontsize, hjust='left', vjust=0.5,
                            fontface='italic', angle=0, family=aes_param$font_fam),
 
                 # y axis
                 geom_text (aes (x=xlabel, y=ylabel, label=axis_labels), data =
-                           df_arrow [2,], nudge_y=nudge_ratio*dist_y, nudge_x=0, 
+                           df_arrow [2,], nudge_y=ry*nudge_ratio*dist_y, nudge_x=0, 
                            size=aes_param$point_fontsize, vjust=0.5, hjust='bottom',
                            fontface='italic', angle=90, family=aes_param$font_fam),
                 # add a dot at the end of the arrows
-                ggplot2::geom_point (x = origin_x, y=origin_y, size=aes_param$pointsize, shape=16)
+                ggplot2::geom_point (x = rx*(origin_x - dist_x*move_x), 
+                                     y = ry*(origin_y - dist_y*move_y), 
+                                     size=aes_param$pointsize, shape=16)
         ))
 }
 
@@ -280,6 +326,7 @@ arrow_axis <- function (plot_ob, length_ratio=0.05, nudge_ratio=0., move_x=0,
 #' the plot size
 #' @param aes_param a list of parameters controlling plot aesthetics
 #' @param ... keyword argument to `arrow_axis`
+#' @return a list of ggplot layers that can be concatenated to a ggplot object
 #' @export
 theme_TB <- function (plot_type='no_arrow', plot_ob=NULL, feature_vec=NULL,
                       color_fill=F, color_vec = NULL, rotation=90, 
@@ -299,6 +346,7 @@ theme_TB <- function (plot_type='no_arrow', plot_ob=NULL, feature_vec=NULL,
                 theme_list <- theme_dotplot (aes_param, rotation=rotation, color_fill=color_fill) 
         }
         if (!is.null (feature_vec)){
+                if (is.numeric (feature_vec)){theme_list <- theme_list [1:length(theme_list) != 2]}
                 theme_list <- append (theme_list, add_custom_color (feature_vec, 
                                                         aes_param, color_fill) )
         }

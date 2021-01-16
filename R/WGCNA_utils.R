@@ -1,13 +1,16 @@
 #' Run WGCNA
-#'
-#' @export
-block_with_parameter <- function(input_data, weight_power){
+block_with_parameter <- function(input_data, weight_power, minModuleSize=25,
+                                 reassignThreshold= 0, mergeCutHeight=0.15){
         # This study will use unsigned network with Pearson correlation matrix
         WGCNA::blockwiseModules(input_data, power = weight_power,
-                  networkType = "unsigned", minModuleSize = 25,
-                  reassignThreshold = 0, mergeCutHeight = 0.15,
-                  numericLabels = F, pamRespectsDendro = FALSE,
-                  saveTOMs = F, saveTOMFileBase = "TOM", verbose = 3)
+                  networkType = "unsigned", 
+                  minModuleSize = minModuleSize,
+                  reassignThreshold = reassignThreshold, 
+                  mergeCutHeight = mergeCutHeight,
+                  numericLabels = F, 
+                  pamRespectsDendro = F,
+                  saveTOMs = F, saveTOMFileBase = "TOM", 
+                  verbose = 3)
 }
 
 plot_dendrogram <- function(net, directory){
@@ -220,62 +223,21 @@ WGCNA_all <- function (x, top_markers, wgcna_dir, celltype, feature='reassign',
         if (return_con_mat ) {return (con_mat_final)}
 }
 
-#' Plot heatmap for WGCNA gene cluster
-#'
-#' @description This function is deprecated. Please use `seurat_heat`
-#' @importFrom grid gpar unit
-WGCNA_heatmap <- function (x, gene_names, celltype, feature, main_width=25, side_width=5){
-        datExpr <- subset_celltype (x[gene_names,], 'all', celltype, feature)
-
-        # Creating the first heatmap: cell-cell correlation
-        sim_mat <- WGCNA::cor (datExpr, method="pearson")
-        na_field <- apply (sim_mat, 1, function(x){mean (is.na (x)) }) == 1
-        sim_mat <- sim_mat [!na_field, !na_field]
-
-        if (!is.null (names (gene_names) )){
-                gene_names <- gene_names [!na_field]
-                color_row_names <- names (gene_names) [match (rownames (sim_mat), gene_names) ] 
-                gene_order <- order (color_row_names)
-                color_row_names <- color_row_names [gene_order]
-                row_color <- get_rainbow_col (color_row_names)
-
-                left_HA <- ComplexHeatmap::HeatmapAnnotation (
-                                              df=data.frame (Marker = color_row_names),
-                                              which='row',
-                                              col= list (Marker=row_color)) 
-
-                top_HA <- ComplexHeatmap::HeatmapAnnotation (
-                                             df=data.frame (Marker = color_row_names),
-                                             which='column',
-                                             col= list (Marker=row_color), 
-                                              show_legend=F) 
-                sim_mat <- sim_mat [gene_order, gene_order]
-                datExpr <- datExpr [, gene_order]
-        }else{
-                left_HA <- NULL
-                top_HA <- NULL
-        }
-
-        AP <- return_aes_param (NULL)
-        H1 <- ComplexHeatmap::Heatmap (sim_mat, cluster_rows=F, cluster_columns=F,
-                         column_names_gp = gpar (fontsize=8), 
-                         row_names_gp = gpar (fontsize=8), 
-                         col = AP$heatmap_color,
-                         left_annotation = left_HA,
-                         top_annotation = top_HA,
-                         row_names_side=c('left'), 
-                         column_names_side=c('bottom'), 
-                         width = unit (main_width, 'cm'),
-                         height = unit (main_width, 'cm')
-        )
-
-        # Creating the second heatmap: expression matrix
-        H2_gene_names <- rownames (sim_mat)
-        if (!is.null (names (gene_names) ) ) {names (H2_gene_names) <- color_row_names}
-        H2 <- seurat_heat (x, 'revised', H2_gene_names, col_rotation=90)
-        return (H1+H2)
-}
-
+#' Plot gene-gene correlation network in a WGCNA cluster
+#' 
+#' @param x a Seurat object
+#' @param color_row a vector of gene names
+#' @param cell_type the cell type in which correlation is computed. By default,
+#' all cell types will be used
+#' @param feature which metadata entry the cell type information is stored.
+#' Ignore it if `cell_type='all'`
+#' @param scale_edge_weight adjust the weight of the lines
+#' @param scale_node_size adjust the relative node size
+#' @param threshold only gene-gene pair with correlation beyond a threshold
+#' will be selected
+#' @importFrom igraph E "E<-"
+#' @importFrom magrittr %>%
+#' @export
 plot_WGCNA_net <- function (x, color_row, celltype='all', feature='revised',
                             scale_edge_weight=0.2, scale_node_size=0.2,
                             threshold=0.5){
@@ -284,7 +246,6 @@ plot_WGCNA_net <- function (x, color_row, celltype='all', feature='revised',
         na_field <- apply (sim_mat, 1, function(x){mean (is.na (x)) }) == 1
         sim_mat <- sim_mat [!na_field, !na_field]
 
-        print (dim (sim_mat))
         sim_mat %>% data.frame () %>%
                 tibble::add_column (gene1 = rownames (sim_mat) ) %>%
                 tidyr::gather ('gene2', 'val', -gene1) %>%
@@ -293,12 +254,14 @@ plot_WGCNA_net <- function (x, color_row, celltype='all', feature='revised',
         sel_genes <- unique (select_sim$gene1)
         sim_mat <- sim_mat [sel_genes, sel_genes]
 
-        network <- igraph::graph_from_adjacency_matrix(sim_mat , weighted=T, mode="undirected", diag=F)
+        network <- igraph::graph_from_adjacency_matrix(sim_mat , 
+                        weighted=T, mode="undirected", diag=F)
         E (network)$width <- E (network)$weight/scale_edge_weight
 
         avg_exp <- colMeans (datExpr)
         avg_exp <- avg_exp [ match (rownames (sim_mat), names (avg_exp) ) ]
-        igraph::plot.igraph (network, vertex.size=as.matrix (avg_exp)/scale_node_size)
+        igraph::plot.igraph (network, vertex.size=as.matrix (
+                                        avg_exp)/scale_node_size)
 }
 
 # ------------------
@@ -315,41 +278,34 @@ plot_WGCNA_net <- function (x, color_row, celltype='all', feature='revised',
 #' @param cluster_num on which cell cluster WGCNA is performed. 'all' means the
 #' entire dataset is involved
 #' @param select_type where the cluster information is stored.
+#' @param ... other parameters to pass to `block_with_parameters` which
+#' corresponds to `WGCNA::blockwiseModules`
 #' @export
-find_eigengene <- function (x, save_dir, cluster_num='all', select_type='revised'){
+find_eigengene <- function (x, save_dir, cluster_num='all',
+                            select_type='revised', save_eigen=T,
+                            return_eigengene=F, ...){
         save_dir <- paste (save_dir, 'WGCNA', sep='/')
         if (!dir.exists (save_dir)){dir.create (save_dir) }
         datExpr <- subset_celltype(x, cluster_num=cluster_num, select_type=select_type)
+        print ('determining the power for scale-free network')
         weight_power <- determine_power_auto (datExpr, save_dir)
+        print ('removing ribosomal genes')
         datExpr_noribo <- remove_ribosomal_genes (datExpr, row_is_gene=FALSE)
-        net <- block_with_parameter (datExpr_noribo, weight_power)
-        save_eigengene (net, save_dir)
-        eig_genes <- WGCNA::moduleEigengenes (datExpr_noribo, net$colors)
-        datME<- eig_genes$eigengene
-        return (datME)
+        net <- block_with_parameter (datExpr_noribo, weight_power, ...)
+        print ('saving gene clusters')
+        if (save_eigen) {save_eigengene (net, save_dir)}
+        if (return_eigengene){
+                print ('calculating eigengenes')
+                eig_genes <- WGCNA::moduleEigengenes (datExpr_noribo, net$colors)
+                datME<- eig_genes$eigengene
+                return (datME)
+        }
 }
 
-make_eigen_heatmap <- function (x, datME){
+make_eigen_heatmap <- function (x, datME, group.by, ...){
         heat_net <- Seurat::CreateSeuratObject (t(as.matrix (datME)), meta.data=x@meta.data)
         color_row <- colnames (datME)
-        seurat_heat (heat_net, 'revised', color_row, slot_data = 'counts',
-                         col_rotation=90)
-}
-
-#' Violin plot for eigengene value in each cell cluster
-#'
-#' @export
-make_eigen_violin <- function (x, datME, feature='revised'){
-        datME %>%
-                tibble::add_column (celltype = x@meta.data [, feature]) %>%
-                tidyr::gather ('module', 'significance', -celltype) %>%
-                ggplot2::ggplot ( aes (x=module, y=significance, color=module) ) +
-                ggplot2::geom_violin () +
-                ggplot2::geom_jitter (size=0.1) +
-                ggplot2::facet_wrap (~celltype, scales='free_y')+
-                #stat_compare_means(method = "anova", label.x.npc=0.2, label.y.npc=0.9)+        
-                ggplot2::theme_minimal ()  +
-                ggplot2::theme (axis.text.x = ggplot2::element_text (angle=90, size=6) )
+        seurat_heat (heat_net, group.by, color_row, slot_data = 'counts', ...)
 }
 
 save_eigengene <- function (net, wgcna_dir) {

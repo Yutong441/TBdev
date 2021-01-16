@@ -14,6 +14,18 @@ batch_correct(
 }
 \arguments{
 \item{data_list}{a list of Seurat objects}
+
+\item{k_filter}{the neighbourhood for SNN graph. The default is 200 (as
+Seurat). If the size of the smallest dataset is smaller than 200, the
+k_filter will be selected to be that size regardless of what the supplied
+value would be}
+
+\item{refer}{which dataset is the reference. If NULL, the reference will be
+determined automatically}
+
+\item{num_anchor_genes}{pass to \code{Seurat::FindIntegrationAnchors}
+\code{anchor.features} argument, i.e. the number of genes that form the
+integration anchor}
 }
 \description{
 Perform Seurat batch correction

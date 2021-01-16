@@ -7,6 +7,8 @@
 compare_cluster_enrichment(
   markers,
   GO_data,
+  organism_db,
+  organism_name = "human",
   logFC_term = "logFC",
   log_FC_thres = 0.25,
   enrich_area = "KEGG"
@@ -18,7 +20,17 @@ DE genes may be used}
 
 \item{GO_data}{result from go_data}
 
+\item{organism_db}{which organism database, for example, org.Hs.eg.db}
+
+\item{organism_name}{which organism for KEGG and Reactome}
+
+\item{logFC_term}{which column in \code{markers} contains the information for
+ranking gene expression}
+
 \item{enrich_area}{either KEGG or GO or reactome}
+
+\item{logFC_thres}{threshold of \code{logFC_term} beyond which a gene is selected
+for over-representation test}
 }
 \description{
 Over-representation test of genes in each cluster

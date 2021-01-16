@@ -2,12 +2,23 @@
 % Please edit documentation in R/GPLVM_utils.R
 \name{raw_to_seurat}
 \alias{raw_to_seurat}
-\title{Obtain the mean values and store them in Seurat objects according to the
-branch assignment indicated by \code{label_list}}
+\title{Load pseudotime information to Seurat}
 \usage{
 raw_to_seurat(pred_all, label_list)
 }
+\arguments{
+\item{pred_all}{dataframe generated from pseudotime analysis. It contains
+the mean and variance of all the genes, starting with 'mean_' and
+'variance_' respectively. In addition, it has a column called \code{x} containing
+pseudotime information and a column called \code{branch} for branch assignment}
+
+\item{label_list}{per item of returned seurat object in the return value
+list, cells with which labels are chosen. It should be a list}
+}
+\value{
+a list of seurat objects of different branch assignments
+}
 \description{
-Obtain the mean values and store them in Seurat objects according to the
-branch assignment indicated by \code{label_list}
+Obtain the mean values and store them in Seurat objects
+according to the branch assignment indicated by \code{label_list}
 }

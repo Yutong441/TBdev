@@ -9,7 +9,7 @@ DE_lineage_genes(
   directory,
   top_number = 3,
   label = "all",
-  feature = "revised",
+  group.by = "revised",
   lineage_markers = NULL
 )
 }

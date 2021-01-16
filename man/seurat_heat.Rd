@@ -42,6 +42,7 @@ seurat_heat(
   main_width = NULL,
   main_height = NULL,
   grid_height = 8,
+  heat_grid_height = NULL,
   automatic = T,
   ...
 )
@@ -142,6 +143,9 @@ supply as many items as the number of column sidebars}
 
 \item{grid_height}{legend grid height, increase this value if the spacing
 between legend labels become too narrow}
+
+\item{heat_grid_height}{grid height for the color gradient legend. If NULL,
+it is the same as \code{grid_height}}
 
 \item{automatic}{whether the default legend generation process in
 ComplexHeatmap is to be used. If not, all legends will be aligned vertically

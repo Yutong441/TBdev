@@ -7,38 +7,47 @@
 run_dim_red(
   x,
   assay = NULL,
-  pca_features = NULL,
   select_cells = NULL,
   feature_num = 2000,
-  run_diff_map = FALSE,
+  find_var_features = FALSE,
   save_mem = NULL,
   normalize = FALSE,
-  run_umap = TRUE,
   var_scale = FALSE,
-  cluster = TRUE,
-  find_var_features = FALSE
+  pca_features = NULL,
+  run_diff_map = FALSE,
+  run_umap = TRUE,
+  cluster = TRUE
 )
 }
 \arguments{
 \item{assay}{assay to use for dimensionality reduction}
 
-\item{pca_features}{run PCA on a selected list of genes, should be a
-character vector}
-
 \item{select_cells}{run PCA on a selected population of cells;
 should be a boolean vector}
 
-\item{run_diff_map}{whether to run diffusion map using the package
-destiny. Depending on the dataset, this may take several minutes}
+\item{feature_num}{how many variably expressed genes to compute}
+
+\item{find_var_features}{whether to run variable gene analysis}
 
 \item{save_mem}{for large matrices whether the entire matrix should be
 stored, or simply storing the \code{VariableFeatures}}
 
 \item{normalize}{whether to normalize the data}
 
-\item{cluster}{whether to perform clustering as well}
+\item{var_scale}{the variable features only to reduce memory}
 
-\item{scale}{the variable features only to reduce memory}
+\item{pca_features}{run PCA on a selected list of genes, should be a
+character vector}
+
+\item{run_diff_map}{whether to run diffusion map using the package
+destiny. Depending on the dataset, this may take several minutes}
+
+\item{run_umap}{whether to run umap}
+
+\item{cluster}{whether to perform clustering as well}
+}
+\value{
+a Seurat object
 }
 \description{
 Run DR

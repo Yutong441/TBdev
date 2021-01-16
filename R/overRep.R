@@ -5,7 +5,7 @@ non_default_theme <- function (plot_ob, default_theme, AP, color_fill=F){
                 col_vec <- AP$heatmap_color
                 plot_ob <- plot_ob +
                         ggplot2::scale_color_continuous (high=col_vec[1], low=col_vec[3]) +
-                        theme_dotplot (rotation=0, AP=AP)
+                        theme_dotplot (rotation=0, aes_param=AP)
                 if (color_fill){plot_ob <- plot_ob + 
                         ggplot2::scale_fill_continuous (high=col_vec[1], low=col_vec[3]) }
                 return (plot_ob)
@@ -39,35 +39,42 @@ gg_dot <- function (xx, showCategory){
 #' @param markers a dataframe of DE genes from Seurat; alternatively, a list of
 #' DE genes may be used
 #' @param GO_data result from go_data
+#' @param organism_db which organism database, for example, org.Hs.eg.db
+#' @param organism_name which organism for KEGG and Reactome
+#' @param logFC_term which column in `markers` contains the information for
+#' ranking gene expression
+#' @param logFC_thres threshold of `logFC_term` beyond which a gene is selected
+#' for over-representation test
 #' @param enrich_area either KEGG or GO or reactome
-#' @import org.Hs.eg.db
 #' @export
-compare_cluster_enrichment <- function (markers, GO_data, logFC_term = 'logFC',
+compare_cluster_enrichment <- function (markers, GO_data, organism_db, organism_name='human', 
+                                        logFC_term = 'logFC',
                                         log_FC_thres=0.25, enrich_area='KEGG'){
         if (class (markers) == 'data.frame'){
                 markers %>% filter ( !!as.symbol (logFC_term) > log_FC_thres ) -> markers
                 cell_type <- unique (markers$group)
-                markers$entrez <- AnnotationDbi::mapIds(org.Hs.eg.db, as.character (
+                markers$entrez <- AnnotationDbi::mapIds(organism_db, as.character (
                                                 markers$feature), 'ENTREZID', 'SYMBOL')
                 gene_list <- lapply ( as.list (cell_type), function (x){
                                              markers$entrez [markers$group == x]} )
                 names (gene_list) <- cell_type
         }else{
                 gene_list <- lapply (markers, function (x) {AnnotationDbi::mapIds (
-                                                org.Hs.eg.db, as.character (x), 
+                                                organism_db, as.character (x), 
                                                 'ENTREZID', 'SYMBOL') %>% unlist ()}) 
                 names (gene_list) <- names (markers)
         }
         if (enrich_area == 'GO'){
                 kk <- clusterProfiler::compareCluster(gene_list, 
                                      fun=paste ('enrich', enrich_area, sep=''), 
-                                     OrgDb=org.Hs.eg.db, pvalueCutoff=0.05)
+                                     OrgDb=organism_db, pvalueCutoff=0.05)
         }else if (enrich_area == 'reactome'){
                 kk <- compare_reactome (gene_list)
         }else{
+                kegg_name <- get_kegg (organism_name)
                 kk <- clusterProfiler::compareCluster(gene_list, 
                                      fun=paste ('enrich', enrich_area, sep=''), 
-                                     organism="hsa", pvalueCutoff=0.05)
+                                     organism=kegg_name, pvalueCutoff=0.05)
         }
         return (enrichplot::pairwise_termsim(kk, method="JC", semData = GO_data))
 }
@@ -102,6 +109,7 @@ compare_reactome <- function (gene_list, cutoff=0.05){
 #' @param sim_dict a data frame with 2 columns: 'ori' for the original terms,
 #' 'sub' for the strings that will replace the original terms. The default is a
 #' a limited data frame built into this package.
+#' @param append_default_dict append default dictionary to simplify the terms
 #' @description need to set seed to ensure reproducibility
 #' @export
 display_cluster_enrichment <- function (xx, show_graph='emap',
@@ -109,9 +117,10 @@ display_cluster_enrichment <- function (xx, show_graph='emap',
                                         save_dir=NULL, enrich_area='GO',
                                         show_num=NULL, clean_results=T,
                                         simplification=T, AP=NULL,
-                                        sim_dict=NULL,...){
+                                        sim_dict=NULL,
+                                        append_default_dict=T,...){
         AP <- return_aes_param (AP)
-        if (is.null (sim_dict)){data(GOsimp); sim_dict <- GOsimp}
+        sim_dict <- append_default_dictionary (sim_dict, append_default_dict)
         if (clean_results){ 
                 ori_terms <- nrow (xx@compareClusterResult)
                 xx <- clean_terms (xx, AP) 
@@ -125,7 +134,7 @@ display_cluster_enrichment <- function (xx, show_graph='emap',
                 if (is.null (show_num)){show_num=150}
                 cluster_plot <- sim_emap (xx, pie='count', rename_vec=rename_vec,
                                         showCategory=show_num, layout='kk', legend_n=1, 
-                                        cex_label_category=AP$fontsize/9, ...) 
+                                        AP=AP,...) 
                 cluster_plot <- cluster_plot + theme_dim_red (AP, color_fill=T)
                 if (is.null(feature_vec)){feature_vec <- xx@compareClusterResult$Cluster}
                 cluster_plot <- cluster_plot + add_custom_color (feature_vec, AP, color_fill=T)

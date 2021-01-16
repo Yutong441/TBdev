@@ -16,6 +16,7 @@ display_cluster_enrichment(
   simplification = T,
   AP = NULL,
   sim_dict = NULL,
+  append_default_dict = T,
   ...
 )
 }
@@ -39,6 +40,8 @@ saving the figure}
 \item{sim_dict}{a data frame with 2 columns: 'ori' for the original terms,
 'sub' for the strings that will replace the original terms. The default is a
 a limited data frame built into this package.}
+
+\item{append_default_dict}{append default dictionary to simplify the terms}
 }
 \description{
 need to set seed to ensure reproducibility

@@ -4,7 +4,13 @@
 \alias{block_with_parameter}
 \title{Run WGCNA}
 \usage{
-block_with_parameter(input_data, weight_power)
+block_with_parameter(
+  input_data,
+  weight_power,
+  minModuleSize = 25,
+  reassignThreshold = 0,
+  mergeCutHeight = 0.15
+)
 }
 \description{
 Run WGCNA

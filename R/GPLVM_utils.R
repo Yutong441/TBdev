@@ -142,6 +142,7 @@ pseudotime_heat <- function (seurat_list, show_genes, group.by, order_row='pseud
 #' `exp_mat`, containing the branch assignment of each cell
 #' @param label_list per item of returned seurat object in the return value
 #' list, cells with which labels are chosen. It should be a list
+#' @return a list of seurat objects of different branch assignments
 mat_to_seurat <- function (exp_mat, ref_meta, branch_lab, label_list){
         print ('assigning metadata including branch information')
         if (!is.null(ref_meta)){
@@ -162,8 +163,17 @@ mat_to_seurat <- function (exp_mat, ref_meta, branch_lab, label_list){
         return (seurat_list)
 }
 
-#' Obtain the mean values and store them in Seurat objects according to the
-#' branch assignment indicated by `label_list`
+#' Load pseudotime information to Seurat
+#'
+#' @description Obtain the mean values and store them in Seurat objects
+#' according to the branch assignment indicated by `label_list`
+#' @param pred_all dataframe generated from pseudotime analysis. It contains
+#' the mean and variance of all the genes, starting with 'mean_' and
+#' 'variance_' respectively. In addition, it has a column called `x` containing
+#' pseudotime information and a column called `branch` for branch assignment
+#' @param label_list per item of returned seurat object in the return value
+#' list, cells with which labels are chosen. It should be a list
+#' @return a list of seurat objects of different branch assignments
 #' @importFrom magrittr %>%
 #' @export
 raw_to_seurat <- function (pred_all, label_list){
@@ -177,8 +187,8 @@ raw_to_seurat <- function (pred_all, label_list){
         return (mat_to_seurat (exp_mat_inf, NULL, meta_data, label_list))
 }
 
-#' Integrate expression matrix, branch information, pseudotime data into a
-#' single Seurat object.
+#' Integrate expression matrix, branch information, pseudotime data 
+#'
 #' @description I did not find this function helpful because later I added them
 #' to the metadata of the integrated dataset.
 integrated_seurat <- function (exp_mat, pseudotime, branch, metadata){
@@ -255,7 +265,6 @@ pca_with_pt_line <- function (pc_pt, pt_mat, metadata, color.by,
                 var_data [, 'ymin'] <- min_val 
                 var_data [, 'ymax'] <- max_val 
                 var_data [, 'x'] <- plot_line [, x_axis]
-                print (dim(var_data))
                 plot_ob <- plot_ob + ggplot2::geom_ribbon (aes_string (x='x', ymin='ymin', 
                                                               ymax='ymax'), fill='gray', data=var_data)
         }
@@ -264,8 +273,10 @@ pca_with_pt_line <- function (pc_pt, pt_mat, metadata, color.by,
 }
 
 
-#' This function works extremely slow. I recommend using the python
-#' alternative.
+#' Calculate mean log likelihood
+#'
+#' @description This function works extremely slow. I recommend using the
+#' python alternative.
 mean_log_likelihood <- function (mu, variance, x){
     out = -(mu^2 + colMeans (x^2) -2*mu*colMeans (x))/variance*2 
     out = out - sqrt(variance) - 0.5*log (2*pi)
@@ -313,7 +324,8 @@ time_cluster_plot <- function (peak_plot, metadata, show_text_prop=0.95,
                         dplyr::arrange (dplyr::desc(val)) -> new_peak
                 new_peak <- new_peak [!new_peak$feature %in% label_peak$feature,]
                 new_peak [, color_by] <- NA
-                rbind (label_peak %>% dplyr::ungroup(), new_peak %>% dplyr::ungroup()) -> label_peak
+                rbind (label_peak %>% dplyr::ungroup(), 
+                       new_peak %>% dplyr::ungroup()) -> label_peak
         }
 
         min_y <- min (peak_plot [, 'val']) - vjust
@@ -335,4 +347,3 @@ time_cluster_plot <- function (peak_plot, metadata, show_text_prop=0.95,
                 ggplot2::ylab ('maximum gradient') + ggplot2::xlab ('pseudotime') +
                 ggplot2::xlim ( c(min_val, max_val) )
 }
-

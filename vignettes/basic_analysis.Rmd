@@ -1,0 +1,229 @@
+---
+title: "Basic Analysis"
+output: html_document
+vignette: >
+  %\VignetteIndexEntry{Basic Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+fig_width: 7 
+fig_height: 7 
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  warning = FALSE
+)
+```
+
+```{r, message = FALSE}
+library (TBdev)
+library (tidyverse)
+library (org.Hs.eg.db)
+library (GOSemSim)
+```
+
+# Load data
+The single cell RNA-seq dataset called `final_merged_tb.Robj` has been placed in `data_dir`. 
+The output of this analysis will be stored in `save_dir`.
+```{r}
+root <- '.' #in this case, it is the current directory
+data_dir <- paste (root, 'data', sep='/')
+save_dir <- paste (root, 'result', sep='/')
+all_data <- get (load (paste (data_dir, 'final_merged_tb.Robj', sep='/') ))
+
+# For simplicity we will only use a subset of the dataset, i.e., the in vivo
+# set
+all_data <- all_data [, all_data$date != 'in_vitro']
+```
+
+Plotting the normalised expression of selected genes.
+In this package, we include a convenient setting for aesthetic parameters.
+The parameters can be supplied to `AP=` argument of every plotting function in
+this package.
+
+```{r}
+AP <- list (pointsize=3, legend_point_size=3, fontsize=11, point_fontsize=4,
+            font_fam= 'sans')
+plot_genes <- c('POU5F1', 'SOX2', 'NANOG', 'GATA3', 'CDX2', 'TFAP2C')
+seurat_violin (all_data, features=plot_genes, group.by='broad_type', AP=AP)
+```
+
+# Dimensionality reductions
+This function performs variable gene selection, normalisation, scaling, PCA and
+other dimensionality reduction techniques
+```{r, message = FALSE}
+all_data <- run_dim_red (all_data, 
+                         normalize=F, # whether to use NormalizeData
+                         var_scale=T, # whether to scale the dataset
+                         run_diff_map=F # run diffusion map using destiny
+)
+```
+
+Compare to the `Seurat::DimPlot` function, this function can show multiple
+subplots with different metadata features
+```{r fig.width = 12, fig.height = 6}
+# relevel the cluster labels generated from `run_dim_red`
+all_data$seurat_clusters <- paste ('C', all_data$seurat_clusters, sep='') %>%
+        partial_relevel ()
+plot_dim_red (all_data, 
+              group.by= c('broad_type', 'seurat_clusters'), 
+              DR='pca', #can be 'umap' or 'diff_map', default 'pca'
+              dims=c(1,2), #select which dimensionality to show
+              num_col = 2, # optional: how many columns to display the subplots
+              further_repel=F, #if TRUE, the labels will be repelled from the
+              # data points
+              AP=AP
+)
+```
+
+You may also look at expression of certain genes, e.g. CDX2
+```{r fig.width = 12, fig.height = 6}
+# relevel the cluster labels generated from `run_dim_red`
+plot_dim_red (all_data, group.by= c('broad_type', 'CDX2'), DR='pca',
+              dims=c(1,2), num_col = 2, further_repel=F, AP=AP
+)
+```
+
+You may also highlight certain cells. In this case, let us highlight primitive
+endoderm (PE) by making it look bigger and with a different shape.
+```{r, fig.width = 12, fig.height = 6}
+plot_dim_red (all_data, 
+              group.by= c('broad_type', 'seurat_clusters'), 
+              DR='pca', #can be 'umap' or 'diff_map', default 'pca'
+              dims=c(1,2), #select which dimensionality to show
+              num_col = 2, # optional: how many columns to display the subplots
+              size_highlight= all_data$broad_type == 'PE',
+              further_repel=F, AP=AP
+)
+```
+
+This function also works for 3D
+```{r, fig.width = 12, fig.height = 6}
+plot_dim_red (all_data, 
+              group.by = c('broad_type', 'seurat_clusters'), 
+              DR='pca', #can be 'umap' or 'diff_map'
+              dims=c(1,2,3), #select which dimensionality to show
+              all_theta=50, #optional: adjust the azimuthal angle
+              all_phi = 20, #optional: adjust the vertical angle
+              show_label=F, #optional: prevent over-crowding of labels
+              num_col = 2, # optional: how many columns to display the subplots
+              show_arrow=F, #no arrow axis
+              show_axes=T, #show full length axis
+              AP=AP
+)
+```
+
+# Differentially expressed (DE) genes
+Finding DE genes across the entire scRNA-seq dataset can be computationally
+intensive. We highly recommend saving the results using `directory=`
+
+```{r, message = FALSE}
+markers <- find_DE_genes (all_data, 
+                          directory=save_dir,
+                          group.by='broad_type', #DE genes over which feature
+                          label='vivo' # optional: unique tag to the result file
+)
+
+```
+Visualise the DE genes in PCA using previous results.
+If previous results are not available, this function will call on
+`find_DE_genes` automatically to generate new results.
+
+```{r}
+plot_gene_PC (all_data, 
+              group.by='broad_type', 
+              directory=save_dir, 
+              label='vivo', # the label must match the previous DE results
+              show_markers='TF', # optional: show transcriptional factors. 
+             #Turn off this feature with 'show_markers=NULL'
+              AP=AP
+)
+```
+
+Select the top DE genes for visualisation.
+```{r, fig.width = 12, fig.height = 7}
+DE_genes <- unique_DE_genes (markers, 6)
+# to use the heatmap function, need to generate a named vector of genes
+DE_genes %>% dplyr::select (group, feature) %>% deframe () -> show_genes
+
+seurat_heat (all_data, color_row=show_genes, 
+             group.by = c('broad_type', 'date'), #color bars across the rows
+             row_scale=T, # optional: row scaling the heatmap
+             center_scale=T, #optional: put the white color region to the center of the range
+             column_rotation=90, # optional: rotate the column labels if they are over-crowded
+             main_width=20, main_height=15, #optional: set the size of the heatmap
+             grid_height=4, #optional: set the spacing of legend
+             AP=AP
+)
+```
+
+# GO/KEGG/Reactome
+
+Load the DE gene results.
+```{r}
+#The package comes with a precompiled list of cells that are not in the
+#trophoblast lineage
+data (CT)
+markers %>% filter (!group %in% CT$non_TB_lineage) -> tb_markers
+```
+
+Run [over-representation test](http://yulab-smu.top/clusterProfiler-book/).
+You may also choose 'GO' or 'Reactome' in the `enrich_area` argument
+
+```{r, message = FALSE}
+d <- godata(org.Hs.eg.db, ont="BP") #which GO database to use. 
+#Here we use 'BP' for biological process, organism is human select cells in the
+#trophoblast lineages
+kk <- compare_cluster_enrichment (tb_markers, d, org.Hs.eg.db, 
+                                  organism_name='human', enrich_area='KEGG')
+```
+
+Visualise in piechart like graph.
+```{r}
+display_cluster_enrichment (kk, 
+                            show_graph='emap', 
+                            show_num=20, #optional: how many terms to show
+                            default_theme=F, #optional: turn off the default ggplot theme
+                            AP = AP
+) 
+```
+
+Here some of the KEGG terms have been simplified, because long terms may
+overlap and impede aesthetics. You may define your own dictionary of
+simplifying the terms. For example,
+```{r}
+sim_dict <- data.frame (ori='Osteoclast differentiation', sub='Osteoclast')
+display_cluster_enrichment (kk, show_graph='emap', show_num=20,
+                            default_theme=F, AP = AP, sim_dict= sim_dict,
+                            append_default_dict = T
+                            # still keep the built-in simplification
+) 
+```
+
+Alternatively, visualise using dotplot.
+```{r, fig.height=3}
+display_cluster_enrichment (kk, show_graph='dotplot', show_num=20, AP=AP) 
+```
+
+```{r, include= FALSE}
+rm (kk, all_data, markers)
+```
+
+Run GSEA for GO/KEGG/Reactome.
+```{r, message = FALSE}
+psea_df <- run_GSEA_all_types (tb_markers, org.Hs.eg.db, enrich_area= 'KEGG',
+                         save_path=paste (save_dir, 'PSEA_broad_type_all_vivo.csv', sep='/'))
+```
+
+Visualise the results in ridgeplot.
+You may similarly wish to simplify the terms using the `sim_dict=` argument.
+```{r}
+ridge_all_types (psea_df, 
+                 show_num=20, #optional: how many terms to show
+                 not_show_prop=0.01, # optional: remove white space at the ends of the axis
+                 # higher values remove more white space
+                 AP=AP
+) +theme (aspect.ratio = 1.5) #because the terms are sometimes crowded
+```

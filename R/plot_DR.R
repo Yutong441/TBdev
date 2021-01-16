@@ -3,17 +3,30 @@
 #' @param further_repel if TRUE, the labels would be repelled away from the
 #' data points as much as possible
 DimPlot_labels <- function (dat, x_coord, y_coord, color_by, further_repel=T){
-        dat %>% dplyr::select (dplyr::all_of (c(x_coord, y_coord, color_by))) %>%
-                magrittr::set_colnames (c('x_axis', 'y_axis', 'feature'))  %>%
-                dplyr::group_by (feature) %>%
-                dplyr::summarise (x_mean = mean(x_axis), y_mean = mean (y_axis)) -> mean_labels
-        if (!further_repel){return (mean_labels)
+        if (!is.numeric (dat [, color_by])){
+                dat %>% dplyr::select (dplyr::all_of (c(x_coord, y_coord, color_by))) %>%
+                        magrittr::set_colnames (c('x_axis', 'y_axis', 'feature'))  %>%
+                        dplyr::group_by (feature) %>%
+                        dplyr::summarise (x_mean = mean(x_axis), y_mean = mean (y_axis)) -> mean_labels
+                if (!further_repel){return (mean_labels)
+                }else{
+                dat %>% dplyr::select (dplyr::all_of (c(x_coord, y_coord, color_by))) %>%
+                        magrittr::set_colnames (c('x_mean', 'y_mean', 'feature'))  %>%
+                        dplyr::mutate (feature = rep ('', nrow (dat) ) ) %>%
+                        rbind (mean_labels) 
+                }
+        }else{return (NULL)}
+}
+
+get_feature_names <- function (name, seurat_ob, assay, slot_data){
+        if (name %in% rownames(seurat_ob)){
+                feature_vec <- as.vector (Seurat::GetAssayData (seurat_ob [name, ],
+                                          assay=assay, slot=slot_data))
         }else{
-        dat %>% dplyr::select (dplyr::all_of (c(x_coord, y_coord, color_by))) %>%
-                magrittr::set_colnames (c('x_mean', 'y_mean', 'feature'))  %>%
-                dplyr::mutate (feature = rep ('', nrow (dat) ) ) %>%
-                rbind (mean_labels) 
+                feature_vec <- seurat_ob@meta.data [, name ]
         }
+        if (!is.numeric (feature_vec)){feature_vec <- as.factor (feature_vec)}
+        return (feature_vec)
 }
 
 #' Reimplementation of DimPlot in Seurat for better graphic controls
@@ -25,16 +38,20 @@ DimPlot_labels <- function (dat, x_coord, y_coord, color_by, further_repel=T){
 #' @param AP a list for `custom_color` and `theme_TB`
 #' @param further_repel if TRUE, the labels would be repelled away from the
 #' data points as much as possible
+#' @param reverse_x reverse x axis direction. This is because sometimes most of
+#' the contents are on the left, which would obstruct the arrow axis.
+#' @param reverse_y similarly reverse y axis direction.
 #' @importFrom grDevices rainbow
 #' @importFrom ggplot2 aes aes_string
 #' @author Yutong Chen
-#' @export
 gg_DimPlot <- function (x, feature, DR='pca', dims=c(1,2), size_highlight=NULL,
-                        highlight_font=4, default_color=F, further_repel=T,
-                        AP=NULL,...){
+                        highlight_font=4, further_repel=T, repel_force=1,
+                        reverse_x=F, reverse_y=F, assay='RNA', slot_data =
+                        'data', AP=NULL,...){
         AP <- return_aes_param (AP)
         dim_red <- x@reductions[[DR]]@cell.embeddings [, dims]
-        feature_names <- as.factor(x@meta.data[, feature])  
+        #feature_names <- as.factor(x@meta.data[, feature])  
+        feature_names <- get_feature_names (feature, x, assay, slot_data)
         x_axis <- colnames (dim_red)[1]
         y_axis <- colnames (dim_red)[2]
 
@@ -53,35 +70,32 @@ gg_DimPlot <- function (x, feature, DR='pca', dims=c(1,2), size_highlight=NULL,
 
         plot_label <- DimPlot_labels (plot_data, x_axis, y_axis, 'feature',
                                       further_repel=further_repel)
-        # change the color of the highlighted points
-        color_vec <- unique (plot_data$feature)
-        names (color_vec) <- color_vec
-        color_vec <- rainbow ( length (color_vec) )
 
-        high_color <- unique (plot_data$feature [plot_data$size_high == 'select'] )
-        color_vec [high_color] <- rainbow (length (high_color) )
-
-        # determine what color scheme to use
-        if (!default_color){ color_vec <- custom_color (plot_data$feature, AP, color_fill=T) }
         # plotting
         plot_ob <- plot_data %>%
                 ggplot2::ggplot (aes_string (x=x_axis, y=y_axis ) ) +
                 ggplot2::geom_point (aes (fill = feature, size=size_high, shape=size_high), 
                             alpha=1, color=AP$point_edge_color, stroke=1) +
-                ggrepel::geom_text_repel (aes (x=x_mean, y=y_mean, label=feature, fontface=2), 
-                                          data=plot_label,
-                                          size=AP$point_fontsize,
-                                          segment.color=NA, 
-                                          family=AP$font_fam)+
                 ggplot2::scale_size_manual (values = c('non-select'=AP$pointsize, 
                                               'select'=AP$pointsize*1.5), guide=F) +
                 # shape code: 16=filled circle, 17 = filled triangle up
                 ggplot2::scale_shape_manual (values = c('non-select'=AP$normal_shape, 
                                                'select'=AP$highlight_shape), guide=F) +
-                ggplot2::labs (fill= '') 
+                ggplot2::labs (fill= feature)
+
+        if (!is.null(plot_label)){
+                plot_ob <- plot_ob +
+                ggrepel::geom_text_repel (aes (x=x_mean, y=y_mean, label=feature, fontface=2), 
+                                          data=plot_label,
+                                          size=AP$point_fontsize,
+                                          segment.color=NA, force=repel_force,
+                                          family=AP$font_fam)
+        }
+        if (reverse_x){plot_ob <- plot_ob + ggplot2::scale_x_reverse ()}
+        if (reverse_y){plot_ob <- plot_ob + ggplot2::scale_y_reverse ()}
         plot_ob + theme_TB ('dim_red', plot_ob=plot_ob, feature_vec=
-                            plot_data$feature, color_fill=T,
-                            aes_param=AP, ...) 
+                            plot_data$feature, color_fill=T, aes_param=AP,
+                    reverse_x=reverse_x, reverse_y=reverse_y,...) 
 }
 
 #' Return multiple subplots
@@ -121,12 +135,13 @@ gg_plot_dim_red <- function (x, by_group, DR='pca', dims=c(1,2),
 #' @param force_repel extent of repulsion
 #' @param AP aesthetic parameters controlling arrow appearance
 #' @importFrom ggplot2 aes aes_string layer Stat
+#' @importFrom magrittr %>%
 #' @author Yutong Chen
-#' @export
 dim_red_3D <- function (plot_data, x, y, z, color_by, all_theta=0, all_phi=0,
                         show_axes=F, show_arrow=T, show_label=T, label_col=NULL,
                         num_col=NULL, axis_length=0.2, lab_just=0.05,
-                        vert_just=0., hor_just=0., further_repel=F, repel_force=1, AP=NULL){
+                        vert_just=0., hor_just=0., further_repel=F,
+                        repel_force=1, AP=NULL){
         # deal with multiple colors
         AP <- return_aes_param (AP)
         if (length (color_by) > 1 ){
@@ -145,15 +160,28 @@ dim_red_3D <- function (plot_data, x, y, z, color_by, all_theta=0, all_phi=0,
                 plot_ob <- plot_ob + ggplot2::scale_fill_viridis_c () + 
                 theme_dim_red (AP, color_fill=T)[[1]] 
         }else{ plot_ob + theme_TB ('no_arrow', feature_vec = plot_data [,
-                                   color], color_fill=T) -> plot_ob
+                                   color], color_fill=T, aes_param=AP) -> plot_ob
         }
         if (show_arrow){
-                plot_ob <- plot_ob + Seg3D(theta=all_theta, phi=all_phi, common_length=axis_length) +
+                # to add new points, it is important to add the min and max
+                point_data <- add_min_max (data.frame (x=0, y=0, z=0), 
+                                           plot_data [, c(x, y, z)] )
+                # the arrow origin is always at the minimum, which is assigned
+                # black. The other values are 'awhite', which occur before
+                # 'black'. The purpose is that where discrete alpha scale is
+                # appled, 'awhite' would have zero alpha and 'black' 1 alpha
+                point_data$color <- c('awhite', 'black', 'awhite')
+                plot_ob <- plot_ob + Seg3D(theta=all_theta, phi=all_phi, common_length=axis_length, AP=AP) +
                         Lab3D (labs = gsub ('PT','D', c(x, y, z)), theta=all_theta, phi=all_phi,
-                               common_length=axis_length+lab_just, vjust=vert_just, hjust=hor_just) 
-        }else if (show_axis){
-                plot_ob <- plot_ob + gg3D::axes3D(theta=all_theta, phi=all_phi) +
-                        gg3D::labs_3D(labs = gsub ('PT','D', c(x, y, z)), theta=all_theta, phi=all_phi) 
+                               common_length=axis_length+lab_just, vjust=vert_just, hjust=hor_just, AP=AP) +
+                        gg3D::stat_3D (aes(x=x, y=y, z=z, alpha=color), theta=all_theta, data=point_data,
+                                       phi=all_phi, size=AP$pointsize, inherit.aes=F, 
+                                       geom='point', show.legend=F) +
+                        ggplot2::scale_alpha_discrete (breaks = c(NA, 'black'), range= c(0, 1))
+        }else if (show_axes){
+                plot_ob <- plot_ob + gg3D::axes_3D(theta=all_theta, phi=all_phi) +
+                        gg3D::labs_3D(labs = gsub ('PT','D', c(x, y, z)), 
+                                      theta=all_theta, phi=all_phi) 
         }
 
         if (is.null(label_col)){label_col <- color}
@@ -176,7 +204,6 @@ dim_red_3D <- function (plot_data, x, y, z, color_by, all_theta=0, all_phi=0,
 #' @param ... additional features to pass to `dim_red_3D`, including
 #' `show_axes`, 'all_theta' and `all_phi`
 #' @author Yutong Chen
-#' @export
 DimPlot_3D <- function (x, feature, DR='pca', dims=c(1,2,3), ...){
         col_names <- gsub ('_', '', colnames (x@reductions[[DR]]) )
         x@reductions[[DR]]@cell.embeddings %>% as.data.frame () -> x_plot
@@ -255,7 +282,6 @@ dim_3_to_2 <- function (dat, theta, phi, axes_names=c('x', 'y', 'z')){
 #' @param axes_names the column names for the x, y, and z coordinates in `dat`
 #' @param repel_force extent of repelling labels
 #' @return a `geom_text_repel` layer
-#' @export
 text_3D_repel <- function (dat, AP, theta, phi, label_col, 
                            axes_names=c('x', 'y', 'z'), repel_force=1){
         trans_dat <- dim_3_to_2 (dat, theta, phi, axes_names)

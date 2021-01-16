@@ -69,6 +69,8 @@ plot_peak_line <- function (peak_df, AP, gene_col='feature', time_col='peak_time
         return (list (layer1, layer2, layer3))
 }
 
+#' Save peak genes in a particular KEGG pathway
+#'
 #' @importFrom magrittr %>%
 #' @export
 save_peak_genes <- function (xx, save_path, pathway=NULL, pathway_df=NULL,

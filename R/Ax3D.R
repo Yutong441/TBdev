@@ -28,7 +28,7 @@ Axes3D <- ggplot2::ggproto("Axes3D", ggplot2::Stat,
 
 #' Draw 3D Axes
 #'
-#' This function adds 3D axes to a ggplot2 plot.
+#' @description This function adds 3D axes to a ggplot2 plot.
 #'
 #' @param theta The azimuthal direction in degrees.
 #' @param phi The colatitude in degrees.
@@ -36,7 +36,6 @@ Axes3D <- ggplot2::ggproto("Axes3D", ggplot2::Stat,
 #' These are often aesthetics, used to set an
 #' aesthetic to a fixed value, like color = "red" or size = 3.
 #' @importFrom ggplot2 aes
-#' @export
 Ax3D = function(mapping = aes(group=1), data = NULL, geom = "path",
                     position = "identity", na.rm = FALSE, show.legend = NA,
                     inherit.aes = TRUE, ...) {
@@ -68,8 +67,9 @@ Segment3D <- ggplot2::ggproto("Axes3D", ggplot2::Stat,
 
 #' Extention to `Ax3D` with arrow heads
 #'
+#' @param theta The azimuthal direction in degrees.
+#' @param phi The colatitude in degrees.
 #' @importFrom ggplot2 aes
-#' @export
 Seg3D <- function(mapping = aes(group=1), data = NULL, geom = "segment",
                   position = "identity", na.rm = FALSE, show.legend = NA,
                   inherit.aes = TRUE, AP=NULL, ...) {
@@ -77,7 +77,8 @@ Seg3D <- function(mapping = aes(group=1), data = NULL, geom = "segment",
         ggplot2::layer(
                 stat = Segment3D, data = data, mapping = mapping, geom = geom,
                 position = position, show.legend = FALSE, inherit.aes = inherit.aes,
-                params = list(na.rm = na.rm, arrow=get_arrow(AP), size=AP$arrow_thickness, 
+                params = list(na.rm = na.rm, arrow=get_arrow(AP), 
+                              size=AP$arrow_thickness, 
                               linejoin=AP$arrow_linejoin, ...)
         )
 }

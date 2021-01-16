@@ -6,6 +6,8 @@
 \usage{
 run_GSEA_all_types(
   markers,
+  organism_db,
+  organism_name = "human",
   show_num = 50,
   cluster_col = "group",
   enrich_area = "KEGG",
@@ -17,6 +19,8 @@ run_GSEA_all_types(
 \arguments{
 \item{markers}{a dataframe containing the fold changes of genes with a
 column specified as \code{cluster_col} that contains the cluster information}
+
+\item{organism_db}{which organism database, for example, org.Hs.eg.db}
 
 \item{show_num}{how many GO/KEGG terms to show. This function will select
 those terms whose mean absolute fold changes are high}

@@ -6,14 +6,10 @@
 \usage{
 plot_dim_red(
   input_data,
-  assay = "RNA",
-  by_group = c("paper", "Type"),
-  by_shape = c(NULL, NULL),
+  group.by,
   DR = "pca",
   select_cells = NULL,
   dims = c(1, 2),
-  all_labels = TRUE,
-  cells_highlight = NULL,
   return_sep = F,
   num_col = NULL,
   AP = NULL,
@@ -23,10 +19,8 @@ plot_dim_red(
 \arguments{
 \item{input_data}{a Seurat object}
 
-\item{by_group}{a 2-element vector, parsed to the \code{group.by} argument of
+\item{group.by}{a 2-element vector, parsed to the \code{group.by} argument of
 \code{DimPlot} in Seurat}
-
-\item{by_shape}{a 2-element vector, parsed to the \code{shape.by} argument}
 
 \item{DR}{the type of dimensionality reduction method}
 
@@ -37,6 +31,9 @@ plot_dim_red(
 \item{num_col}{how many columns the subplots are arranged}
 
 \item{plot_3D}{whether to plot in 3D}
+}
+\value{
+a ggplot or list of ggplot objects
 }
 \description{
 Please run the \code{run_dim_red} function before executing this

@@ -15,8 +15,10 @@ ridge_all_types(
   term_length = 60,
   show_num = NULL,
   simplification = T,
+  amplify_font = 1.2,
   AP = NULL,
-  sim_dict = NULL
+  sim_dict = NULL,
+  append_default_dict = T
 )
 }
 \arguments{
@@ -43,11 +45,16 @@ spaces in the final plot.}
 
 \item{simplification}{whether to simplify the GO/KEGG/Reactome terms}
 
+\item{amplify_font}{increase the font size of the y axis labels by a ratio,
+which represent the enrichment terms}
+
 \item{AP}{aesthetic parameters}
 
 \item{sim_dict}{a data frame with 2 columns: 'ori' for the original terms,
 'sub' for the strings that will replace the original terms. The default is a
 a limited data frame built into this package.}
+
+\item{append_default_dict}{append default dictionary to simplify the terms}
 }
 \description{
 Ridge plot for multiple categories

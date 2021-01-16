@@ -4,14 +4,7 @@
 \alias{plot_cell_similarity}
 \title{Plot cell-cell similarity in a line graph}
 \usage{
-plot_cell_similarity(
-  x,
-  cell_sim,
-  group.by,
-  DR = "pca",
-  dims = 1,
-  aes_param = NULL
-)
+plot_cell_similarity(x, cell_sim, group.by, DR = "pca", dims = 1, AP = NULL)
 }
 \arguments{
 \item{x}{a Seurat object}

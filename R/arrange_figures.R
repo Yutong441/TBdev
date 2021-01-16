@@ -34,9 +34,7 @@ expand_length <- function (x, target_n){
 #' @param grid_layout, same as the argument in `grid.arrange`
 #' @param margin_width the width of the margin in inches. The default is 0.79in
 #' (2cm). Same unit in `margin_height`, `page_width`, `page_height`
-#' @param plot_width the width of each subplot. If one value is supplied, then
-#' all subplots will have the same width. You may supply a vector each item of
-#' which corresponds to the width of one subplot across the columns.
+#' @param plot_width the width of each subplot. 
 #' @param plot_height same concept as plot_width
 #' @importFrom grid pushViewport viewport grid.layout grid.rect grid.draw
 #' popViewport grid.text grid.grabExpr 
@@ -44,8 +42,8 @@ expand_length <- function (x, target_n){
 arrange_plots <- function (grob_list, save_path, grid_layout, panel_label=NULL,
                            margin_width=0.79, margin_height=0.79,
                            panel_spacing=0.1975, plot_width=9, plot_height=9, 
-                           aes_param=list (highlight_font = list (fontface='bold', fontsize=18),
-                                           font_fam = 'Arial') ){
+                           aes_param=list (highlight_font = list (fontface='bold', 
+                                        fontsize=18), font_fam = 'Arial') ){
         
         highlight_font <- get_highlight_font (aes_param$highlight_font$fontface, 
                                               aes_param$highlight_font$fontsize, 

@@ -11,6 +11,8 @@
 #' of the correlation matrix
 #' @param select_cells2 similarly for the coluns
 #' @param select_genes which genes to compare, default is variable genes
+#' @return a correlation matrix with select_cells1 along the rows and
+#' select_cells2 along the columns
 #' @importFrom Seurat VariableFeatures
 #' @importFrom magrittr %>%
 #' @export
@@ -83,7 +85,7 @@ cell_violin <- function (all_cor, metadata, feature, column_scale=T,
         plot_corr %>% dplyr::select (!all_cells) %>%
                 tidyr::gather ('cell_type2', 'expr_val', -cell_type) -> plot_data
         ggplot2::ggplot (plot_data, ggplot2::aes (x=cell_type, y=expr_val, fill=cell_type) ) +
-                ggplot2::geom_jitter (position=position_jitter(0.2), shape=AP$normal_shape, 
+                ggplot2::geom_jitter (position=ggplot2::position_jitter(0.2), shape=AP$normal_shape, 
                                       color=AP$point_edge_color, stroke=0.3,
                                       size=AP$pointsize)+
                 ggplot2::facet_wrap (~cell_type2, ncol=num_col) +
@@ -104,7 +106,7 @@ cell_violin <- function (all_cor, metadata, feature, column_scale=T,
 #' @param feature cluster by which feature in the metadata
 #' @export
 cell_heat <- function (all_cor, metadata, features, column_scale=T,
-                       row_scale=F, col_rotation=0){
+                       row_scale=F, ...){
         all_cor <- scaling (all_cor, row_scale, column_scale) # from 'SCHeat.R'
         seurat_meta <- metadata [match (colnames (all_cor), rownames (metadata) ),]
         cor_seurat <- Seurat::CreateSeuratObject (all_cor, meta.data=seurat_meta)
@@ -112,7 +114,7 @@ cell_heat <- function (all_cor, metadata, features, column_scale=T,
         row_meta <- metadata [match (rownames (all_cor), rownames (metadata) ),]
         names (color_row) <- row_meta [, features[1] ]
         seurat_heat (cor_seurat, features[2], color_row, slot_data='counts',
-                         show_row_names=F, column_rotation=col_rotation)
+                         show_row_names=F, ...)
 }
 
 #' Probability of fitting in river plot
@@ -169,9 +171,9 @@ plot_prob_line <- function (prob_data, select_cells, selected_lines=NULL,
                 ggplot2::geom_line (aes_string(x=time_ind, y='prob', color='cell_type'), 
                                     size=band_thick, alpha=band_trans)+
                 ggrepel::geom_text_repel (aes (x=x, y=max_prob, label=cell_type), 
-                                          data=label_data, size=AP$point_fontsize) +
+                                          data=label_data, size=AP$point_fontsize, show.legend=F) +
                 ggplot2::geom_vline (aes (xintercept=x, color=cell_type), 
-                                     data=vline_data, linetype='dashed' )+
+                                     data=vline_data, linetype='dashed', show.legend=F)+
                 theme_TB('dotplot', feature_vec=plot_data$cell_type, rotation=0, AP=AP)+
                 ggplot2::xlab ('pseudotime') + ggplot2::ylab ('probability') + 
                 custom_tick (plot_data$prob) +

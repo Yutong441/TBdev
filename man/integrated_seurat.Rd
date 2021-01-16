@@ -2,8 +2,7 @@
 % Please edit documentation in R/GPLVM_utils.R
 \name{integrated_seurat}
 \alias{integrated_seurat}
-\title{Integrate expression matrix, branch information, pseudotime data into a
-single Seurat object.}
+\title{Integrate expression matrix, branch information, pseudotime data}
 \usage{
 integrated_seurat(exp_mat, pseudotime, branch, metadata)
 }

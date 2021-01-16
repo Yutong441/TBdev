@@ -211,7 +211,6 @@ get_p <- function(y, g, y_union, cex_category, pie, layout){
 #' @importFrom ggplot2 aes_
 #' @importFrom igraph E "E<-"
 #' @importFrom igraph V "V<-"
-#' @export
 #' @author Guangchung Yu
 sim_emap <- function(x, showCategory = 30, rename_vec=NULL, color = "p.adjust",
                      layout = "nicely", split=NULL, pie = "equal", legend_n =5,

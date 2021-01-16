@@ -25,6 +25,10 @@ of the correlation matrix}
 
 \item{select_genes}{which genes to compare, default is variable genes}
 }
+\value{
+a correlation matrix with select_cells1 along the rows and
+select_cells2 along the columns
+}
 \description{
 Compute the distance matrix using a user-defined metric
 }

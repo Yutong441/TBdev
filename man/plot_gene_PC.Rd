@@ -6,13 +6,12 @@
 \usage{
 plot_gene_PC(
   x,
+  group.by = NULL,
   show_markers = NULL,
   dims = c(1, 2),
-  color_by = "Type",
   directory = NULL,
   label = "all",
   DR = "pca",
-  skip_char = 0,
   color_markers = NULL,
   DE_rank = "logFC",
   cluster_col = "group",
@@ -23,14 +22,27 @@ plot_gene_PC(
 \arguments{
 \item{x}{a Seurat object}
 
+\item{group.by}{which feature of genes to color, default is the cell
+type in which the genes are differentially expressed}
+
 \item{show_markers}{the genes to shown in the final plot. If \code{NULL}, all genes
 will be shown. If \code{TF}, a list of transcriptional factors will be shown.
 Alternatively, the argument accepts a vector of genes.}
 
 \item{dims}{which pcs to plot}
 
-\item{color_by}{which feature of genes to color, default is the cell
-type in which the genes are differentially expressed}
+\item{directory}{where the DE gene results are stored. If NULL, the cells
+will not be coloured.}
+
+\item{label}{the label of the DE gene data}
+
+\item{cluster_col}{which column in the DE gene result that stores the
+cluster names}
+
+\item{feature_col}{which column in the DE gene result that stores the gene
+names}
+
+\item{AP}{aesthetic parameters}
 }
 \description{
 Plot the contribution of genes to each PCs

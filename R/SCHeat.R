@@ -67,7 +67,6 @@ return_row_HA_ob <- function (df_list, col_list, vert_anna_param, show_legend=T)
 #'
 #' @param xx a numerical matrix or dataframe
 #' @importFrom magrittr %>%
-#' @export
 scaling <- function (xx, row_scale, column_scale){
         xx <- as.matrix ( xx)
         if (row_scale){ xx %>% t() %>% scale () %>% t() -> xx }
@@ -87,7 +86,6 @@ scaling <- function (xx, row_scale, column_scale){
 #'
 #' @importFrom stats quantile
 #' @importFrom circlize colorRamp2
-#' @export
 determine_color_gradient <- function (xx, quantile_val=0., center_scale=T,
                                       AP=NULL){
         AP <- return_aes_param (AP)
@@ -139,7 +137,8 @@ make_anno_legend <- function (anna_param, legend_bar_title, color, name=NA){
 }
 
 make_multi_anno_legend <- function (anna_param, anno_df, color_map_list, anno_names, index){
-        make_anno_legend (anna_param, levels (anno_df [, index] ),  color_map_list[[index]], anno_names[index])
+        make_anno_legend (anna_param, levels (anno_df [, index] ),  
+                          color_map_list[[index]], anno_names[index])
 }
 
 #' Heatmap for Seurat object
@@ -218,6 +217,8 @@ make_multi_anno_legend <- function (anna_param, anno_df, color_map_list, anno_na
 #' @param main_height height of the heatmap in cm
 #' @param grid_height legend grid height, increase this value if the spacing
 #' between legend labels become too narrow
+#' @param heat_grid_height grid height for the color gradient legend. If NULL,
+#' it is the same as `grid_height`
 #' @param automatic whether the default legend generation process in
 #' ComplexHeatmap is to be used. If not, all legends will be aligned vertically
 #' and only be arranged in separate columns if the total length exceeds the
@@ -265,6 +266,7 @@ seurat_heat <- function (x, group.by, color_row=NULL,
                          group_order=NULL, 
                          main_width=NULL, main_height=NULL,
                          grid_height=8,
+                         heat_grid_height=NULL,
                          automatic=T,
                          ...){
 
@@ -300,11 +302,14 @@ seurat_heat <- function (x, group.by, color_row=NULL,
         color_row <- color_row [unique_index]
         if (is.null (names (color_row )) ){
                 names (color_row) <- rep ('NA', length (color_row)) 
-                left_HA <- F
         }
         color_row_names <- names (color_row)
         color_row_names [is.na (color_row_names)] <- 'NA'
         color_row_names <- partial_relevel (color_row_names, row_reorder_levels)
+        if (mean (color_row_names == 'NA') == 1){
+                color_row_names <- rep ('no values', length(color_row_names))
+                left_HA <- F
+        }
 
         # order vectors
         if (reorder_column){
@@ -390,6 +395,8 @@ seurat_heat <- function (x, group.by, color_row=NULL,
                         main_legend_param <- append (anna_param, list (at=break_points) )
                 }else{main_legend_param <- anna_param}
         }
+        if (is.null(heat_grid_height)){heat_grid_height <- grid_height}
+        main_legend_param$grid_height <- unit (heat_grid_height, 'mm')
 
         if (!top_HA){hori_bars <- NULL}
         if (!left_HA){vert_bars <- NULL}
@@ -415,6 +422,7 @@ seurat_heat <- function (x, group.by, color_row=NULL,
                  column_title_rot=column_rotation,
                  row_title_gp = gpar (fontsize=AP$fontsize, fontfamily=AP$gfont_fam),
                  column_title_gp = gpar (fontsize=AP$fontsize, fontfamily=AP$gfont_fam), 
+
                  col=color_scale,
                  width = main_width, height = main_height,
                  name=heat_name,

@@ -18,7 +18,8 @@ load_cell_cycle_genes <- function (){
         gene_list <- list ()
         for (i in 1:ncol(cell_cycle)){
                 gene_list [[i]] <- as.vector (unique ( cell_cycle[, i] ))
-                names (gene_list [[i]] ) <- rep ( colnames (cell_cycle)[i], length (gene_list[[i]]) )
+                names (gene_list [[i]] ) <- rep ( colnames (cell_cycle)[i], 
+                                                 length (gene_list[[i]]) )
         }
         gene_vec <- do.call ( c, gene_list )
         gene_vec <- trimws (gene_vec, which='both') #remove white space
@@ -88,20 +89,25 @@ get_phase_score <- function (x, gene_vec = NULL, norm_factor=F, norm_column=F, n
 #' Make a heatmap for phase score
 #'
 #' @param x a matrix containing the phase scores
+#' @param seurat_ob a seurat object that provides the metadata
+#' @param group.by which feature to plot the row color bar for the heatmap
 #' @export
-make_cycle_heat <- function (x, seurat_ob, feature='revised', AP=NULL){
+make_cycle_heat <- function (x, seurat_ob, group.by=NULL, AP=NULL, ...){
         cycle_names <- factor ( colnames (x), levels=get_cycle_order() )
         print (cycle_names)
         x_seurat <- Seurat::CreateSeuratObject (x, meta.data=data.frame (
                         cell_cycle=cycle_names, row.names=colnames (x)) )
         cell_vec <- rownames (x_seurat)
-        names (cell_vec) <- seurat_ob@meta.data [match (rownames (x), colnames (seurat_ob)), feature]
+        if (!is.null (group.by)){
+                names (cell_vec) <- seurat_ob@meta.data [match (rownames (x), 
+                                                colnames (seurat_ob)), group.by]
+        }
         seurat_heat (x_seurat, color_row=cell_vec, group.by='cell_cycle',
-                         slot_data='counts', show_row_names=F, cluster_columns=F,
-                         row_scale=F, cluster_rows=T, heat_name = 'phase score', 
-                         column_legend_labels = 'cell cycle',
-                         row_legend_labels = 'cell type',
-                         column_reorder_levels=list (get_cycle_order()), AP=AP)
+                     slot_data='counts', show_row_names=F, cluster_columns=F,
+                     row_scale=F, cluster_rows=T, heat_name = 'phase score', 
+                     column_legend_labels = 'cell cycle',
+                     row_legend_labels = 'cell type', center_scale=T,
+                     column_reorder_levels=list (get_cycle_order()), AP=AP, ...)
 }
 
 #' Correlation of phase score with PC
@@ -126,18 +132,21 @@ phase_PC_plot <- function (ans, x, corr_feature, DR='pca', num_dim=1, AP=NULL){
                 tibble::add_column (PC1=pca [, num_dim]) %>%
                 tidyr::gather ('cycle_phase','phase_score', -Type, -PC1) %>%
                 dplyr::mutate (cycle_phase = factor (cycle_phase, levels=c(
-                                        'M', 'M.G1', 'G1.S', 'S', 'G2.M') ) ) %>%
-                ggplot2::ggplot (aes_string (x='PC1', y='phase_score')) +
-                        ggpubr::stat_cor(label.x.npc='left') +
-                        ggplot2::geom_point (aes (fill=Type),
-                                             color=AP$point_edge_color,
-                                             shape=AP$normal_shape,
-                                             size=AP$pointsize) +
-                        ggplot2::geom_smooth (method='lm') +
-                        ggplot2::xlab (colnames (pca)[num_dim] )+
-                        ggplot2::facet_wrap (~cycle_phase)+ ggplot2::labs (fill='')
-                        theme_TB ('dotplot', feature_vec=metadata [, corr_feature], aes_param=AP, 
-                                  rotation=0, color_fill=T)
+                                        'M', 'M.G1', 'G1.S', 'S', 'G2.M') ) ) -> plot_data
+        ggplot2::ggplot (plot_data, aes_string (x='PC1', y='phase_score')) +
+                ggplot2::geom_point (aes (fill=Type),
+                                     color=AP$point_edge_color,
+                                     shape=AP$normal_shape,
+                                     size=AP$pointsize) +
+                ggplot2::geom_smooth (method='lm') +
+                ggpubr::stat_cor(aes(label= ..rr.label..),
+                                 label.x.npc='left',
+                                 size=AP$point_fontsize) +
+                ggplot2::xlab (colnames (pca)[num_dim] )+
+                ggplot2::facet_wrap (~cycle_phase)+ ggplot2::labs (fill='')+
+                theme_TB ('dotplot', feature_vec=metadata [, corr_feature], 
+                          aes_param=AP, rotation=0, color_fill=T)+
+                custom_tick (plot_data$phase_score)
 
 }
 
@@ -146,7 +155,8 @@ phase_PC_plot <- function (ans, x, corr_feature, DR='pca', num_dim=1, AP=NULL){
 #' @description same usage as `phase_PC_plot`
 #' @importFrom ggplot2 guide_legend aes
 #' @export
-phase_density_plot <- function (ans, x, corr_feature, select_phase=NULL, num_row=2, AP=NULL){
+phase_density_plot <- function (ans, x, corr_feature, select_phase=NULL,
+                                num_row=2, AP=NULL){
         AP <- return_aes_param (AP)
         metadata <- x@meta.data [match (rownames (ans), colnames (x) ), ]
         if (is.null (select_phase)){select_phase <- colnames (ans) }
@@ -154,14 +164,16 @@ phase_density_plot <- function (ans, x, corr_feature, select_phase=NULL, num_row
                 tibble::add_column (Type=metadata [, corr_feature]) %>%
                 tidyr::gather ('cycle_phase','phase_score', -Type) %>%
                 dplyr::filter (cycle_phase %in% select_phase) %>%
-                dplyr::mutate (cycle_phase = factor (cycle_phase, levels = get_cycle_order()) ) %>%
-                ggplot2::ggplot ( aes (x=phase_score, y=..density.., fill=Type)) +
+                dplyr::mutate (cycle_phase = factor (cycle_phase, levels = 
+                                        get_cycle_order()) ) -> plot_data
+        ggplot2::ggplot (plot_data, aes (x=phase_score, y=..density.., fill=Type)) +
                 ggplot2::geom_density (alpha=AP$ridge_alpha)+
-                ggplot2::theme_minimal () + labs (fill='')
+                ggplot2::theme_minimal () + ggplot2::labs (fill='')+
                 ggplot2::facet_wrap (~cycle_phase, nrow=num_row) + 
                 theme_TB ('dotplot', feature_vec = metadata[, corr_feature],
                           color_fill=T, rotation=0, AP=AP)+
-                ggplot2::guides(fill = guide_legend(override.aes = list(alpha = 1, color=AP$point_edge_color))) 
+                ggplot2::guides(fill = guide_legend(override.aes = list(alpha = 1, 
+                                                        color=AP$point_edge_color))) 
 }
 
 #' Plot cycle score over pseudotime
@@ -184,13 +196,16 @@ cycle_over_time <- function (plot_data, color_by, time_col,sel_phase=c('M', 'S')
                              num_col=1, extend_max=0.4, AP=NULL){
         AP <- return_aes_param (AP)
         plot_data %>% dplyr::select ( all_of ( c ( sel_phase, color_by, time_col )  ) ) %>%
-                tidyr::gather ('phase', 'score', -!!as.symbol (color_by), -!!as.symbol (time_col)) -> plot_data
+                tidyr::gather ('phase', 'score', -!!as.symbol (color_by), 
+                               -!!as.symbol (time_col)) -> plot_data
         ggplot2::ggplot (plot_data, aes_string (x=time_col, y= 'score')) + 
-                ggpubr::stat_cor(aes (label= ..rr.label..), label.x.npc='center', size=AP$point_fontsize) +
                 ggplot2::geom_point (aes_string (fill=color_by), shape=21, size=AP$pointsize, 
                                      color=AP$point_edge_color) +
+                ggpubr::stat_cor(aes (label= ..rr.label..), label.x.npc='center', 
+                                 size=AP$point_fontsize) +
                 ggplot2::facet_wrap (~phase, ncol=num_col) +ggplot2::labs (fill='')+
-                custom_tick (plot_data$score) + custom_scale (plot_data [, time_col], 'x', extend_ratio_max=extend_max) +
+                custom_tick (plot_data$score) + 
+                custom_scale (plot_data [, time_col], 'x', extend_ratio_max=extend_max) +
                 theme_TB ('dotplot', feature_vec = plot_data [, color_by],
                           color_fill=T, rotation=0, aes_param=AP)
 }

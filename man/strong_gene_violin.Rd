@@ -10,7 +10,7 @@ strong_gene_violin(
   dim_num = 1,
   DR = "pca",
   assay = "RNA",
-  data_slot = "data"
+  slot_data = "data"
 )
 }
 \description{

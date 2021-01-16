@@ -134,7 +134,7 @@ seurat_heat_highlight <- function (x, select_cells, color_row, group.by,
                                    seurat_heat_params = list ()){
 
         AP <- return_aes_param(AP)
-        # standardise color scales across heatmap
+        print ('standardise color scales across heatmap')
         if (row_scale){
                 x <- x [color_row, ]
                 exp_mat <- Seurat::GetAssayData (x, slot=slot_data, assay=assay)
@@ -157,13 +157,14 @@ seurat_heat_highlight <- function (x, select_cells, color_row, group.by,
         }else{split_color <- NULL}
 
 
-        # heatmap parameters
+        print ('specific heatmap parameters')
         if (length (seurat_heat_params) > 0){
                 all_params <- rep_param_list (seurat_heat_params, 2)
                 sep_list <- sep_param_list (all_params)
         }else{ sep_list <- list (seurat_heat_params, seurat_heat_params)
         }
-        # common parameters
+
+        print ('common parameters')
         common_list <- list (color_row=color_row, group.by=group.by,
                              assay=assay, slot_data=slot_data,
                              provided_color=split_color,

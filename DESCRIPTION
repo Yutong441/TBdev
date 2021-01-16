@@ -44,6 +44,7 @@ Imports:
         destiny,
         DeconRNASeq,
         WGCNA,
+        org.Hs.eg.db,
         GOSemSim,
         clusterProfiler,
         DOSE,
@@ -51,13 +52,17 @@ Imports:
         KEGGREST,
         AnnotationDbi,
 Suggests:
-        edgeR,
-        SingeCellExperiment,
-        network,
-        ggnet2,
-        mclust,
-        parallelDist,
-        ppcor,
-        coop,
+    edgeR,
+    SingeCellExperiment,
+    network,
+    ggnet2,
+    mclust,
+    parallelDist,
+    ppcor,
+    coop,
+    Matrix,
+    knitr,
+    rmarkdown
 Depends: 
     R (>= 2.10)
+VignetteBuilder: knitr

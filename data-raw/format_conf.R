@@ -30,6 +30,7 @@ format_conf <- list (
         heatmap_color = c("#00B0F0", "#FFF2F1", "#FF0000"), #blue, white, red
         color_vec = color_vec,
         date_color_vec = c(in_vitro='#FF0000'),
+        palette = 'viridis', # for `ggplot2::scale_color_continuous`
 
         remove_keys = remove_keys,
         # arrow settings

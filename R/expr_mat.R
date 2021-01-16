@@ -27,17 +27,6 @@ date_to_gene <- function (x){
         return (make.unique (as.character(x)))
 }
 
-DE_cell <-  function (dataset, markers, cell_type, save_dir){
-        celltype_table <- table (dataset$Type, factor(Seurat::Idents(dataset)))
-        sim_table <- apply (celltype_table, 2, function(x){rownames(celltype_table)[which(x==max(x)) ]})
-
-        feature_plot <- markers [markers$cluster == as.numeric(names(which(sim_table==cell_type))), ]
-        feature_plot %>% dplyr::top_n (n=8, wt=avg_logFC) %>% dplyr::select (gene) -> feature_plot
-        num_col <- length(feature_plot$gene)%/%3
-        Seurat::VlnPlot(dataset, features = feature_plot$gene , group.by='Type', ncol = num_col)
-        ggsave (paste (save_dir, paste ('DE_gene_', cell_type, '.png', sep=''), sep='/'), width= num_col*10, height=9)
-}
-
 #' Remove ribosomal genes from single cell dataset
 #'
 #' @param x can be S3 or S4 class
@@ -71,8 +60,6 @@ extract_exp_mat <- function (x, assay=NULL, slots='data'){
 }
 
 #' Print the dimension of a Seurat object
-#' 
-#' @export
 print_dim <- function (x){
         print (paste ('a dataset of', dim (x)[2], 'cells and', dim (x)[1], 'genes'))
 }

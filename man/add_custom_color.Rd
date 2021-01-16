@@ -4,13 +4,16 @@
 \alias{add_custom_color}
 \title{Customise the colors that correspond to particular features}
 \usage{
-add_custom_color(feature_vec, aes_param, color_fill = F)
+add_custom_color(feature_vec, aes_param, color_fill = T)
 }
 \arguments{
 \item{feature_vec}{a vector of features for which colors will be assigned}
 
-\item{color_fill}{whether scale_color_* or scale_fill_* is used}
+\item{color_fill}{whether \verb{scale_color_*} or \verb{scale_fill_*} is used}
+}
+\value{
+a \verb{scale_*} object
 }
 \description{
-Customise the colors that correspond to particular features
+This function works for either continuous or discrete scale
 }

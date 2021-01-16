@@ -4,7 +4,7 @@
 \alias{merge_seurat}
 \title{Merge Seurat object}
 \usage{
-merge_seurat(list_obj, assays, slot_name = "data")
+merge_seurat(list_obj, assays, slot_data = "data")
 }
 \arguments{
 \item{list_obj}{a list of Seurat objects}

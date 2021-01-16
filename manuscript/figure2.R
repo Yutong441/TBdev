@@ -70,6 +70,7 @@ d <- godata(org.Hs.eg.db, ont="BP")
 peak_plot$logFC <- peak_plot$val
 thres <- quantile (peak_plot$logFC, 0.7)
 kk <- compare_cluster_enrichment (peak_plot, d, enrich_area='KEGG', log_FC_thres=thres)
+set.seed (100)
 display_cluster_enrichment (kk, show_graph='emap', feature_vec=
                                      peak_plot$group, show_num=30) + labs (fill='stage')
 one_term <- gene_per_term (kk, 'MAPK', return_val=T)

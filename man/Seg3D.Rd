@@ -16,6 +16,11 @@ Seg3D(
   ...
 )
 }
+\arguments{
+\item{theta}{The azimuthal direction in degrees.}
+
+\item{phi}{The colatitude in degrees.}
+}
 \description{
 Extention to \code{Ax3D} with arrow heads
 }

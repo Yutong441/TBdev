@@ -4,7 +4,23 @@
 \alias{clean_metadata}
 \title{Clean metadata of Seurat objects}
 \usage{
-clean_metadata(x)
+clean_metadata(
+  x,
+  AP = NULL,
+  cell_type_col = c("revised", "Type", "assigned_cluster", "broad_type"),
+  date_col = "date"
+)
+}
+\arguments{
+\item{AP}{aesthetic parameters. The key one is cell_order, which contains
+sorting cell order}
+
+\item{cell_type_col}{on which columns should cell type sorting occur}
+
+\item{date_col}{which column contains date information}
+}
+\value{
+a Seurat object
 }
 \description{
 The cell type labels are converted into levelled factors. 'D'

@@ -10,7 +10,7 @@ dim_plot_cell_similarity(
   group.by,
   DR = "pca",
   dims = c(1, 2),
-  aes_param = NULL
+  AP = NULL
 )
 }
 \arguments{

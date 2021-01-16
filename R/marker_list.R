@@ -37,7 +37,9 @@ load_correct_label <- function (metadata, root_dir, file_name, sheetName,
 
 #' Standardise cell labels
 #'
-#' @param x a vector of cell names
+#' @param cellname a vector of cell names
+#' @param conversion the dataframe to convert cell names
+#' @return a character vector based on `cellname`
 #' @export
 standardise_name <- function (cellname, conversion=NULL){
         # in case a factor vector is used
@@ -72,6 +74,7 @@ fill_na_labels <- function (x, reference, fill_label){
 #' @param mixed_sorting if set TRUE, the `mixedsort` function from gtools package
 #' will be used and will override the `reorder_levels` argument
 #' @param leading_char ignore the leading character when releveling
+#' @return a factor vector
 #' @importFrom magrittr %>%
 #' @importFrom gtools mixedsort
 #' @examples
@@ -122,7 +125,6 @@ partial_relevel <- function (x, reorder_levels=NULL, mixed_sorting=F,
 #'
 #' @param x string B
 #' @param append_str string A
-#' @export
 append_if_numeric <- function (x, append_str='D'){
         if (is.na (as.numeric (x))){ return (x) 
         }else{return (paste (append_str, x, sep='') ) }
@@ -132,14 +134,20 @@ append_if_numeric <- function (x, append_str='D'){
 #'
 #' @description The cell type labels are converted into levelled factors. 'D'
 #' is appended before data labels.
+#' @param AP aesthetic parameters. The key one is cell_order, which contains
+#' sorting cell order
+#' @param cell_type_col on which columns should cell type sorting occur
+#' @param date_col which column contains date information
+#' @return a Seurat object
 #' @export
-clean_metadata <- function (x){
-        AP <- return_aes_param (NULL)
+clean_metadata <- function (x, AP=NULL, cell_type_col= c('revised', 'Type', 
+                                'assigned_cluster', 'broad_type'), date_col='date'){
+        AP <- return_aes_param (AP)
         x$Type <- standardise_name (x$Type)
         if (! ('revised' %in% colnames (x@meta.data))){x$revised <- x$Type}
         na_field <- x$revised %in% c('NA', NA)
         x$revised [na_field] <- x$Type [na_field]
-        for (one_col in c('revised', 'Type', 'assigned_cluster', 'broad_type')){
+        for (one_col in cell_type_col){
                 if (one_col %in% colnames (x@meta.data) ){
                         print (paste ('releveling', one_col))
                         x@meta.data[is.na(x@meta.data [, one_col]), one_col] <- 'unknown'
@@ -149,7 +157,7 @@ clean_metadata <- function (x){
         }
 
         # merge date and cell type label
-        if ('date' %in% colnames (x@meta.data)){
+        if (date_col %in% colnames (x@meta.data)){
                 # convert days into numeric figures
                 x$date <- trimws(gsub ('^D', '', as.character (x$date)))
 
@@ -165,6 +173,9 @@ clean_metadata <- function (x){
         return (x)
 }
 
+#' Incorporate Trophoblast stem cells into Seurat object
+#'
+#' @description a specific function unlikely to be helpful
 #' @export
 incorporate_TSC <- function (x, analyse_by='new_cluster2'){
         TSC_cells <- x$revised %in% c('hTSC_OKAE', 'hTSC_TURCO') 
@@ -172,13 +183,12 @@ incorporate_TSC <- function (x, analyse_by='new_cluster2'){
         TSC_data$select <- 'select'
         TSC_data@meta.data [, analyse_by] <- TSC_data$revised
         x$select <- 'not select'
-        merge_x <- Seurat::merge (x, TSC_data)
+        merge_x <- merge_seurat (list (x, TSC_data), assays='RNA')
         return (merge_x [, merge_x@meta.data [, analyse_by] != 'hTSC'])
 }
 
 # ----------Cells----------
 
-#' @export
 select_lineage <- function (x, feature, celltypes, discard=F){
         if (discard){return (x[, ! (x@meta.data [, feature] %in% celltypes) ])
         }else{return (x[, x@meta.data [, feature] %in% celltypes])}

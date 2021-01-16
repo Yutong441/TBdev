@@ -10,6 +10,9 @@ get_arrow(AP)
 \item{AP}{aesthetic parameter determining arrow types, relevant ones are
 'arrow_angle', 'arrow_length', 'arrow_type'}
 }
+\value{
+a ggplot arrow object
+}
 \description{
 Obtain arrow object
 }

@@ -27,23 +27,31 @@ RunDiffusion <- function (x, reduction='pca', dims=1:10){
 #' Run DR
 #'
 #' @param assay assay to use for dimensionality reduction
-#' @param pca_features run PCA on a selected list of genes, should be a
-#' character vector
 #' @param select_cells run PCA on a selected population of cells;
 #' should be a boolean vector
-#' @param run_diff_map whether to run diffusion map using the package
-#' destiny. Depending on the dataset, this may take several minutes
+#' @param feature_num how many variably expressed genes to compute
+#' @param find_var_features whether to run variable gene analysis
 #' @param save_mem for large matrices whether the entire matrix should be
 #' stored, or simply storing the `VariableFeatures`
 #' @param normalize whether to normalize the data
-#' @param scale the variable features only to reduce memory
+#' @param var_scale the variable features only to reduce memory
+#' @param pca_features run PCA on a selected list of genes, should be a
+#' character vector
+#' @param run_diff_map whether to run diffusion map using the package
+#' destiny. Depending on the dataset, this may take several minutes
+#' @param run_umap whether to run umap
 #' @param cluster whether to perform clustering as well
+#' @return a Seurat object
 #' @importFrom Seurat VariableFeatures
 #' @export
-run_dim_red <- function (x, assay=NULL, pca_features=NULL, select_cells=NULL,
-                         feature_num=2000, run_diff_map=FALSE, save_mem=NULL, 
-                         normalize=FALSE, run_umap=TRUE, var_scale=FALSE,
-                         cluster=TRUE, find_var_features=FALSE){
+run_dim_red <- function (x, assay=NULL, 
+                         select_cells=NULL,
+                         feature_num=2000, find_var_features=FALSE, 
+                         save_mem=NULL, 
+                         normalize=FALSE, 
+                         var_scale=FALSE, pca_features=NULL, 
+                         run_diff_map=FALSE, run_umap=TRUE, 
+                         cluster=TRUE){
 
         if (normalize){x <- Seurat::NormalizeData(object = x, normalization.method =
                          "LogNormalize", scale.factor = 10000)
@@ -89,7 +97,6 @@ run_dim_red <- function (x, assay=NULL, pca_features=NULL, select_cells=NULL,
 #' @param select_genes PCA on a subset of genes, default is variable
 #' genes
 #' @importFrom Seurat VariableFeatures
-#' @export
 selected_cell_PCA <- function (x, select_cells=NULL, assay=NULL, select_genes=NULL){
         # initialise default parameters
         if (is.null(assay)){assay <- Seurat::DefaultAssay (x) }
@@ -135,20 +142,18 @@ label_order <- function (x){
 #' function
 #'
 #' @param input_data a Seurat object
-#' @param by_group a 2-element vector, parsed to the `group.by` argument of
+#' @param group.by a 2-element vector, parsed to the `group.by` argument of
 #' `DimPlot` in Seurat
-#' @param by_shape a 2-element vector, parsed to the `shape.by` argument
 #' @param plot_3D whether to plot in 3D
 #' @param DR the type of dimensionality reduction method
 #' @param select_cells cells to be shown in the plot
 #' @param dims two axes of the reduced dimensional space
 #' @param num_col how many columns the subplots are arranged
+#' @return a ggplot or list of ggplot objects
 #' @export
-plot_dim_red <- function (input_data, assay='RNA', by_group = c('paper', 'Type'), 
-                          by_shape= c(NULL, NULL), DR='pca',
-                          select_cells=NULL, dims=c(1,2), all_labels=TRUE,
-                          cells_highlight=NULL, return_sep=F, num_col=NULL,
-                          AP=NULL,...){
+plot_dim_red <- function (input_data, group.by, DR='pca', select_cells=NULL,
+                          dims=c(1,2), return_sep=F,
+                          num_col=NULL, AP=NULL,...){
         if (is.null(select_cells)){
                 plot_data <- input_data
         }else{plot_data <- input_data [, select_cells]}
@@ -164,12 +169,12 @@ plot_dim_red <- function (input_data, assay='RNA', by_group = c('paper', 'Type')
                 }
         }
         plots <- list()
-        for (i in 1:length(by_group)){
+        for (i in 1:length(group.by)){
                 if (!plot_3D){
-                        plots[[i]] <- gg_DimPlot (plot_data, feature=by_group[i], DR=DR, 
+                        plots[[i]] <- gg_DimPlot (plot_data, feature=group.by[i], DR=DR, 
                                                      dims=dims, AP=AP, ...)
                 }else{
-                        plots [[i]] <- DimPlot_3D (input_data, by_group[i], DR=DR, AP=AP,...)
+                        plots [[i]] <- DimPlot_3D (input_data, group.by[i], DR=DR, AP=AP,...)
         }}
         if (!return_sep){
                 return (ggpubr::ggarrange (plotlist=plots, ncol=num_col) )
@@ -179,16 +184,25 @@ plot_dim_red <- function (input_data, assay='RNA', by_group = c('paper', 'Type')
 #' Plot the contribution of genes to each PCs
 #'
 #' @param x a Seurat object
-#' @param dims which pcs to plot
-#' @param color_by which feature of genes to color, default is the cell
+#' @param group.by which feature of genes to color, default is the cell
 #' type in which the genes are differentially expressed
+#' @param dims which pcs to plot
 #' @param show_markers the genes to shown in the final plot. If `NULL`, all genes
 #' will be shown. If `TF`, a list of transcriptional factors will be shown.
 #' Alternatively, the argument accepts a vector of genes.
+#' @param directory where the DE gene results are stored. If NULL, the cells
+#' will not be coloured.
+#' @param label the label of the DE gene data
+#' @param cluster_col which column in the DE gene result that stores the
+#' cluster names
+#' @param feature_col which column in the DE gene result that stores the gene
+#' names
+#' @param AP aesthetic parameters
 #' @importFrom ggplot2 aes aes_string
+#' @importFrom magrittr %>%
 #' @export
-plot_gene_PC <- function (x, show_markers=NULL, dims=c(1,2), color_by='Type',
-                          directory=NULL, label='all', DR='pca', skip_char=0,
+plot_gene_PC <- function (x, group.by=NULL, show_markers=NULL, dims=c(1,2),
+                          directory=NULL, label='all', DR='pca',
                           color_markers=NULL, DE_rank='logFC',
                           cluster_col='group', feature_col='feature', AP=NULL){
         AP <- return_aes_param (AP)
@@ -196,9 +210,9 @@ plot_gene_PC <- function (x, show_markers=NULL, dims=c(1,2), color_by='Type',
         plot_gene <- x@reductions[[DR]]@feature.loadings 
 
         # run DE gene analysis
-        if (!is.null (directory) & !is.null (color_by)){
+        if (!is.null (directory) & !is.null (group.by)){
                 print ('finding marker genes')
-                markers <- find_DE_genes (x, directory, feature=color_by, label=label)
+                markers <- find_DE_genes (x, directory, group.by=group.by, label=label)
                 markers %>% dplyr::arrange (desc (!!as.symbol (DE_rank))) -> markers
                 markers <- markers [match (rownames (plot_gene), markers [, feature_col]), ]
         }else{markers <- data.frame (cluster=rep (0, nrow(plot_gene) ))}
@@ -210,12 +224,12 @@ plot_gene_PC <- function (x, show_markers=NULL, dims=c(1,2), color_by='Type',
                 marker_list <- TF[,1]
         }else{marker_list <- show_markers}
 
-        markers [, cluster_col ] <- partial_relevel (markers [, cluster_col], 
-                                                        AP$cell_order, skip_char=skip_char)
-        print (table (rownames (plot_gene) %in% marker_list))
+        markers [, cluster_col ] <- partial_relevel (markers [, cluster_col],
+                                                     AP$cell_order)
 
         if (is.null (color_markers)){  color_cluster <- markers [, cluster_col]
-        }else{ color_cluster <- names (color_markers) [  match (rownames (plot_gene), color_markers) ] }
+        }else{ color_cluster <- names (color_markers) [  match (
+                                        rownames (plot_gene), color_markers) ] }
 
         print ('plotting')
         plot_gene %>% as.data.frame () %>%
@@ -224,8 +238,13 @@ plot_gene_PC <- function (x, show_markers=NULL, dims=c(1,2), color_by='Type',
                 tibble::add_column (gene = rownames (plot_gene)) %>%
                 tibble::add_column (cluster = color_cluster) %>%
                 dplyr::filter (gene %in% marker_list) -> plot_data
+        if (!is.null(group.by)){
+                plot_data %>% dplyr::filter (cluster %in% unique (x@meta.data[, group.by])) -> plot_data
+        }
 
         ggplot2::ggplot (plot_data, aes_string(plot_PC[1], plot_PC[2]))+
-                ggplot2::geom_text (aes(label=gene, color=cluster), size=3, family=AP$font_fam) -> plot_ob
-        return (plot_ob +theme_TB ('no_arrow', plot_ob=plot_ob, feature_vec=plot_data$cluster, aes_param=AP))
+                ggplot2::geom_text (aes(label=gene, color=cluster), size=AP$point_fontsize, 
+                                    family=AP$font_fam) -> plot_ob
+        return (plot_ob +theme_TB ('dim_red', plot_ob=plot_ob, feature_vec=plot_data$cluster, 
+                                   aes_param=AP))
 }

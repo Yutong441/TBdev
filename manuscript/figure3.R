@@ -17,7 +17,7 @@ TSC_cells <- all_data$revised %in% c('hTSC_OKAE', 'hTSC_TURCO')
 
 data (CT)
 highlight <- all_data$assigned_cluster %in% CT$in_vitro_cells
-p1 <- plot_dim_red (all_data, by_group = c('assigned_cluster'), DR='pca' , return_sep=F,
+p1 <- plot_dim_red (all_data, group.by= c('assigned_cluster'), DR='pca' , return_sep=F,
                     size_highlight=highlight, highlight_font=2, dims=c(1,2), nudge_ratio=0.2)
 p1
 # ----------figure 3B ----------

@@ -9,6 +9,8 @@
 #' @param compare_types to which cell types or cell features are those in
 #' `select_types` compared with. If NULL, it would be every types except
 #' `select_types`
+#' @return cell similarity matrix of N X M, where N is the sample and M
+#' is the cell type to compare 
 #' @export
 get_cell_similarity <- function (x, group.by, select_types, compare_types=NULL,
                                  slot_name='data', assay_name='RNA'){
@@ -61,10 +63,9 @@ get_cell_similarity <- function (x, group.by, select_types, compare_types=NULL,
 #' @importFrom ggplot2 aes 
 #' @export
 plot_cell_similarity <- function (x, cell_sim, group.by, DR='pca', dims=1,
-                                  aes_param=NULL){
-        aes_param <- return_aes_param (aes_param)
+                                  AP=NULL){
+        AP <- return_aes_param (AP)
         x_select <- x[, match (rownames (cell_sim), colnames (x))]
-        print (dim (x_select))
         ordering <- x_select@reductions[[DR]]@cell.embeddings[,dims]
         x_label <- colnames (x_select@reductions[[DR]]@cell.embeddings)[dims]
 
@@ -73,16 +74,18 @@ plot_cell_similarity <- function (x, cell_sim, group.by, DR='pca', dims=1,
                 tibble::add_column (feature = x_select@meta.data [, group.by]) %>%
                 tidyr::gather ('Type', 'similarity', -x, -feature) %>%
                 dplyr::mutate (Type = gsub ('^X', '', Type) ) %>%
-                dplyr::mutate (Type = partial_relevel (Type, aes_param$cell_order) ) -> plot_data
+                dplyr::mutate (Type = partial_relevel (Type, AP$cell_order) ) -> plot_data
 
-        plot_ob <- ggplot2::ggplot (plot_data, aes (x=x, y=similarity)) +
-                        ggplot2::geom_point (aes (group=feature, color=feature) ) +
-                        ggplot2::facet_wrap (~Type)+
-                        ggplot2::xlab (x_label) +
-                        theme_TB ('dotplot' , feature_vec=plot_data$feature,
-                                  rotation=0, aes_param=aes_param) 
-        return (plot_ob)
-
+        ggplot2::ggplot (plot_data, aes (x=x, y=similarity)) +
+                ggplot2::geom_point (aes (group=feature, fill=feature),
+                                     color=AP$point_edge_color,
+                                     size=AP$pointsize, shape=AP$normal_shape) +
+                ggplot2::facet_wrap (~Type)+
+                ggplot2::xlab (x_label) +
+                theme_TB ('dotplot' , feature_vec=plot_data$feature,
+                          rotation=0, aes_param=AP, color_fill=T) +
+                custom_tick (plot_data$similarity)+
+                custom_tick (plot_data$x, x_y='x')
 }
 
 #' Plot cell-cell similarity in a dimensionality reduction plot
@@ -97,7 +100,7 @@ plot_cell_similarity <- function (x, cell_sim, group.by, DR='pca', dims=1,
 #' @importFrom ggplot2 aes aes_string
 #' @export
 dim_plot_cell_similarity  <- function (x, cell_sim, group.by, DR='pca',
-                                       dims=c(1,2), aes_param=NULL){
+                                       dims=c(1,2), AP=NULL){
         x_select <- x[,match (rownames (cell_sim), colnames (x))]
         dim_red <- x_select@reductions[[DR]]@cell.embeddings [, dims]
         x_axis <- colnames (dim_red)[1]
@@ -109,6 +112,6 @@ dim_plot_cell_similarity  <- function (x, cell_sim, group.by, DR='pca',
                         ggplot2::geom_point (aes (color=similarity)) +
                         ggplot2::facet_wrap (~Type, ncol = num_col ) -> plot_ob
         return (plot_ob + theme_TB ('dim_red', plot_ob=plot_ob, 
-                                    nudge_ratio=1.4, aes_param=aes_param)+ 
+                                    nudge_ratio=0.2, aes_param=AP)+ 
                 ggplot2::scale_color_continuous (type='viridis') )
 }

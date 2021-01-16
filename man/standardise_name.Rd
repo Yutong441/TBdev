@@ -7,7 +7,12 @@
 standardise_name(cellname, conversion = NULL)
 }
 \arguments{
-\item{x}{a vector of cell names}
+\item{cellname}{a vector of cell names}
+
+\item{conversion}{the dataframe to convert cell names}
+}
+\value{
+a character vector based on \code{cellname}
 }
 \description{
 Standardise cell labels

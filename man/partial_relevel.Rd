@@ -25,6 +25,9 @@ will be used and will override the \code{reorder_levels} argument}
 
 \item{leading_char}{ignore the leading character when releveling}
 }
+\value{
+a factor vector
+}
 \description{
 Turn a vector into a factor vector. The order of the vector is
 not changed, only the factor level

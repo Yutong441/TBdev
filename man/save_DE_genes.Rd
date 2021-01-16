@@ -7,7 +7,7 @@
 save_DE_genes(
   x,
   save_dir,
-  feature = "revised",
+  group.by = "revised",
   label = "all",
   show_num = 30,
   weight = "logFC",

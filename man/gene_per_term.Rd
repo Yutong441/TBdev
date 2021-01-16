@@ -4,12 +4,20 @@
 \alias{gene_per_term}
 \title{For the results from \code{compareClusterResult} object}
 \usage{
-gene_per_term(xx, term, category_col = "Description", return_val = F)
+gene_per_term(
+  xx,
+  term,
+  organism_db,
+  category_col = "Description",
+  return_val = F
+)
 }
 \arguments{
 \item{xx}{a compareClusterResult object}
 
 \item{term}{a keyword that matches the term of interest}
+
+\item{organism_db}{which organism database, for example, org.Hs.eg.db}
 
 \item{category_col}{which column in x that has the terms}
 

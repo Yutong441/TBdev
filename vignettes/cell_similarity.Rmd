@@ -1,0 +1,95 @@
+---
+title: "Cell Similarity"
+output: html_document
+vignette: >
+  %\VignetteIndexEntry{Cell Similarity}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  warning = FALSE
+)
+```
+
+```{r message = FALSE}
+library (TBdev)
+```
+
+# Load data
+The single cell RNA-seq dataset is located in `data_dir`. The output of this
+analysis will be stored in `save_dir` and `sup_save_dir`
+```{r}
+root <- '.'
+data_dir <- paste (root, 'data', sep='/')
+all_data <- get (load (paste (data_dir, 'final_merged_tb.Robj', sep='/') ))
+```
+
+# Correlation
+
+For example, we will quantify the correlation between the transcriptome of in
+vitro cells i.e. human embryonic stem cells (hESC) and human trophoblast stem
+cells (hTSC) with the in vivo cell lines.
+
+```{r}
+select_cells2 <- all_data$date == 'in_vitro'
+select_cells1 <- !select_cells2
+
+# you may choose to run 'partial_corr' or 'distance' to quantify partial
+# correlation and Euclidean distance respectively
+all_cor <- compute_all_cor (all_data, 
+                            method= 'correlation', 
+                            assay='RNA',
+                            select_cells1=select_cells1,
+                            select_cells2=select_cells2
+)
+```
+
+Show the results in heatmap.
+
+```{r, fig.width=5, fig.height=12}
+AP <- list (pointsize=3, legend_point_size=3, fontsize=11, point_fontsize=4,
+            font_fam= 'sans')
+cell_heat (all_cor, all_data@meta.data, 
+           features=c('broad_type', 'broad_type'), #group by features
+           # first one for select_cells1 (rows), second one for
+           # select_cells2 (columns)
+           # below are the parameters to `seurat_heat`
+           row_legend_labels='comparison',
+           center_scale=T,
+           column_scale=T, 
+           row_scale=F,
+           grid_height=4, AP = AP,
+           column_rotation = 90,
+           main_height = 25, main_width=7,
+           automatic =F #make sure all legends lie in the same column
+)
+```
+
+in violin plot
+```{r}
+cell_violin (all_cor, all_data@meta.data, c('broad_type', 'broad_type'), 
+             column_scale=T, num_col=2, AP=AP)
+```
+
+# Quadratic programming
+Use quadratic programming to determine cell-cell similarity
+```{r, message = FALSE}
+library (DeconRNASeq)
+select_types <- c('hTSC_OKAE', 'hTSC_TURCO', 'hESC', 'hESC_YAN')
+compare_types <- c('ICM', 'TB', 'CTB', 'STB', 'EVT')
+cell_sim <- get_cell_similarity (all_data, 
+                                 group.by=c('broad_type', 'broad_type'), 
+                                 # in the order of select_types, compare_types
+                                 select_types= select_types, 
+                                 compare_types=compare_types
+)
+```
+
+```{r}
+plot_cell_similarity (all_data, cell_sim, group.by= 'broad_type', DR='pca',
+                      AP=AP)
+```

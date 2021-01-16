@@ -190,10 +190,6 @@ get_module_score <- function (x, save_path, all_path=NULL, pgenes=NULL, append_m
         if ( file.exists (save_path) ){
                 print ('loading saved module scores')
                 module_scores <- utils::read.csv (save_path, row.names=1)
-                # e.g. PI3K-Akt signaling may be changed to PI3K.Akt, need to
-                # change it back
-                rownames (module_scores) <- gsub ('\\.', '-', rownames (module_scores) )
-                colnames (module_scores) <- gsub ('^X', '', colnames (module_scores))
         }else{
                 if (is.null (pgenes)){
                         pgenes <- list ()
@@ -218,6 +214,10 @@ get_module_score <- function (x, save_path, all_path=NULL, pgenes=NULL, append_m
                 rownames (module_scores) <- gsub ('_[0-9]+$', '', rownames (module_scores))
                 utils::write.csv (module_scores, save_path)
         }
+        # e.g. PI3K-Akt signaling may be changed to PI3K.Akt, need to
+        # change it back
+        rownames (module_scores) <- gsub ('\\.', '-', rownames (module_scores) )
+        colnames (module_scores) <- gsub ('^X', '', colnames (module_scores))
 
         if (!append_meta){return (module_scores)
         }else{

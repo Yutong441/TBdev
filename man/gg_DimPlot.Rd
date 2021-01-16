@@ -11,8 +11,12 @@ gg_DimPlot(
   dims = c(1, 2),
   size_highlight = NULL,
   highlight_font = 4,
-  default_color = F,
   further_repel = T,
+  repel_force = 1,
+  reverse_x = F,
+  reverse_y = F,
+  assay = "RNA",
+  slot_data = "data",
   AP = NULL,
   ...
 )
@@ -27,6 +31,11 @@ which cells to magnify in size}
 
 \item{further_repel}{if TRUE, the labels would be repelled away from the
 data points as much as possible}
+
+\item{reverse_x}{reverse x axis direction. This is because sometimes most of
+the contents are on the left, which would obstruct the arrow axis.}
+
+\item{reverse_y}{similarly reverse y axis direction.}
 
 \item{AP}{a list for \code{custom_color} and \code{theme_TB}}
 }

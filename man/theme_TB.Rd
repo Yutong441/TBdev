@@ -42,6 +42,9 @@ NB: if automated coloring is desired, it is also essential to input plot_ob}
 \item{length_ratio}{the length of the arrows for dim_plot as a percentage of
 the plot size}
 }
+\value{
+a list of ggplot layers that can be concatenated to a ggplot object
+}
 \description{
 Append this function at the end of a ggplot to provide the style in this
 paper

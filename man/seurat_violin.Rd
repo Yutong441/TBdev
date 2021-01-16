@@ -10,9 +10,19 @@ seurat_violin(
   group.by,
   assay = "RNA",
   slot_data = "data",
-  num_col = 3,
+  num_col = NULL,
+  free_xy = "fixed",
   AP = NULL
 )
+}
+\arguments{
+\item{x}{a Seurat object}
+
+\item{features}{genes to plot, which will be split over by facets}
+
+\item{group.by}{by which cell feature}
+
+\item{num_col}{in how many columns the facets are arranged}
 }
 \description{
 Similar to Seurat VlnPlot, with more graphic controls

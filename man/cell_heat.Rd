@@ -4,14 +4,7 @@
 \alias{cell_heat}
 \title{Plot correlation matrix}
 \usage{
-cell_heat(
-  all_cor,
-  metadata,
-  features,
-  column_scale = T,
-  row_scale = F,
-  col_rotation = 0
-)
+cell_heat(all_cor, metadata, features, column_scale = T, row_scale = F, ...)
 }
 \arguments{
 \item{all_cor}{correlation matrix, with both colnames and rownmaes}

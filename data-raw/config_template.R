@@ -19,6 +19,7 @@ format_conf <- list (
         # color settings
         heatmap_color = c("#00B0F0", "#FFF2F1", "#FF0000"), #blue, white, red
         date_color_vec = c(in_vitro='#FF0000'),
+        palette = 'viridis', # for `ggplot2::scale_color_continuous`
 
         # arrow settings
         arrow_angle=30,

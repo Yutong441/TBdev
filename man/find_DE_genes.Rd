@@ -6,10 +6,9 @@
 \usage{
 find_DE_genes(
   x,
-  directory,
-  feature = "seurat_clusters",
+  directory = NULL,
+  group.by = "seurat_clusters",
   filename = NULL,
-  load_data = TRUE,
   label = "all"
 )
 }
@@ -18,9 +17,7 @@ find_DE_genes(
 
 \item{directory}{where to save the computed markers}
 
-\item{feature}{a column in the meta data}
-
-\item{load_data}{whether to load existing marker data}
+\item{group.by}{a column in the meta data to group the cell types}
 }
 \description{
 Find DE genes across a particular feature

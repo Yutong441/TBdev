@@ -4,7 +4,15 @@
 \alias{find_eigengene}
 \title{Find eigengene of WGCNA modules}
 \usage{
-find_eigengene(x, save_dir, cluster_num = "all", select_type = "revised")
+find_eigengene(
+  x,
+  save_dir,
+  cluster_num = "all",
+  select_type = "revised",
+  save_eigen = T,
+  return_eigengene = F,
+  ...
+)
 }
 \arguments{
 \item{x}{a Seurat object}
@@ -15,6 +23,9 @@ find_eigengene(x, save_dir, cluster_num = "all", select_type = "revised")
 entire dataset is involved}
 
 \item{select_type}{where the cluster information is stored.}
+
+\item{...}{other parameters to pass to \code{block_with_parameters} which
+corresponds to \code{WGCNA::blockwiseModules}}
 }
 \description{
 Calculate the WGCNA connectivity matrix, perform hierarchical

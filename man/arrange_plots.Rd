@@ -30,9 +30,7 @@ to check. The exception is data frame.}
 \item{margin_width}{the width of the margin in inches. The default is 0.79in
 (2cm). Same unit in \code{margin_height}, \code{page_width}, \code{page_height}}
 
-\item{plot_width}{the width of each subplot. If one value is supplied, then
-all subplots will have the same width. You may supply a vector each item of
-which corresponds to the width of one subplot across the columns.}
+\item{plot_width}{the width of each subplot.}
 
 \item{plot_height}{same concept as plot_width}
 }

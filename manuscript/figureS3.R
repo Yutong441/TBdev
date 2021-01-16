@@ -1,16 +1,16 @@
 # WGCNA over pseudotime
-root_dir <- '/mnt/c/Users/Yutong/Documents/bioinformatics/reproduction/'
-setwd (paste (root_dir, 'TBdev', sep='/'))
-library (tidyverse)
-library (GOSemSim)
+setwd ('..')
 devtools::load_all()
+library (tidyverse)
+library (org.Hs.eg.db)
+library (GOSemSim)
 
+root_dir <- '/mnt/c/Users/Yutong/Documents/bioinformatics/reproduction/'
 root <- paste (root_dir, 'results/', sep='/')
 merge_dir <- paste (root, 'XLYBPZ_Dylan_dir', sep='/')
 save_dir <- paste (root, 'manuscript/figure3', sep='/')
 sup_save_dir <- paste (root, 'manuscript/figureS3', sep='/')
-
-x <- load (paste (merge_dir, 'final_merged_vivo.Robj', sep='/') )
+x <- load (paste (merge_dir, 'final_merged_tb.Robj', sep='/') )
 all_data <- get (x)
 
 # ----------figure S3A-B: 2-WD ----------
@@ -27,7 +27,6 @@ markers$sign_diver <- sign (markers$logFC)*markers$divergence
 
 show_meta <- all_data@meta.data [!is.na (all_data$MGP_PT) & !all_data$broad_type %in% c('EPI', 'PE') ,]
 markers %>% slice_max (sign_diver, n=9) %>% dplyr::select (feature) %>% deframe() -> DE_genes1
-devtools::load_all()
 p1 <- gene_over_pseudotime (pred_all, exp_mat, DE_genes1, show_meta, color_feature = 'broad_type', num_col=3)
 markers %>% slice_min (sign_diver, n=9) %>% dplyr::select (feature) %>% deframe() -> DE_genes2
 p2 <- gene_over_pseudotime (pred_all, exp_mat, DE_genes2, show_meta, color_feature = 'broad_type', num_col=3)
@@ -38,8 +37,9 @@ markers$group [markers$sign_diver ==0 ] <- 'none'
 markers$logFC <- markers$divergence
 thres <- quantile (markers$logFC, 0.7)
 
-d <- godata('org.Hs.eg.db', ont="BP")
-kk <- compare_cluster_enrichment (markers, d, enrich_area='KEGG', log_FC_thres=thres)
+d <- godata(org.Hs.eg.db, ont="BP")
+kk <- compare_cluster_enrichment (markers, d, org.Hs.eg.db, enrich_area='KEGG', log_FC_thres=thres)
+set.seed (100)
 p3 <- display_cluster_enrichment (kk, show_graph='emap', feature_vec=
                                      markers$group, show_num=20) + labs (fill='')
 
@@ -66,13 +66,14 @@ p5 <- seurat_heat (module_data, group.by=c('epil_branch','broad_type'),
                  column_reorder_levels = list (CT$branch_order, CT$cell_order),
                  column_legend_labels= c('branch', 'cell type'), 
                  row_legend_labels='WGCNA clusters',
-                 cluster_rows=T, heat_name='norm count',
+                 cluster_rows=T, heat_name='norm count', center_scale=T,
                  group_order = order (module_data$MGP_PT) )
 
 # figure S3D: GO/KEGG on WGCNA
-kk_wg <- compare_cluster_enrichment (gene_list, d, enrich_area='KEGG')
+kk_wg <- compare_cluster_enrichment (gene_list, d, org.Hs.eg.db, enrich_area='KEGG')
 color_cluster <- colnames (color_row)
 names (color_cluster) <- names(gene_list)
+set.seed (100)
 p4 <- display_cluster_enrichment (kk_wg, show_graph='emap', feature_vec=names (gene_list), 
                                      show_num=20) + labs (fill = '') +
                                 scale_fill_manual (values=color_cluster)

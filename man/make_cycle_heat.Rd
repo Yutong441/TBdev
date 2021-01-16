@@ -4,10 +4,14 @@
 \alias{make_cycle_heat}
 \title{Make a heatmap for phase score}
 \usage{
-make_cycle_heat(x, seurat_ob, feature = "revised", AP = NULL)
+make_cycle_heat(x, seurat_ob, group.by = NULL, AP = NULL, ...)
 }
 \arguments{
 \item{x}{a matrix containing the phase scores}
+
+\item{seurat_ob}{a seurat object that provides the metadata}
+
+\item{group.by}{which feature to plot the row color bar for the heatmap}
 }
 \description{
 Make a heatmap for phase score

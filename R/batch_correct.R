@@ -7,8 +7,10 @@
 #' @param save_robj names of the data saved in the directory `root`
 #' @param all_data a list of Seurat objects
 #' NB: need to pass either `save_robj` or `all_data`
+#' @param paper paper_ID a character vector as the ID of each dataset
 #' @export
-load_all_data <- function (save_robj=NULL, root=NULL, all_data = NULL){
+load_all_data <- function (save_robj=NULL, root=NULL, all_data = NULL,
+                           paper_ID=NULL){
         if (is.null (all_data) ) {
                 all_data <- list()
                 num_data <- length (save_robj)
@@ -22,7 +24,11 @@ load_all_data <- function (save_robj=NULL, root=NULL, all_data = NULL){
                         dataset <- get (r_obj)
                         rm (r_obj)
                         all_data [[i]] <- dataset
-                        all_data [[i]]$paper <- strsplit (save_robj[i], '/')[[1]][[1]]
+                        if (is.null (paper_ID)){
+                                all_data [[i]]$paper <- strsplit (save_robj[i], '/')[[1]][[1]]
+                        }else{
+                                all_data [[i]]$paper <- paper_ID[i]
+                        }
                 }
                 all_genes [[i]] <- rownames(all_data[[i]])
         }
@@ -49,23 +55,28 @@ load_all_data <- function (save_robj=NULL, root=NULL, all_data = NULL){
 #' @param assays a vector of assay names to be merged. If only one name is
 #' supplied, this assay from all Seurat objects all be combined.
 #' @importFrom Seurat GetAssayData
+#' @importFrom magrittr %>%
 #' @export
-merge_seurat <- function (list_obj, assays, slot_name='data'){
+merge_seurat <- function (list_obj, assays, slot_data='data'){
         if (length (assays) == 1){ assays <- rep (assays, length (list_obj)) }
         list_data <- list ()
+        meta_list <- list ()
         for (i in 1:length(list_obj)){
                 list_obj [[i]] %>%
-                        GetAssayData (slot=slot_name, assay = assays[i]) -> list_data [[i]]
+                        GetAssayData (slot=slot_data, assay = assays[i]) -> list_data [[i]]
                 # make sure all objects have the same order of rows before `cbind`
                 list_data [[i]] <- list_data [[i]] [rownames (list_data[[1]]),]
+                # create unique cell names
+                colnames (list_data[[i]]) <- paste (colnames (list_data[[i]]), i, sep='.')
+                meta_list [[i]] <- list_obj[[i]]@meta.data
+                meta_list[[i]]$ID_col <- colnames (list_data [[i]])
         }
-        # merge assay data
+        print ('merge assay data')
         all_assays <- do.call (cbind, list_data)
-
-        # add meta data
-        all_metadata <- data.table::rbindlist (lapply (list_obj, function(x){x$ID_code <- colnames (x)
-                                           return (x@meta.data) }), fill=TRUE)
-        rownames (all_metadata) <- all_metadata$ID_code
+        print ('add meta data')
+        all_metadata <- data.table::rbindlist (meta_list, fill=TRUE)
+        rm (list_data, meta_list)
+        rownames (all_metadata) <- all_metadata$ID_col
         seurat_assay <- Seurat::CreateSeuratObject (all_assays, meta.data= all_metadata)
         seurat_assay[['RNA']]@data <- all_assays
         return (seurat_assay)
@@ -79,6 +90,15 @@ merge_seurat <- function (list_obj, assays, slot_name='data'){
 #' Perform Seurat batch correction
 #'
 #' @param data_list a list of Seurat objects
+#' @param refer which dataset is the reference. If NULL, the reference will be
+#' determined automatically
+#' @param k_filter the neighbourhood for SNN graph. The default is 200 (as
+#' Seurat). If the size of the smallest dataset is smaller than 200, the
+#' k_filter will be selected to be that size regardless of what the supplied
+#' value would be
+#' @param num_anchor_genes pass to `Seurat::FindIntegrationAnchors`
+#' `anchor.features` argument, i.e. the number of genes that form the
+#' integration anchor
 #' @export
 batch_correct <- function (data_list, k_filter=NULL, dims=1:30, refer=NULL,
                            num_anchor_genes=2000){
@@ -163,18 +183,4 @@ label_transfer <- function (merged_data, feature, by_paper=NULL){
         merged_data@meta.data [known_cells, predicted_feature] <-
                 merged_data@meta.data [known_cells, feature]
         return (merged_data)
-}
-
-plot_transfer_label <- function (merged_data, feature, DR='umap', by_paper=NULL){
-        if (is.null(by_paper)){
-                known_cells <- !is.na(merged_data@meta.data [, feature])
-        }else{
-                known_cells <- merged_data$paper %in% by_paper
-        }
-        selected_data <- merged_data [, !known_cells]
-        predicted_feature <- paste ('predicted', feature, sep='_')
-        plot1<- Seurat::DimPlot (selected_data, reduction = DR, group.by='Type', label=TRUE)
-        plot2<- Seurat::DimPlot (selected_data, reduction = DR, group.by='seurat_clusters', label=TRUE)
-        plot3<- Seurat::DimPlot (selected_data, reduction = DR, group.by=predicted_feature, label=TRUE)
-        return (plot1 + plot2 + plot3)
 }

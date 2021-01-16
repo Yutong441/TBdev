@@ -18,6 +18,9 @@ genes. There must be rownames and colnames}
 \item{label_list}{per item of returned seurat object in the return value
 list, cells with which labels are chosen. It should be a list}
 }
+\value{
+a list of seurat objects of different branch assignments
+}
 \description{
 Convert matrix into a list of seurat objects based on branch assignment
 }

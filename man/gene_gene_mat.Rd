@@ -2,27 +2,21 @@
 % Please edit documentation in R/DE_gene.R
 \name{gene_gene_mat}
 \alias{gene_gene_mat}
-\title{Plot the gene}
+\title{Gene expression in two categories}
 \usage{
-gene_gene_mat(
-  x,
-  compare.by,
-  compare_items,
-  group.by,
-  assay = "RNA",
-  data_slot = "data"
-)
+gene_gene_mat(x, compare.by, group.by, assay = "RNA", slot_data = "data")
 }
 \arguments{
 \item{x}{a Seurat object}
 
 \item{compare.by}{which features to be compared}
 
-\item{compare_items}{which 2 features in \code{compare.by} to be compared}
-
 \item{group.by}{perform the analysis separately for different groups of
 cells}
 }
+\value{
+a dataframe
+}
 \description{
-Plot the gene
+Calculate the mean expression of each gene in two categories
 }

@@ -1,0 +1,100 @@
+---
+title: "WGCNA"
+output: html_document
+vignette: >
+  %\VignetteIndexEntry{WGCNA}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+fig_width: 7 
+fig_height: 7 
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  warning = FALSE
+)
+```
+
+# Load data
+```{r message = FALSE}
+library (TBdev)
+library (WGCNA)
+```
+
+Load scRNAseq data
+```{r}
+root <- '.'
+data_dir <- paste (root, 'data', sep='/')
+save_dir <- paste (root, 'result', sep='/')
+all_data <- get (load (paste (data_dir, 'final_merged_tb.Robj', sep='/') ))
+
+# For simplicity we will only use a subset of the dataset, i.e., the in vivo
+# set
+all_data <- all_data [, all_data$date != 'in_vitro']
+```
+
+# WGCNA
+This function implements most of the functionality of [WGCNA](https://horvath.genetics.ucla.edu/html/CoexpressionNetwork/Rpackages/WGCNA/Tutorials/). 
+This includes selection of an appropriate power for scale-free network, using
+this weight power to calculate connectivity matrix, and hierarchical clustering
+of the matrix. 
+The eigen-gene of each cluster in each cell is returned.  Owing to the various
+results it generates, we make it compulsory to store the results in a directory.
+A directory called WGCNA will be created under the directory.
+
+```{r, message = FALSE}
+find_eigengene (all_data, save_dir, 
+                minModuleSize =25, #can tune the final number of clusters
+                cluster_num='all' #use the entire dataset
+)
+```
+
+Read the stored cluster information.
+WGCNA tends to name clusters by color names. 
+To avoid confusion, here they are renamed as 'GC1', 'GC2' etc.
+```{r}
+color_row <- utils::read.csv ( paste ( save_dir, 
+                        'WGCNA/module_genes.csv' , sep='/'), row.names=1)
+gene_list <- lapply (as.list (colnames (color_row) ), function (x) {
+                             unique (color_row [, x]) })
+names (gene_list) <- colors2labels (colnames (color_row), prefix='GC')
+```
+
+We recommend calculating the module scores instead of using eigengene to
+quantify the expression level of particular WGNCA clusters
+```{r}
+WG_data <- get_module_score (all_data, paste (save_dir, 
+                             'WGCNA/Data_module_score.csv', sep='/'), 
+                             pgenes=gene_list, 
+                             append_meta=T #return a seurat object
+)
+```
+
+Visualise in heatmap
+```{r, fig.width=10, fig.height=6}
+AP <- list (pointsize=3, legend_point_size=3, fontsize=11, point_fontsize=4,
+            font_fam= 'sans')
+seurat_heat (WG_data, cluster_rows=T,
+             group.by=c('broad_type','date'),
+             main_width=15, main_height=10,
+             column_rotation=90,
+             grid_height=4, center_scale=T, AP=AP,
+             automatic=F
+)
+```
+
+View gene-gene correlation network in a graph format.
+The edge thickness represents the correlation value.
+The node side represents average gene expression level.
+
+For example, let us look at the genes in cluster 4, whose appears elevated in
+extravillous trophoblast (EVT).
+```{r, fig.width=7, fig.height=7}
+set.seed (100)
+plot_WGCNA_net (all_data, gene_list$GC4, 
+                threshold=0.75,
+                #only show gene pair whose correlation is above a threshold
+                scale_node_size=0.05) #the smaller the value the larger the size
+```

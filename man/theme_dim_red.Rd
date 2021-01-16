@@ -6,6 +6,10 @@
 \usage{
 theme_dim_red(aes_param, color_fill)
 }
+\value{
+a list containing the theme setting that can be directory
+concatenated with ggplot object
+}
 \description{
 For dimensionality reduction plots, use a minimalistic theme
 without any borders, grids or axis.

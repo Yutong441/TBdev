@@ -29,6 +29,22 @@
 
 #-------------------------------------------------- 
 
+#' Obtain the species name for KEGG
+#'
+#' @param name common name for the species
+#' @noRd
+get_kegg <- function (name){
+        org_names <- c('human'='hsa', 'mouse'='mmu', 'marmoset'='cjc')
+        if (!name %in% names (org_names)){
+                org <- KEGGREST::keggList ('organism')
+                kegg_name <- org [grep (name, org [, 'species']), 'organism']
+                rm (org)
+                return (kegg_name[1])
+        }else{
+                return (org_names [names (org_names) == name ])
+        }
+}
+
 remove_terms <- function (xx_res, AP){
         for ( i in AP$remove_keys){
                 rm_index <- grepl (i, xx_res, ignore.case=T)
@@ -40,7 +56,9 @@ remove_terms <- function (xx_res, AP){
 #' Remove terms from GO/KEGG analysis that are not related to development
 #'
 #' @param xx a compareClusterResult object
-clean_terms <- function (xx, AP, attr_name='compareClusterResult', term_column='Description'){
+#' @noRd
+clean_terms <- function (xx, AP, attr_name='compareClusterResult',
+                         term_column='Description'){
         xx_res <- attr (xx, attr_name) 
         keep_terms <- remove_terms (xx_res [, term_column], AP)
         xx_res  <- xx_res [xx_res [, term_column] %in% keep_terms, ]
@@ -48,9 +66,11 @@ clean_terms <- function (xx, AP, attr_name='compareClusterResult', term_column='
         return (xx)
 }
 
-simplify_terms <- function (xx, simple_terms, term_col='Description', attr_name='compareClusterResult'){
+simplify_terms <- function (xx, simple_terms, term_col='Description',
+                            attr_name='compareClusterResult'){
         dat <- attr (xx, attr_name) 
-        new_terms <- as.character (simple_terms$sub [match (dat [, term_col], simple_terms$ori) ])
+        new_terms <- as.character (simple_terms$sub [match (
+                                   dat [, term_col], simple_terms$ori) ])
         na_terms <- is.na (new_terms)
         new_terms [na_terms] <- as.character (dat [na_terms, term_col])
         names (new_terms) <- dat [, term_col]
@@ -64,16 +84,31 @@ simplify_terms <- function (xx, simple_terms, term_col='Description', attr_name=
         return (new_terms)
 }
 
-simplify_gsea <- function (xx_df, simple_terms, term_col='category'){
-        new_terms <- as.character (simple_terms$sub [match (xx_df [, term_col], simple_terms$ori) ])
-        na_terms <- is.na (new_terms)
-        new_terms [na_terms] <- as.character (xx_df [na_terms, term_col])
-        names (new_terms) <- xx_df [, term_col]
-        new_terms <- gsub ('signaling pathway', 'signaling', new_terms) 
-        cancer_terms <- grep ('cancer', new_terms, ignore.case=T)
-        new_terms [cancer_terms [1] ] <- 'Cancer'
-        xx_df [, term_col] <- new_terms
+simplify_gsea <- function (xx_df, simple_terms=NULL, term_col='category'){
+        if (!is.null (simple_terms)){
+                new_terms <- as.character (simple_terms$sub [match (
+                                        xx_df [, term_col], simple_terms$ori) ])
+                na_terms <- is.na (new_terms)
+                new_terms [na_terms] <- as.character (xx_df [na_terms, term_col])
+                names (new_terms) <- xx_df [, term_col]
+                new_terms <- gsub ('signaling pathway', 'signaling', new_terms) 
+                cancer_terms <- grep ('cancer', new_terms, ignore.case=T)
+                new_terms [cancer_terms [1] ] <- 'Cancer'
+                xx_df [, term_col] <- new_terms
+        }
         return (xx_df)
+}
+
+append_default_dictionary <- function (new_dict, append_default){
+        if (append_default){
+                data (GOsimp)
+                if (is.null (new_dict)){new_dict <- GOsimp
+                }else{
+                        new_dict <- rbind (new_dict, GOsimp) 
+                        new_dict <- new_dict [!duplicated (new_dict$ori), ]
+                }
+        }
+        return (new_dict)
 }
 
 #' For the results from `compareClusterResult` object
@@ -83,9 +118,9 @@ simplify_gsea <- function (xx_df, simple_terms, term_col='category'){
 #' optionally return a list of all the genes corresponding to the matches terms
 #' @param xx a compareClusterResult object
 #' @param term a keyword that matches the term of interest
+#' @param organism_db which organism database, for example, org.Hs.eg.db
 #' @param category_col which column in x that has the terms
 #' @param return_val whether to return the gene names
-#' @import org.Hs.eg.db
 #' @examples
 #' KG <- modules::use ('KEGG_path.R')
 #' library (GOSemSim)
@@ -93,7 +128,7 @@ simplify_gsea <- function (xx_df, simple_terms, term_col='category'){
 #' kk <- KG$compare_cluster_enrichment (markers, d, enrich_area='KEGG')
 #' path_val <- KG$gene_per_term (kk, 'JAK-STAT', return_val=T)
 #' @export
-gene_per_term <- function (xx, term, category_col='Description', return_val=F){
+gene_per_term <- function (xx, term, organism_db, category_col='Description', return_val=F){
         if (class (xx) == 'compareClusterResult' ){
                 xx_df <- xx@compareClusterResult
         }else{ xx_df <- xx }
@@ -104,7 +139,7 @@ gene_per_term <- function (xx, term, category_col='Description', return_val=F){
                 print (paste ('pvalue is', xx_df$p.adjust [all_index [i] ] ) )
                 all_genes <- xx_df$geneID [all_index [i] ]
                 all_genes <- strsplit (all_genes, '/') [[1]]
-                gene_entrez <- AnnotationDbi::mapIds(org.Hs.eg.db, as.character (
+                gene_entrez <- AnnotationDbi::mapIds(organism_db, as.character (
                                                 all_genes),  'SYMBOL', 'ENTREZID')
                 names(gene_entrez) <- NULL
                 all_terms[[i]] <- gene_entrez
@@ -120,10 +155,9 @@ gene_per_term <- function (xx, term, category_col='Description', return_val=F){
 #'
 #' @description For the data frame generated from enrichment analysis, achieves
 #' the same function as `gene_per_term`
-#' @import org.Hs.eg.db
 #' @importFrom magrittr %>%
 #' @export
-gene_per_enriched_term <- function (xx, term, cell_type=NULL, category_col='category'){
+gene_per_enriched_term <- function (xx, term, organism_db, cell_type=NULL, category_col='category'){
         if (!is.null (cell_type) ){
                 xx_df <- xx %>% filter (cluster == cell_type)
         }else{ xx_df <- xx }
@@ -136,7 +170,7 @@ gene_per_enriched_term <- function (xx, term, cell_type=NULL, category_col='cate
                         rownames () -> all_genes
                 all_genes <- sapply (all_genes, function (x) {strsplit (x, '\\.')[[1]][3]})
 
-                gene_entrez <- AnnotationDbi::mapIds(org.Hs.eg.db, as.character (
+                gene_entrez <- AnnotationDbi::mapIds(organism_db, as.character (
                                                 all_genes),  'SYMBOL', 'ENTREZID')
                 names(gene_entrez) <- NULL
                 all_terms[[i]] <- gene_entrez

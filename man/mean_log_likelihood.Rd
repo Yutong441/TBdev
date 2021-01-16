@@ -2,12 +2,11 @@
 % Please edit documentation in R/GPLVM_utils.R
 \name{mean_log_likelihood}
 \alias{mean_log_likelihood}
-\title{This function works extremely slow. I recommend using the python
-alternative.}
+\title{Calculate mean log likelihood}
 \usage{
 mean_log_likelihood(mu, variance, x)
 }
 \description{
-This function works extremely slow. I recommend using the python
-alternative.
+This function works extremely slow. I recommend using the
+python alternative.
 }

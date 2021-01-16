@@ -4,7 +4,14 @@
 \alias{run_GSEA}
 \title{GSEA}
 \usage{
-run_GSEA(markers, cluster_num, enrich_area = "GO", ...)
+run_GSEA(
+  markers,
+  cluster_num,
+  organism_db,
+  organism_name = "human",
+  enrich_area = "GO",
+  ...
+)
 }
 \arguments{
 \item{markers}{a dataframe with at least 3 columns: one for gene names
@@ -13,6 +20,10 @@ they are not 'feature', 'group' and 'logFC' respectively, they need to be
 supplied as keyword arguments in ...}
 
 \item{cluster_num}{which cluster to compute enrichment}
+
+\item{organism_db}{which organism database, for example, org.Hs.eg.db}
+
+\item{organism_name}{which organism for KEGG and Reactome}
 
 \item{enrich_area}{either 'GO', 'KEGG' or 'reactome'}
 }

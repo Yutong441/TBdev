@@ -1,10 +1,13 @@
-#' @import org.Hs.eg.db
-#' @noRd
-get_gene_list <- function (markers, cluster_num, gene_col='feature',
+#' Obtain gene list from DE gene results
+#'
+#' @description This function obtains a list of genes, the input format to GSEA
+#' or over-representation test, from the top DE genes. For parameter setting,
+#' see `run_GSEA`
+get_gene_list <- function (markers, cluster_num, organism_db, gene_col='feature',
                            cluster_col='group', FC='logFC'){
         geneList <- markers [markers [, cluster_col] == cluster_num, FC]
         names (geneList) <- markers [markers [, cluster_col]== cluster_num, gene_col]
-        names (geneList) <- AnnotationDbi::mapIds(org.Hs.eg.db, 
+        names (geneList) <- AnnotationDbi::mapIds(organism_db, 
                                 names(geneList), 'ENTREZID', 'SYMBOL')
         geneList <- geneList [!duplicated (names (geneList) ) ]
         return (geneList)
@@ -17,16 +20,18 @@ get_gene_list <- function (markers, cluster_num, gene_col='feature',
 #' they are not 'feature', 'group' and 'logFC' respectively, they need to be
 #' supplied as keyword arguments in ...
 #' @param cluster_num which cluster to compute enrichment
+#' @param organism_db which organism database, for example, org.Hs.eg.db
+#' @param organism_name which organism for KEGG and Reactome
 #' @param enrich_area either 'GO', 'KEGG' or 'reactome'
-#' @import org.Hs.eg.db
 #' @export
-run_GSEA <- function (markers, cluster_num, enrich_area='GO', ...){
-        geneList <- get_gene_list (markers, cluster_num, ...)
+run_GSEA <- function (markers, cluster_num, organism_db, organism_name
+                      ='human', enrich_area='GO', ...){
+        geneList <- get_gene_list (markers, cluster_num, organism_db, ...)
         print (paste ('analysing', length (geneList), 'genes' ))
         if (enrich_area == 'GO'){
                 ego <- clusterProfiler::gseGO(
                               geneList     =  sort (geneList, decreasing=T),
-                              OrgDb        = org.Hs.eg.db,
+                              OrgDb        = organism_db,
                               ont          = "ALL",
                               nPerm        = 1000,
                               minGSSize    = 100,
@@ -37,9 +42,10 @@ run_GSEA <- function (markers, cluster_num, enrich_area='GO', ...){
         }
 
         if (enrich_area == 'KEGG'){
+                kegg_organism <- get_kegg (organism_name)
                 kk <- clusterProfiler::gseKEGG(
                                geneList     = sort (geneList, decreasing=T),
-                               organism     = 'hsa',
+                               organism     = kegg_organism,
                                minGSSize    = 120,
                                pvalueCutoff = 0.05,
                                verbose      = FALSE)
@@ -48,7 +54,7 @@ run_GSEA <- function (markers, cluster_num, enrich_area='GO', ...){
         if (enrich_area == 'reactome'){
                 ra <- clusterProfiler::gsePathway(
                                geneList     = sort (geneList, decreasing=T),
-                               organism     = 'human',
+                               organism     = organism_name,
                                minGSSize    = 120,
                                pvalueCutoff = 0.05,
                                verbose      = FALSE)
@@ -60,6 +66,7 @@ run_GSEA <- function (markers, cluster_num, enrich_area='GO', ...){
 #'
 #' @param markers a dataframe containing the fold changes of genes with a
 #' column specified as `cluster_col` that contains the cluster information
+#' @param organism_db which organism database, for example, org.Hs.eg.db
 #' @param show_num how many GO/KEGG terms to show. This function will select
 #' those terms whose mean absolute fold changes are high
 #' @param enrich_area either 'GO', 'KEGG' or 'reactome'
@@ -68,15 +75,23 @@ run_GSEA <- function (markers, cluster_num, enrich_area='GO', ...){
 #' all clusters
 #' @importFrom magrittr %>%
 #' @export
-run_GSEA_all_types <- function (markers, show_num=50, cluster_col='group',
-                                enrich_area='KEGG', save_path=NULL, AP=NULL, ...){
+run_GSEA_all_types <- function (markers, organism_db, organism_name='human',
+                                show_num=50, cluster_col='group',
+                                enrich_area='KEGG', save_path=NULL, AP=NULL,
+                                ...){
         AP <- return_aes_param (AP)
-        if (is.null (save_path) | !file.exists (save_path) ){
+        if (is.null (save_path)  ){proceed <- T
+        }else{
+                if (!file.exists (save_path)){proceed <- T
+                }else{proceed <- F}
+        }
+        if (proceed){
                 cell_types <- unique (markers [, cluster_col])
                 # run GSEA for each cluster
                 gsea_list <- lapply (as.list (cell_types), function (x){
-                                     run_GSEA (markers, x,
+                                     run_GSEA (markers, x, organism_db,
                                                enrich_area=enrich_area,
+                                               organism_name=organism_name,
                                                cluster_col=cluster_col, ...)})
                 # obtain the dataframe
                 gsea_df_list <- lapply (gsea_list, ridge_one_type)
@@ -89,7 +104,7 @@ run_GSEA_all_types <- function (markers, show_num=50, cluster_col='group',
                 }
                 print ('combine before writing')
                 gsea_df <- do.call(rbind, gsea_df_list)
-                utils::write.csv (gsea_df, save_path)
+                if (!is.null (save_path)) {utils::write.csv (gsea_df, save_path)}
         }else{ 
                 print ('reading from precomputed GSEA. ')
                 print ('If you do not like this feature, set save_path=NULL')
@@ -110,18 +125,18 @@ run_GSEA_all_types <- function (markers, show_num=50, cluster_col='group',
 }
 
 
-all_GSEA_one_type <- function (markers, cluster_num, save_dir, label=NULL){
+all_GSEA_one_type <- function (markers, cluster_num, save_dir, label=NULL, ...){
         if (is.null(label)){label <- cluster_num}
         save_dir <- paste (  save_dir, label, sep='/' )
         if (!dir.exists (save_dir) ){dir.create (save_dir) }
 
-        ego <- run_GSEA (markers, cluster_num)
+        ego <- run_GSEA (markers, cluster_num, organism_db, ...)
         display_cluster_enrichment (ego, show_graph='dotplot', save_dir=save_dir)
         display_cluster_enrichment (ego, show_graph='ridgeplot', save_dir=save_dir)
         display_cluster_enrichment (ego, show_graph='gseaplot', save_dir=save_dir)
         rm (ego)
 
-        ekk <- run_GSEA (markers, cluster_num, enrich_area='KEGG')
+        ekk <- run_GSEA (markers, cluster_num, organism_db, enrich_area='KEGG')
         display_cluster_enrichment (ekk, show_graph='dotplot', enrich_area='KEGG', save_dir=save_dir)
         display_cluster_enrichment (ekk, show_graph='ridgeplot', enrich_area='KEGG', save_dir=save_dir)
         display_cluster_enrichment (ekk, show_graph='gseaplot', enrich_area='KEGG', save_dir=save_dir)
@@ -149,31 +164,31 @@ get_all_paths <- function (save_dir,  cluster_num, all_path=NULL, path_data_dir=
 #' \url{https://rdrr.io/github/GuangchuangYu/enrichplot/src/R/ridgeplot.R}
 ridge_one_type <- function(x, fill='p.adjust', core_enrichment = T, orderBy =
                            "NES", decreasing = F) {
-    if (!fill %in% colnames(x@result)) { stop("'fill' variable not available...") }
-    if (orderBy !=  'NES' && !orderBy %in% colnames(x@result)) {
-        message('wrong orderBy parameter; set to default `orderBy = "NES"`')
-        orderBy <- "NES"
-    }
-    if (core_enrichment) { gs2id <- DOSE::geneInCategory(x)
-    } else { gs2id <- x@geneSets[x$ID] }
+        if (!fill %in% colnames(x@result)) { stop("'fill' variable not available...") }
+        if (orderBy !=  'NES' && !orderBy %in% colnames(x@result)) {
+                message('wrong orderBy parameter; set to default `orderBy = "NES"`')
+                orderBy <- "NES"
+        }
+        if (core_enrichment) { gs2id <- DOSE::geneInCategory(x)
+        } else { gs2id <- x@geneSets[x$ID] 
+        }
+        gs2val <- lapply(gs2id, function(id) {
+                res <- x@geneList[id]
+                res <- res[!is.na(res)]
+        })
+        nn <- names(gs2val)
+        i <- match(nn, x$ID)
+        nn <- x$Description[i]
 
-    gs2val <- lapply(gs2id, function(id) {
-        res <- x@geneList[id]
-        res <- res[!is.na(res)]
-    })
-    nn <- names(gs2val)
-    i <- match(nn, x$ID)
-    nn <- x$Description[i]
-
-    j <- order(x@result[[orderBy]][i], decreasing = decreasing)
-    len <- sapply(gs2val, length)
-    gs2val.df <- data.frame(category = rep(nn, times=len),
-                            color = rep(x[i, fill], times=len),
-                            value = unlist(gs2val))
-
-    colnames(gs2val.df)[2] <- fill
-    gs2val.df$category <- factor(gs2val.df$category, levels=nn[j])
-    return (gs2val.df)
+        j <- order(x@result[[orderBy]][i], decreasing = decreasing)
+        len <- sapply(gs2val, length)
+        gs2val.df <- data.frame(category = rep(nn, times=len),
+                                color = rep(x[i, fill], times=len),
+                                value = unlist(gs2val)
+        )
+        colnames(gs2val.df)[2] <- fill
+        gs2val.df$category <- factor(gs2val.df$category, levels=nn[j])
+        return (gs2val.df)
 }
 
 #' Ridge plot for multiple categories
@@ -194,7 +209,13 @@ ridge_one_type <- function(x, fill='p.adjust', core_enrichment = T, orderBy =
 #' @param sim_dict a data frame with 2 columns: 'ori' for the original terms,
 #' 'sub' for the strings that will replace the original terms. The default is a
 #' a limited data frame built into this package.
+#' @param amplify_font increase the font size of the y axis labels by a ratio,
+#' which represent the enrichment terms
 #' @param AP aesthetic parameters
+#' @param sim_dict a data frame with 2 columns: 'ori' for the original terms,
+#' 'sub' for the strings that will replace the original terms. The default is a
+#' a limited data frame built into this package.
+#' @param append_default_dict append default dictionary to simplify the terms
 #' @importFrom stats quantile
 #' @importFrom ggplot2 aes_string
 #' @importFrom magrittr %>%
@@ -203,9 +224,10 @@ ridge_one_type <- function(x, fill='p.adjust', core_enrichment = T, orderBy =
 ridge_all_types <- function (xx, x_col='value', y_col='category', sort_by=
                              'p.adjust', default_theme=F, color_col='cluster',
                      not_show_prop=0.01, term_length=60, show_num=NULL,
-                     simplification=T, AP=NULL, sim_dict=NULL){
+                     simplification=T, amplify_font=1.2, AP=NULL,
+                     sim_dict=NULL, append_default_dict=T){
         AP <- return_aes_param (AP)
-        if (is.null (sim_dict)){data(GOsimp); sim_dict <- GOsimp}
+        sim_dict <- append_default_dictionary (sim_dict, append_default_dict)
 
         xx %>% dplyr::mutate (char_length = nchar (as.character (!!as.symbol ('category')) ) ) %>%
                 dplyr::filter (char_length < term_length) %>%
@@ -229,8 +251,8 @@ ridge_all_types <- function (xx, x_col='value', y_col='category', sort_by=
                                              limits=c(xmin, xmax))  -> plot_xx
         if (!default_theme){
                 plot_xx <- plot_xx + theme_TB ('dotplot', feature_vec = xx [, color_col], 
-                        rotation=0, color_fill=T, AP=AP) +
-                        ggplot2::theme (axis.text.y = element_text (size=1.5*AP$fontsize))+
+                        rotation=0, color_fill=T, aes_param=AP) +
+                        ggplot2::theme (axis.text.y = element_text (size=amplify_font*AP$fontsize))+
                         ggplot2::guides (fill= ggplot2::guide_legend (override.aes=
                                                         list(color='white', alpha=1)))
         }

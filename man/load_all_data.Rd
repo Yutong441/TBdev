@@ -4,13 +4,15 @@
 \alias{load_all_data}
 \title{load all Seurat objects specified by \code{save_robj} in the \code{root} folder}
 \usage{
-load_all_data(save_robj = NULL, root = NULL, all_data = NULL)
+load_all_data(save_robj = NULL, root = NULL, all_data = NULL, paper_ID = NULL)
 }
 \arguments{
 \item{save_robj}{names of the data saved in the directory \code{root}}
 
 \item{all_data}{a list of Seurat objects
 NB: need to pass either \code{save_robj} or \code{all_data}}
+
+\item{paper}{paper_ID a character vector as the ID of each dataset}
 }
 \description{
 load all Seurat objects specified by \code{save_robj} in the \code{root} folder

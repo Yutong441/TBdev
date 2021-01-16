@@ -38,7 +38,6 @@ Label3D <- ggplot2::ggproto("Label3D", ggplot2::Stat,
 #' These are often aesthetics, used to set an
 #' aesthetic to a fixed value, like color = "red" or size = 3.
 #' @importFrom ggplot2 aes
-#' @export
 Lab3D <- function(mapping = aes(group=1), data = NULL, geom = "text",
                     position = "identity", na.rm = FALSE, show.legend = NA,
                     inherit.aes = TRUE, AP=NULL, ...) {

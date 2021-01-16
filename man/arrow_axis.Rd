@@ -10,6 +10,8 @@ arrow_axis(
   nudge_ratio = 0,
   move_x = 0,
   move_y = 0,
+  reverse_x = F,
+  reverse_y = F,
   aes_param = list(pointsize = 3, font_fam = "Arial", point_fontsize = 6)
 )
 }
@@ -26,6 +28,8 @@ negative value is to the right}
 \item{aes_param}{setting for pointsize, font_fam, point_fontsize,
 arrow_angle, arrow_length, arrow_length_unit, arrow_type, arrow_thickness,
 arrow_linejoin}
+
+\item{return}{a list of geoms for the arrow segment and axis labels}
 }
 \description{
 Create miniature arrow to replace axes

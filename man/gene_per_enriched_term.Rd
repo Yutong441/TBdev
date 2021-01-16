@@ -4,7 +4,13 @@
 \alias{gene_per_enriched_term}
 \title{Obtain genes of each enriched terms}
 \usage{
-gene_per_enriched_term(xx, term, cell_type = NULL, category_col = "category")
+gene_per_enriched_term(
+  xx,
+  term,
+  organism_db,
+  cell_type = NULL,
+  category_col = "category"
+)
 }
 \description{
 For the data frame generated from enrichment analysis, achieves
