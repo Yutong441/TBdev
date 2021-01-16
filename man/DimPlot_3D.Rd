@@ -4,7 +4,15 @@
 \alias{DimPlot_3D}
 \title{3D version of DimPlot}
 \usage{
-DimPlot_3D(x, feature, DR = "pca", dims = c(1, 2, 3), ...)
+DimPlot_3D(
+  x,
+  feature,
+  DR = "pca",
+  dims = c(1, 2, 3),
+  assay = "RNA",
+  slot_data = "data",
+  ...
+)
 }
 \arguments{
 \item{x}{a Seurat object}

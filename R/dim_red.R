@@ -24,6 +24,19 @@ RunDiffusion <- function (x, reduction='pca', dims=1:10){
         return (x)
 }
 
+#' Add GPLVM data to Seurat dim red assay
+#'
+#' @param x a Seurat object
+#' @param embedding the mean pseudotime estimated from GrandPrix
+#' @export
+RunGPLVM <- function (x, embedding, assay='RNA'){
+        rownames(embedding) <- colnames (x)
+        gp_seurat <- Seurat::CreateDimReducObject (embeddings= embedding, 
+                                                   key = 'GP_', assay=assay)
+        x[['gplvm']] <- gp_seurat
+        return (x)
+}
+
 #' Run DR
 #'
 #' @param assay assay to use for dimensionality reduction
@@ -139,7 +152,9 @@ label_order <- function (x){
 #' Quick way of plotting DimPlot in Seurat
 #' 
 #' @description Please run the `run_dim_red` function before executing this
-#' function
+#' function. Internally, this function calls `gg_DimPlot` for 2D plotting and
+#' `dim_red_3D` for 3D. Please refer to these 2 functions for further parameter
+#' settings
 #'
 #' @param input_data a Seurat object
 #' @param group.by a 2-element vector, parsed to the `group.by` argument of
@@ -149,11 +164,13 @@ label_order <- function (x){
 #' @param select_cells cells to be shown in the plot
 #' @param dims two axes of the reduced dimensional space
 #' @param num_col how many columns the subplots are arranged
+#' @param no_facet whether to use `ggplot2::facet_wrap`. Currently only 3D
+#' version is supported.
 #' @return a ggplot or list of ggplot objects
 #' @export
 plot_dim_red <- function (input_data, group.by, DR='pca', select_cells=NULL,
                           dims=c(1,2), return_sep=F,
-                          num_col=NULL, AP=NULL,...){
+                          num_col=NULL, num_row=NULL, no_facet=T, AP=NULL,...){
         if (is.null(select_cells)){
                 plot_data <- input_data
         }else{plot_data <- input_data [, select_cells]}
@@ -174,10 +191,17 @@ plot_dim_red <- function (input_data, group.by, DR='pca', select_cells=NULL,
                         plots[[i]] <- gg_DimPlot (plot_data, feature=group.by[i], DR=DR, 
                                                      dims=dims, AP=AP, ...)
                 }else{
-                        plots [[i]] <- DimPlot_3D (input_data, group.by[i], DR=DR, AP=AP,...)
+                        if (no_facet){
+                                plots [[i]] <- DimPlot_3D (input_data, group.by[i],
+                                                           DR=DR, AP=AP,...)
+                        }
         }}
+        if (!no_facet){
+                plots <- DimPlot_3D (input_data, group.by, DR=DR, AP=AP,...)
+                return_sep <- T
+        }
         if (!return_sep){
-                return (ggpubr::ggarrange (plotlist=plots, ncol=num_col) )
+                return (ggpubr::ggarrange (plotlist=plots, ncol=num_col, nrow=num_row) )
         }else{return (plots) }
 }
 

@@ -12,6 +12,8 @@ plot_dim_red(
   dims = c(1, 2),
   return_sep = F,
   num_col = NULL,
+  num_row = NULL,
+  no_facet = T,
   AP = NULL,
   ...
 )
@@ -30,6 +32,9 @@ plot_dim_red(
 
 \item{num_col}{how many columns the subplots are arranged}
 
+\item{no_facet}{whether to use \code{ggplot2::facet_wrap}. Currently only 3D
+version is supported.}
+
 \item{plot_3D}{whether to plot in 3D}
 }
 \value{
@@ -37,5 +42,7 @@ a ggplot or list of ggplot objects
 }
 \description{
 Please run the \code{run_dim_red} function before executing this
-function
+function. Internally, this function calls \code{gg_DimPlot} for 2D plotting and
+\code{dim_red_3D} for 3D. Please refer to these 2 functions for further parameter
+settings
 }

@@ -6,25 +6,28 @@
 \usage{
 save_to_csv(
   x,
-  directory,
+  directory = NULL,
   assay = NULL,
-  slots = "data",
+  slot_data = "data",
   select_cells = NULL,
   select_genes = NULL,
   label = "",
-  features = c("revised_date", "revised", "date")
+  save_result = T
 )
 }
 \arguments{
 \item{x}{a seurat object}
+
+\item{directory}{where the results are saved}
 
 \item{select_cells}{which cells to be saved}
 
 \item{select_genes}{which genes to be saved, or the number of top variably
 expressed genes}
 
-\item{features}{which features in the meta data to be saved}
+\item{save_result}{if FALSE, the expression matrix is the output. If no
+directory is supplied, this argument is set FALSE automatically}
 }
 \description{
-Save Seurat object as csv
+save the expression matrix and metadata of a Seurat object
 }

@@ -18,7 +18,7 @@ DimPlot_labels <- function (dat, x_coord, y_coord, color_by, further_repel=T){
         }else{return (NULL)}
 }
 
-get_feature_names <- function (name, seurat_ob, assay, slot_data){
+get_one_feature_names <- function (name, seurat_ob, assay, slot_data){
         if (name %in% rownames(seurat_ob)){
                 feature_vec <- as.vector (Seurat::GetAssayData (seurat_ob [name, ],
                                           assay=assay, slot=slot_data))
@@ -29,12 +29,30 @@ get_feature_names <- function (name, seurat_ob, assay, slot_data){
         return (feature_vec)
 }
 
+get_feature_names <- function (name, seurat_ob, assay, slot_data){
+        if (length (name) == 1){
+                feature_df <- get_one_feature_names (name, seurat_ob, assay, slot_data)
+                feature_df <- data.frame (feature_df)
+        }else{
+                name_list <- list()
+                for (i in 1:length (name))
+                        name_list[[i]]  <- get_one_feature_names (
+                                        name[i], seurat_ob, assay, slot_data)
+                feature_df <- do.call (cbind, name_list)
+        }
+        colnames (feature_df) <- name
+        meta <- seurat_ob@meta.data
+        meta <- meta [, colnames (meta) != name]
+        return (cbind (meta, feature_df))
+}
+
 #' Reimplementation of DimPlot in Seurat for better graphic controls
 #' 
 #' @param x a Seurat object
 #' @param size_highlight a character, logical or numeric vector specifying
 #' which cells to magnify in size
 #' @param highlight_font how large the highlighted cells should be
+#' @param label_col which column contains the label information
 #' @param AP a list for `custom_color` and `theme_TB`
 #' @param further_repel if TRUE, the labels would be repelled away from the
 #' data points as much as possible
@@ -45,9 +63,9 @@ get_feature_names <- function (name, seurat_ob, assay, slot_data){
 #' @importFrom ggplot2 aes aes_string
 #' @author Yutong Chen
 gg_DimPlot <- function (x, feature, DR='pca', dims=c(1,2), size_highlight=NULL,
-                        highlight_font=4, further_repel=T, repel_force=1,
-                        reverse_x=F, reverse_y=F, assay='RNA', slot_data =
-                        'data', AP=NULL,...){
+                        highlight_font=4, label_col=NULL, further_repel=T,
+                        repel_force=1, reverse_x=F, reverse_y=F, assay='RNA',
+                        slot_data = 'data', AP=NULL,...){
         AP <- return_aes_param (AP)
         dim_red <- x@reductions[[DR]]@cell.embeddings [, dims]
         #feature_names <- as.factor(x@meta.data[, feature])  
@@ -64,17 +82,17 @@ gg_DimPlot <- function (x, feature, DR='pca', dims=c(1,2), size_highlight=NULL,
         }else{ #if the vector is a numeric string
                 size_high <- c('non-select', 'select')[as.factor(1:ncol(x) %in% size_highlight)]
         }
-        dim_red %>% as.data.frame () %>%
-                tibble::add_column (feature=feature_names) %>%
+        dim_red %>% as.data.frame () %>% cbind (feature_names) %>%
                 tibble::add_column (size_high =size_high) -> plot_data
 
-        plot_label <- DimPlot_labels (plot_data, x_axis, y_axis, 'feature',
+        if (is.null (label_col)){label_col <- feature}
+        plot_label <- DimPlot_labels (plot_data, x_axis, y_axis, label_col,
                                       further_repel=further_repel)
 
         # plotting
         plot_ob <- plot_data %>%
                 ggplot2::ggplot (aes_string (x=x_axis, y=y_axis ) ) +
-                ggplot2::geom_point (aes (fill = feature, size=size_high, shape=size_high), 
+                ggplot2::geom_point (aes_string (fill = feature, size='size_high', shape='size_high'), 
                             alpha=1, color=AP$point_edge_color, stroke=1) +
                 ggplot2::scale_size_manual (values = c('non-select'=AP$pointsize, 
                                               'select'=AP$pointsize*1.5), guide=F) +
@@ -85,7 +103,8 @@ gg_DimPlot <- function (x, feature, DR='pca', dims=c(1,2), size_highlight=NULL,
 
         if (!is.null(plot_label)){
                 plot_ob <- plot_ob +
-                ggrepel::geom_text_repel (aes (x=x_mean, y=y_mean, label=feature, fontface=2), 
+                ggrepel::geom_text_repel (aes (x=x_mean, y=y_mean,
+                                               label=feature, fontface=2), 
                                           data=plot_label,
                                           size=AP$point_fontsize,
                                           segment.color=NA, force=repel_force,
@@ -94,7 +113,7 @@ gg_DimPlot <- function (x, feature, DR='pca', dims=c(1,2), size_highlight=NULL,
         if (reverse_x){plot_ob <- plot_ob + ggplot2::scale_x_reverse ()}
         if (reverse_y){plot_ob <- plot_ob + ggplot2::scale_y_reverse ()}
         plot_ob + theme_TB ('dim_red', plot_ob=plot_ob, feature_vec=
-                            plot_data$feature, color_fill=T, aes_param=AP,
+                            plot_data [,feature], color_fill=T, aes_param=AP,
                     reverse_x=reverse_x, reverse_y=reverse_y,...) 
 }
 
@@ -156,12 +175,9 @@ dim_red_3D <- function (plot_data, x, y, z, color_by, all_theta=0, all_phi=0,
                          shape=AP$normal_shape, stroke=1, size=AP$pointsize) -> plot_ob
 
         if (length (color_by) > 1){ plot_ob <- plot_ob + ggplot2::facet_wrap (~variable, ncol=num_col) }
-        if (is.numeric (plot_data [, color]) ){
-                plot_ob <- plot_ob + ggplot2::scale_fill_viridis_c () + 
-                theme_dim_red (AP, color_fill=T)[[1]] 
-        }else{ plot_ob + theme_TB ('no_arrow', feature_vec = plot_data [,
+        plot_ob + theme_TB ('no_arrow', feature_vec = plot_data [,
                                    color], color_fill=T, aes_param=AP) -> plot_ob
-        }
+
         if (show_arrow){
                 # to add new points, it is important to add the min and max
                 point_data <- add_min_max (data.frame (x=0, y=0, z=0), 
@@ -185,6 +201,7 @@ dim_red_3D <- function (plot_data, x, y, z, color_by, all_theta=0, all_phi=0,
         }
 
         if (is.null(label_col)){label_col <- color}
+        if (is.numeric (plot_data [, label_col]) ){show_label <- F}
         if (show_label){
                 print ('get text labels')
                 text_scale <- get_3D_label_position (plot_data, x, y, z, label_col,
@@ -204,12 +221,15 @@ dim_red_3D <- function (plot_data, x, y, z, color_by, all_theta=0, all_phi=0,
 #' @param ... additional features to pass to `dim_red_3D`, including
 #' `show_axes`, 'all_theta' and `all_phi`
 #' @author Yutong Chen
-DimPlot_3D <- function (x, feature, DR='pca', dims=c(1,2,3), ...){
+DimPlot_3D <- function (x, feature, DR='pca', dims=c(1,2,3), assay='RNA',
+                        slot_data='data', ...){
         col_names <- gsub ('_', '', colnames (x@reductions[[DR]]) )
         x@reductions[[DR]]@cell.embeddings %>% as.data.frame () -> x_plot
         colnames (x_plot) <- col_names
-        x_plot <- cbind (x_plot, x@meta.data)
-        dim_red_3D (x_plot, col_names[dims[1]], col_names[dims[2]], col_names[dims[3]], feature, ...)
+        feature_names <- data.frame (get_feature_names (feature, x, assay, slot_data))
+        x_plot <- cbind (x_plot, feature_names)
+        dim_red_3D (x_plot, col_names[dims[1]], col_names[dims[2]], 
+                    col_names[dims[3]], feature, ...)
 }
 
 #' Append minimum and maximum values

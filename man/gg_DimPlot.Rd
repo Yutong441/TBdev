@@ -11,6 +11,7 @@ gg_DimPlot(
   dims = c(1, 2),
   size_highlight = NULL,
   highlight_font = 4,
+  label_col = NULL,
   further_repel = T,
   repel_force = 1,
   reverse_x = F,
@@ -28,6 +29,8 @@ gg_DimPlot(
 which cells to magnify in size}
 
 \item{highlight_font}{how large the highlighted cells should be}
+
+\item{label_col}{which column contains the label information}
 
 \item{further_repel}{if TRUE, the labels would be repelled away from the
 data points as much as possible}

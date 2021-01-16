@@ -54,9 +54,9 @@ remove_ribosomal_genes <- function (x, row_is_gene=TRUE){
 # Save expression matrix
 # ----------------------
 
-extract_exp_mat <- function (x, assay=NULL, slots='data'){
+extract_exp_mat <- function (x, assay=NULL, slot_data='data'){
         if (is.null(assay)){assay <- Seurat::DefaultAssay (x) }
-        return (attr (x[[assay]], slots))
+        return (attr (x[[assay]], slot_data))
 }
 
 #' Print the dimension of a Seurat object
@@ -67,33 +67,42 @@ print_dim <- function (x){
 
 #' Save Seurat object as csv
 #' 
+#' @description save the expression matrix and metadata of a Seurat object
 #' @param x a seurat object
+#' @param directory where the results are saved
 #' @param select_cells which cells to be saved
 #' @param select_genes which genes to be saved, or the number of top variably
 #' expressed genes
-#' @param features which features in the meta data to be saved
+#' @param save_result if FALSE, the expression matrix is the output. If no
+#' directory is supplied, this argument is set FALSE automatically
 #' @export
-save_to_csv <- function (x, directory, assay=NULL, slots='data',
+save_to_csv <- function (x, directory=NULL, assay=NULL, slot_data='data',
                          select_cells=NULL, select_genes=NULL, label='',
-                         features=c('revised_date', 'revised', 'date')){
+                         save_result=T){
+        if (is.null (directory)){save_result <- F}
         dim_x <- dim (x)
+        if (is.null(select_cells)){select_cells <- 1:dim_x[2]}
+        x <- x [, select_cells]
         if (is.numeric(select_genes)){
                 x <- Seurat::FindVariableFeatures (x, nfeatures=select_genes)
                 select_genes <- Seurat::VariableFeatures (x)
         }
-        if (is.null(select_cells)){select_cells <- 1:dim_x[2]}
 
-        save_x <- x [select_genes, select_cells]
-        exp_mat <- extract_exp_mat (save_x, assay, slots)
+        save_x <- x [select_genes, ]
+        exp_mat <- extract_exp_mat (save_x, assay, slot_data)
 
         print_dim (save_x)
-        direct_data <- paste (directory, 'data', sep='/')
-        if (!dir.exists (direct_data)){dir.create (direct_data)}
-        utils::write.csv (exp_mat, paste (direct_data,
-                                paste ('merged_', label, '.csv', sep=''), sep='/'))
+        if (save_result){
+                direct_data <- paste (directory, 'data', sep='/')
+                if (!dir.exists (direct_data)){dir.create (direct_data)}
+                utils::write.csv (exp_mat, paste (direct_data,
+                                        paste ('merged_', label, '.csv', sep=''), sep='/'))
 
-        utils::write.csv (save_x@meta.data, paste (direct_data, 
-                        paste ('merged_meta_', label, '.csv', sep=''), sep='/' ))
+                utils::write.csv (save_x@meta.data, paste (direct_data, 
+                                paste ('merged_meta_', label, '.csv', sep=''), sep='/' ))
+        }else{
+                return (as.matrix (exp_mat))
+        }
 }
 
 #' Sparsify a large matrix

@@ -111,18 +111,22 @@ theme_dotplot <- function (aes_param = list(fontsize=15,
               )
 }
 
+custom_round <- function (vec, num_out=3, more_precision=0, quantile_val=0){
+        min_vec <- stats::quantile(vec, quantile_val, na.rm=T)
+        max_vec <- stats::quantile(vec, 1-quantile_val, na.rm=T)
+        if (max_vec < 1){
+                nfig <- round (log10 (1/max_vec)) + more_precision
+        }else{nfig <- 0}
+        min_vec <- ceiling (min_vec*10^(nfig))/10^(nfig)
+        max_vec <- floor (max_vec*10^(nfig))/10^(nfig)
+        return (seq (min_vec, max_vec, length.out=num_out))
+}
+
 #' Make the x or y axis only show the min, middle and max points
 #'
 #' @export
 custom_tick <- function (vec, x_y='y'){
-        min_vec <- min(vec, na.rm=T)
-        max_vec <- max(vec, na.rm=T)
-        if (max_vec < 1){
-                nfig <- round (log10 (1/max_vec)) 
-        }else{nfig <- 0}
-        min_vec <- round(min_vec, nfig)
-        max_vec <- round(max_vec, nfig)
-        breaking <- seq (min_vec, max_vec, length.out=3)
+        breaking <- custom_round (vec, 3)
         if (x_y == 'y'){return (ggplot2::scale_y_continuous (breaks = breaking) )
         }else {return (ggplot2::scale_x_continuous (breaks = breaking) )}
 }
@@ -202,9 +206,11 @@ add_custom_color_discrete <- function (feature_vec, aes_param, color_fill=F){
 }
 
 add_custom_color_continuous <- function (feature_vec, aes_param, color_fill=F){
+        breaks <- custom_round (feature_vec, 2, more_precision=2, quantile_val=0.)
+        print (breaks)
         if (color_fill){
-                ggplot2::scale_fill_continuous (type=aes_param$palette)
-        }else{ggplot2::scale_color_continuous (type=aes_param$palette)
+                ggplot2::scale_fill_continuous (type=aes_param$palette, breaks=breaks)
+        }else{ggplot2::scale_color_continuous (type=aes_param$palette, breaks=breaks)
         }
 }
 
