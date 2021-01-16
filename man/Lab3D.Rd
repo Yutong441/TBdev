@@ -23,7 +23,7 @@ Lab3D(
 
 \item{phi}{The colatitude in degrees.}
 
-\item{label}{The labels to add. A vector of three where the first
+\item{labs}{The labels to add. A vector of three where the first
 element is x, the second is y, and the third is z.}
 
 \item{common_length}{the proportion that the arrow axis occupies on the

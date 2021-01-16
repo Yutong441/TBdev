@@ -170,7 +170,7 @@ dim_red_3D <- function (plot_data, x, y, z, color_by, all_theta=0, all_phi=0,
         }else{color <- color_by
         }
         ggplot2::ggplot (plot_data, aes_string (x=x, y=y, z=z) ) +
-                gg3D::stat_3D (aes_string (fill=color), geom='point',
+                Stat3D (aes_string (fill=color), geom='point',
                          theta=all_theta, phi=all_phi, color= AP$point_edge_color,
                          shape=AP$normal_shape, stroke=1, size=AP$pointsize) -> plot_ob
 
@@ -190,14 +190,14 @@ dim_red_3D <- function (plot_data, x, y, z, color_by, all_theta=0, all_phi=0,
                 plot_ob <- plot_ob + Seg3D(theta=all_theta, phi=all_phi, common_length=axis_length, AP=AP) +
                         Lab3D (labs = gsub ('PT','D', c(x, y, z)), theta=all_theta, phi=all_phi,
                                common_length=axis_length+lab_just, vjust=vert_just, hjust=hor_just, AP=AP) +
-                        gg3D::stat_3D (aes(x=x, y=y, z=z, alpha=color), theta=all_theta, data=point_data,
+                        Stat3D (aes(x=x, y=y, z=z, alpha=color), theta=all_theta, data=point_data,
                                        phi=all_phi, size=AP$pointsize, inherit.aes=F, 
                                        geom='point', show.legend=F) +
                         ggplot2::scale_alpha_discrete (breaks = c(NA, 'black'), range= c(0, 1))
         }else if (show_axes){
-                plot_ob <- plot_ob + gg3D::axes_3D(theta=all_theta, phi=all_phi) +
-                        gg3D::labs_3D(labs = gsub ('PT','D', c(x, y, z)), 
-                                      theta=all_theta, phi=all_phi) 
+                plot_ob <- plot_ob + Ax3D(theta=all_theta, phi=all_phi) +
+                        Lab3D(labs = gsub ('PT','D', c(x, y, z)),
+                              theta=all_theta, phi=all_phi, AP=AP) 
         }
 
         if (is.null(label_col)){label_col <- color}
@@ -351,7 +351,7 @@ dim_red_3D_traj <- function (plot_data, px, py, pz, pcolor, traj_data, tx, ty,
 
         print  ('start plotting')
         dim_red_3D (plot_data, px, py, pz, pcolor, all_theta=all_theta, all_phi=all_phi, ...) +
-                gg3D::stat_3D (aes_string (group= 'branch', color= 'lab_color', x=tx, y=ty, z=tz),
+                Stat3D (aes_string (group= 'branch', color= 'lab_color', x=tx, y=ty, z=tz),
                          inherit.aes=F, geom='path', theta=all_theta, phi=all_phi,
                          data=tra_scaled, size=2, linetype='dashed') +
                 ggplot2::scale_color_manual (values=c('black'= traj_color, 'white'=NA))+ 

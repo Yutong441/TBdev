@@ -1,16 +1,15 @@
 #' @importFrom magrittr %>%
 #' @importFrom dplyr mutate
-#' @importFrom plot3D trans3D
 #' @references
 #' \url{https://github.com/AckerDWM/gg3D/blob/master/R/axes_3D.R}
 #' @author AckerDWM (modified by Yutong Chen)
 coord_transform <- function (theta, phi, Xend, Yend, Zend){
     pmat <- plot3D::perspbox(z=diag(2), plot=F, theta=theta, phi=phi)
-    x_axis = trans3D(x = c(0, Xend), y = 0, z = 0, pmat = pmat) %>%
+    x_axis = plot3D::trans3D(x = c(0, Xend), y = 0, z = 0, pmat = pmat) %>%
       data.frame() %>% mutate(axis="x") %>% mutate (pos=c('start', 'end')) 
-    y_axis = trans3D(x = 0, y = c(0, Yend), z = 0, pmat = pmat) %>%
+    y_axis = plot3D::trans3D(x = 0, y = c(0, Yend), z = 0, pmat = pmat) %>%
       data.frame() %>% mutate(axis="y")%>% mutate (pos=c('start', 'end'))
-    z_axis = trans3D(x = 0, y = 0, z = c(0, Zend), pmat = pmat) %>%
+    z_axis = plot3D::trans3D(x = 0, y = 0, z = c(0, Zend), pmat = pmat) %>%
       data.frame() %>% mutate(axis="z")%>% mutate (pos=c('start', 'end'))
     return (dplyr::bind_rows(x_axis, y_axis, z_axis))
 }
@@ -39,7 +38,7 @@ Axes3D <- ggplot2::ggproto("Axes3D", ggplot2::Stat,
 Ax3D = function(mapping = aes(group=1), data = NULL, geom = "path",
                     position = "identity", na.rm = FALSE, show.legend = NA,
                     inherit.aes = TRUE, ...) {
-        ggplot2::layer(
+    ggplot2::layer(
     stat = Axes3D, data = data, mapping = mapping, geom = geom,
     position = position, show.legend = FALSE, inherit.aes = inherit.aes,
     params = list(na.rm = na.rm, ...)

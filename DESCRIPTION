@@ -28,7 +28,6 @@ Imports:
         data.table,
         graphics,
         ggplot2,
-        gg3D,
         plot3D,
         ggrepel,
         ComplexHeatmap,
