@@ -207,7 +207,6 @@ add_custom_color_discrete <- function (feature_vec, aes_param, color_fill=F){
 
 add_custom_color_continuous <- function (feature_vec, aes_param, color_fill=F){
         breaks <- custom_round (feature_vec, 2, more_precision=2, quantile_val=0.)
-        print (breaks)
         if (color_fill){
                 ggplot2::scale_fill_continuous (type=aes_param$palette, breaks=breaks)
         }else{ggplot2::scale_color_continuous (type=aes_param$palette, breaks=breaks)

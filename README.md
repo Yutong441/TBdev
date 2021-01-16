@@ -57,7 +57,7 @@ directory, run the 'assign_label/change_labels.R' script section 'save data for
 pseudotime analysis' to obtain the input matrix to GPLVM. It generates 2 files
 in the 'data/' folder. One is 'merged_all.csv'. The other is
 'merged_meta_all.csv'. Next install tensorflow version 1.13.1 and gpflow
-version 1.0.0. In the root directory, run 'pseudotime/GPLVM/tb_gplvm.py'. This
+version 1.0.0. In the root directory, run 'inst/python/GPLVM/tb_gplvm.py'. This
 script uses GPLVM to infer the 3D latent space for the dataset. Having run this
 file, there would be 4 files in the 'result/' folder.  The
 'model_no_prior.hdf5' file stores the GPLVM model. The 'PT_no_prior.csv' file
@@ -69,13 +69,13 @@ package. Alternatively, you may wish to follow the instruction from
 done in python.
 
 Next, install the python package [STREAM](https://github.com/pinellolab/STREAM). 
-After running the file 'pseudotime/STREAM/stream_GPLVM.py', 3 files in the
+After running the file 'inst/python/STREAM/stream_GPLVM.py', 3 files in the
 'data/' folder will be generated. The 'stream_branch_labels.csv' contains
 branch information. 'stream_pseudotime' contains the pseudotime estimated by
 STREAM. Lastly, the 'STREAM_data.csv' file contains scaled expression matrix.
 These files are inputs to the B-RGPLVM algorithm.
 
-Lastly, run B-RGPLVM, using the script 'pseudotime/BRGPLVM/branching_tb.py'.
+Lastly, run B-RGPLVM, using the script 'inst/python/BRGPLVM/branching_tb.py'.
 Three files will be generated in the 'result/' folder.
 'model_dict_matern.hdf5' is the B-RGPLVM model. The 'prediction_matern_500.csv'
 contains inferred gene expression from B-RGPLVM. Lastly, the
@@ -87,7 +87,7 @@ inference results from STREAM. Secondly. GPLVM and B-RGPLVM were implemented in
 tensorflow 1. However, the STREAM package depends on tensorflow 2. We had to
 create two virtual environments as followed:
 
-```{bash, eval= FALSE}
+```{bash}
 # create environment for GPLVM and B-RGPLVM
 conda create -n ptime python=3.6
 conda activate ptime

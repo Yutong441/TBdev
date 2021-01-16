@@ -1,6 +1,6 @@
 ---
 title: "GPLVM"
-output: rmarkdown::html_vignette
+output: html_document
 vignette: >
   %\VignetteIndexEntry{GPLVM}
   %\VignetteEngine{knitr::rmarkdown}
@@ -10,10 +10,125 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  warning = FALSE
 )
 ```
 
-```{r setup}
-library(TBdev)
+Set up python environment to call the script for GPLVM.
+Because the script for GPLVM is written in python, to call this script in R, it
+is necessary to install the reticulate package. Next, a python virtual
+environment needs to be created as followed:
+
+```{bash, eval= FALSE}
+conda create -n ptime python=3.6
+conda activate ptime
+conda install -c conda-forge tensorflow==1.13.1
+conda install pip
+pip install gpflow==1.0.0
+conda install -c bioconda anndata
+```
+
+```{r message = FALSE}
+reticulate::use_condaenv("ptime")
+# where the python files are located within the package:
+script_root <- system.file("python/", package='TBdev')
+reticulate::source_python (paste (script_root, 'GPLVM/GrandPrix.py', sep='/'))
+reticulate::source_python (paste (script_root, 'STREAM/fitting_prob.py', sep='/'))
+
+library (TBdev)
+library (ggplot2)
+```
+
+# Load data
+Load a seurat object that has been saved in the directory `data`.
+```{r, fig.width=12, fig.height=6}
+root <- '.'
+data_dir <- paste (root, 'data', sep='/')
+all_data <- get (load (paste (data_dir, 'final_merged_tb.Robj', sep='/') ))
+AP <- list (pointsize=3, legend_point_size=3, fontsize=11, point_fontsize=4,
+            font_fam= 'sans')
+plot_dim_red (all_data, group.by = c('broad_type', 'date'), DR='pca',
+              dims=c(1,2,3), all_theta=50, AP=AP
+)
+```
+
+Select the cells in the trophoblast lineage
+```{r}
+# save from cMor
+data (CT)
+tb_data <- all_data [, ! (all_data$revised %in% c(CT$in_vitro_cells, CT$non_emb_lineage,
+                   'Oocyte', 'Zy', '2C', '4C', '8C', 'PE', 'EPI', 'PSA-EPI' ))]
+exp_mat <- save_to_csv (tb_data, select_genes=4000)
+# scale the data as required by GPLVM
+Y <- scale(t(exp_mat))
+```
+
+# Embedding
+It is highly recommended to run the python script on a GPU. 
+That is, save the expression matrix and then run `inst/python/GPLVM/gplvm_tb.py`.
+However, for illustration in this R markdown, the code below is run on a CPU
+for 100 epochs of iteration only. For this dataset, convergence is usually
+reached after 50~100 epochs.
+It may be better to set a higher number of epochs e.g. 1000 to ensure
+convergence for other datasets in general.
+```{r, message = FALSE}
+Grand_out = fit_model (data=Y, # rows are cells and columns are genes
+                       n_latent_dims=3L, #here 3 latent dimensions are computed
+                       n_inducing_points=10L, #number of inducing points
+                       latent_prior_var=1., 
+                       maxitr=100L, #maximum epoch of iteration
+                       disp=T,  return_pred=T,
+                       kernel=list ('name'='RBF', 'ls'=1.0, 'var'=1.0)
+                       # Use RBF kernel
+)
+```
+
+```{r include=FALSE}
+rm (Y)
+```
+
+Visualise the result
+```{r, fig.width=12, fig.height=6}
+tb_data <- RunGPLVM (tb_data, Grand_out[[1]][[1]])
+plot_dim_red (tb_data, group.by = c('broad_type', 'date'), DR='gplvm',
+              dims=c(1,2,3), all_theta=50, AP=AP
+)
+```
+
+Another benefit of GPLVM is infer the gene expression distribution at given
+pseudotime location. We can determine the probability of a cell whose
+expression fits into this distribution.
+To illustrate, we will compare the human trophoblast stem cells (hTSC) with
+those along the trophoblast lineage. Human embryonic stem cells (hESC) will
+also be compared.
+
+```{r}
+in_vitro <- all_data [rownames (exp_mat),all_data$broad_type %in% c('hTSC_OKAE', 
+                                                        'hTSC_TURCO', 'hESC')]
+in_vitro_mat <- as.matrix (Seurat::GetAssayData (in_vitro, assay='RNA', slot='data'))
+in_vitro_met <- in_vitro@meta.data
+fit_chance <- fitting_likelihood (data.frame (exp_mat), 
+                                  new_X = data.frame (in_vitro_mat), 
+                                  new_meta = in_vitro_met, 
+                                  group_by = 'broad_type',
+                                  pt_mean = data.frame (Grand_out[[2]][[1]]),
+                                  pt_var  = data.frame (Grand_out[[2]][[2]])
+)
+```
+
+Visualise the results on the latent dimension inferred by GPLVM
+```{r, fig.width=12, fig.height=10}
+meta <- tb_data@meta.data
+tb_data@meta.data <- cbind (meta [, !colnames (meta) %in% colnames (fit_chance)], fit_chance)
+# shorten the name a bit for plotting
+colnames (tb_data@meta.data) <- gsub ('^hTSC_', '', colnames (tb_data@meta.data))
+plot_dim_red (tb_data, group.by = c('broad_type', 'hESC', 'OKAE', 'TURCO'), 
+              DR='gplvm', dims=c(1,2,3), all_theta=50, AP=AP, 
+              label_col='broad_type' #label the cell types in all subplots
+) 
+```
+
+```{r include=FALSE}
+rm (list = ls ())
 ```
