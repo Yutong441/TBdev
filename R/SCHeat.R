@@ -54,10 +54,8 @@ get_hori_bars <- function (x, group.by, group_order, default_color,
         return (list (hori_bar, HA_df, color_map_list) )
 }
 
-#' @importFrom ComplexHeatmap HeatmapAnnotation
-#' @noRd
 return_row_HA_ob <- function (df_list, col_list, vert_anna_param, show_legend=T){
-        HeatmapAnnotation (df=df_list, which='row', col=col_list,
+        ComplexHeatmap::HeatmapAnnotation (df=df_list, which='row', col=col_list,
                            show_annotation_name=F,
                            annotation_legend_param=vert_anna_param,
                            show_legend=show_legend) 
@@ -229,7 +227,7 @@ make_multi_anno_legend <- function (anna_param, anno_df, color_map_list, anno_na
 #' @importFrom stats quantile
 #' @author Yutong Chen
 #' @export
-seurat_heat <- function (x, group.by, color_row=NULL, 
+seurat_heat <- function (x, group.by=NULL, color_row=NULL, 
                          # Seurat related
                          assay='RNA', slot_data='data', 
 
@@ -238,6 +236,8 @@ seurat_heat <- function (x, group.by, color_row=NULL,
                          show_column_names=F, show_row_names=T,
                          show_column_anna=T, column_rotation=0,
                          annotation_name_side='left',
+                         column_names_side = 'bottom',
+                         row_names_side = 'left',
 
                          # clustering
                          cluster_columns=F,
@@ -281,6 +281,13 @@ seurat_heat <- function (x, group.by, color_row=NULL,
                 show_column_legend <- T
                 show_row_legend <- T
                 show_heat_legend <- T
+        }
+
+        if (is.null (group.by)){
+                x$any_group <- 'none'
+                group.by <- 'any_group'
+                column_split <- NA
+                top_HA <- F
         }
 
         # setting default row and column order levels
@@ -406,7 +413,7 @@ seurat_heat <- function (x, group.by, color_row=NULL,
         Heatmap (plot_data, cluster_rows=cluster_rows, 
                  cluster_columns=cluster_columns, 
                  show_column_names=show_column_names,
-                 column_names_side='bottom',
+                 column_names_side=column_names_side,
                  column_names_gp=gpar (fontsize=AP$fontsize, fontfamily=AP$gfont_fam),
                  show_row_names=show_row_names,
                  top_annotation=hori_bars, 
@@ -414,7 +421,7 @@ seurat_heat <- function (x, group.by, color_row=NULL,
 
                  column_split=column_split,
                  row_split=color_row_names, 
-                 row_names_side=c('left'), 
+                 row_names_side=row_names_side, 
                  row_names_gp = gpar (fontsize=AP$fontsize, fontfamily=AP$gfont_fam), 
 
                  row_title=row_title,

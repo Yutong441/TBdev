@@ -6,7 +6,7 @@
 \usage{
 seurat_heat(
   x,
-  group.by,
+  group.by = NULL,
   color_row = NULL,
   assay = "RNA",
   slot_data = "data",
@@ -17,6 +17,8 @@ seurat_heat(
   show_column_anna = T,
   column_rotation = 0,
   annotation_name_side = "left",
+  column_names_side = "bottom",
+  row_names_side = "left",
   cluster_columns = F,
   cluster_rows = F,
   column_split = 1,

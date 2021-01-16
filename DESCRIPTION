@@ -42,7 +42,6 @@ Imports:
         gridExtra,
         Seurat,
         destiny,
-        DeconRNASeq,
         WGCNA,
         org.Hs.eg.db,
         GOSemSim,
@@ -61,6 +60,7 @@ Suggests:
     ppcor,
     coop,
     Matrix,
+    DeconRNASeq,
     knitr,
     rmarkdown
 Depends: 
