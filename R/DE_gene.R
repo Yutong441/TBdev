@@ -94,7 +94,7 @@ list_DE_genes <- function (x, directory, group.by, top_number=8, label='all',
 #' @export
 DE_lineage_genes <- function (x, directory, top_number=3, label='all',
                               group.by='revised', lineage_markers=NULL){
-        if (is.null (lineage_markers)){data (lineage_markers) }
+        if (is.null (lineage_markers)){data (lineage_markers, package='TBdev') }
         DE_genes <- list_DE_genes (x, directory, group.by=group.by,
                                    top_number=top_number, label=label)
         all_genes <- c(lineage_markers,  DE_genes)
@@ -171,7 +171,7 @@ seurat_violin <- function (x, features, group.by, assay='RNA',
 strong_gene_violin <- function (x, group.by, dim_num=1, DR='pca', assay='RNA',
                                 slot_data='data'){
         feature_load <- x@reductions[[DR]]@feature.loadings
-        data (TF)
+        data (TF, package='TBdev')
         strong_gene <- data.frame (feature_load [rownames (feature_load) %in% TF [,1], dim_num])
         abs (strong_gene) %>% dplyr::top_n (20) -> gene_plot
         vln_plot <- seurat_violin (x, rownames (gene_plot), 'species_type', assay, slot_data)

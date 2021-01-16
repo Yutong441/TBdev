@@ -44,7 +44,9 @@ load_correct_label <- function (metadata, root_dir, file_name, sheetName,
 standardise_name <- function (cellname, conversion=NULL){
         # in case a factor vector is used
         x <- as.character(cellname)
-        if (is.null(conversion) ) {data (convert_name); conversion <- convert_name
+        if (is.null(conversion) ) {
+                data (convert_name, package='TBdev')
+                conversion <- convert_name
         }
         for (i in 1:dim(conversion)[1]){
                 x [x %in% as.character (conversion$original [i]) ] <-
@@ -88,7 +90,7 @@ fill_na_labels <- function (x, reference, fill_label){
 partial_relevel <- function (x, reorder_levels=NULL, mixed_sorting=F,
                              leading_char='', skip_char=0){
         if (is.null (reorder_levels)){
-                data (orders)
+                data (orders, package='TBdev')
                 reorder_levels <- orders$cell_order
         }
         ori_level <- as.character (levels (factor (x) ))
@@ -200,7 +202,7 @@ select_lineage <- function (x, feature, celltypes, discard=F){
 #'
 #' @export
 date_to_CS <- function (x, date_col = 'date'){
-        data (date2CS)
+        data (date2CS, package='TBdev')
         new_CS <- as.character (x@meta.data [, date_col])
         for (i in 1:nrow (date2CS)){
                 new_CS [ new_CS == date2CS$date [i] ] <- as.character (date2CS$CS[i])
@@ -221,7 +223,7 @@ date_to_CS <- function (x, date_col = 'date'){
 #' return_aes_param (list (fontsize=12, font_fam='Arial') )
 #' @export
 return_aes_param <- function (aes_param){
-        data (format_conf)
+        data (format_conf, package='TBdev')
         if (is.null (aes_param)){
                 aes_param <- format_conf
         }else{

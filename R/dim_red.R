@@ -244,7 +244,7 @@ plot_gene_PC <- function (x, group.by=NULL, show_markers=NULL, dims=c(1,2),
         print ('select markers')
         if (is.null (show_markers)){marker_list <- rownames (plot_gene)
         }else if (show_markers=='TF'){
-                data (TF)
+                data (TF, package='TBdev')
                 marker_list <- TF[,1]
         }else{marker_list <- show_markers}
 

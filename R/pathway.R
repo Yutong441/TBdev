@@ -86,7 +86,7 @@ pathway_heat_pca <- function (x, gene_list, save_dir, cutoff=70,
 all_pathways_heat_pca <- function (x, save_dir, all_path=NULL,
                                    highlight_cells=NULL, DE_dir=NULL,
                                    DE_label=NULL){
-        if (is.null(all_path)){data (KeggID); all_path <- KeggID
+        if (is.null(all_path)){data (KeggID, package='TBdev'); all_path <- KeggID
         }
         if (!dir.exists (save_dir)){dir.create (save_dir)}
         for (one_pathway in all_path$pathway){
@@ -117,7 +117,7 @@ all_pathways_heat_pca <- function (x, save_dir, all_path=NULL,
 #' @export
 path_eigen <- function (x, all_path=NULL, threshold=0.02,
                         select_cells=NULL, return_mat=F){
-        if (is.null(all_path)){data (KeggID); all_path <- KeggID
+        if (is.null(all_path)){data (KeggID, package='TBdev'); all_path <- KeggID
         }
         eigengene <- list()
         for (i in 1:length (all_path$pathway) ){
@@ -185,7 +185,7 @@ path_eigen <- function (x, all_path=NULL, threshold=0.02,
 #' `pgenes` and whose columns are cell names
 #' @export
 get_module_score <- function (x, save_path, all_path=NULL, pgenes=NULL, append_meta=F){
-        if (is.null(all_path)){data (KeggID); all_path <- KeggID
+        if (is.null(all_path)){data (KeggID, package='TBdev'); all_path <- KeggID
         }
         if ( file.exists (save_path) ){
                 print ('loading saved module scores')

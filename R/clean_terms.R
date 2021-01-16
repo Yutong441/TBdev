@@ -101,7 +101,7 @@ simplify_gsea <- function (xx_df, simple_terms=NULL, term_col='category'){
 
 append_default_dictionary <- function (new_dict, append_default){
         if (append_default){
-                data (GOsimp)
+                data (GOsimp, package='TBdev')
                 if (is.null (new_dict)){new_dict <- GOsimp
                 }else{
                         new_dict <- rbind (new_dict, GOsimp) 

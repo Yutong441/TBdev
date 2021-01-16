@@ -192,7 +192,7 @@ raw_to_seurat <- function (pred_all, label_list){
 #' @description I did not find this function helpful because later I added them
 #' to the metadata of the integrated dataset.
 integrated_seurat <- function (exp_mat, pseudotime, branch, metadata){
-        data (all_types)
+        data (all_types, package='TBdev')
         int_meta <- data.frame ('pseudotime'=pseudotime, 'branch'=branch)
         assign_branch <- c('main', 'EVT_branch', 'STB_branch')
         int_meta$branch <- assign_branch [ as.factor (int_meta$branch) ]
@@ -209,7 +209,7 @@ integrated_seurat <- function (exp_mat, pseudotime, branch, metadata){
 #' @param save_dir where the module scores are saved
 seurat_list_score <- function (seurat_list, save_dir, label='DF_B', KeggID=NULL){
         module_list <- list ()
-        if (is.null (KeggID)){data (KeggID)}
+        if (is.null (KeggID)){data (KeggID, package='TBdev')}
         for ( i in 1:length (seurat_list) ){
                 save_path <- paste (save_dir, paste (label, i, '.csv', sep=''), sep='/')
                 module_score <- get_module_score (seurat_list[[i]], all_path=KeggID, 

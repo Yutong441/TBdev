@@ -144,7 +144,7 @@ all_GSEA_one_type <- function (markers, cluster_num, save_dir, label=NULL, ...){
 }
 
 get_all_paths <- function (save_dir,  cluster_num, all_path=NULL, path_data_dir='GO/pathways'){
-        if (is.null(all_path)){data (Kegg_ID); all_path <- Kegg_ID
+        if (is.null(all_path)){data (Kegg_ID, package='TBdev'); all_path <- Kegg_ID
         }
         final_dir <- paste (save_dir, cluster_num, sep='/')
         if (!dir.exists (final_dir) ){dir.create (final_dir) }
