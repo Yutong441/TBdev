@@ -1,27 +1,34 @@
-setwd ('..')
-devtools::load_all ()
+# adjust config of graphics
+# Please load this file e.g. using `source ('config_template.R')` into R. This
+# will create a list called `format_cf`, which can be supplied to the aesthetic
+# parameters of all the plotting functions in this package.
+library (TBdev)
 library (tidyverse)
+
 # ----------plotting settings----------
 format_conf <- list (
-        fontsize = 15,
+        fontsize = 15, #all fontsizes except `geom_text`
         point_fontsize = 18/3, #for geom_text
-        pointsize = 3,
-        legend_point_size = 5,
+        # NB: geom_text uses a different unit, conversion to that in other
+        # ggplot parameters is to divide by 3
+        pointsize = 3, #size of a circle
+        legend_point_size = 5, #size of the legend symbol
+        point_edge_color = 'white', #color of the edge of circle
         normal_shape = 21, # circle, has to be larger than 20
-        point_edge_color = 'white',
-        highlight_shape = 24, # triangle
+        highlight_shape = 24, # triangle, has to be larger than 20
         font_fam = 'Arial',
         # for grid::gpar argument, 'sans' mans 'Arial'
         gfont_fam = 'sans', 
         highlight_font = list(fontface='bold', fontsize=18),
-        ridge_alpha=0.5,
+        # for plotting the letters to index subfigures
+        ridge_alpha=0.5, #transparency of ridgeplot
 
         # color settings
         heatmap_color = c("#00B0F0", "#FFF2F1", "#FF0000"), #blue, white, red
         date_color_vec = c(in_vitro='#FF0000'),
         palette = 'viridis', # for `ggplot2::scale_color_continuous`
 
-        # arrow settings
+        # arrow settings for plotting arrox axis
         arrow_angle=30,
         arrow_length=0.01, 
         arrow_length_unit='npc',
@@ -42,9 +49,8 @@ CT <- list(
         in_vitro_cells = c('hESC', 'hES', 'ESC', 'hESC_YAN', 'hESC', 'maESC',
                            'hTSC', 'hTSC_OKAE', 'hTSC_TURCO')
 )
-CT$non_TB_lineage <- c(CT$non_emb_lineage,
-                              CT$pre_imp_lineage,
-                              CT$in_vitro_cells)
+CT$non_TB_lineage <- c(CT$non_emb_lineage, CT$pre_imp_lineage,
+                       CT$in_vitro_cells)
 
 # ----------ordering settings----------
 # regulate the appearance of cells in legends or other features

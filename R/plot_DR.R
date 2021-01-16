@@ -134,7 +134,7 @@ gg_plot_dim_red <- function (x, by_group, DR='pca', dims=c(1,2),
 #' data points as much as possible
 #' @param force_repel extent of repulsion
 #' @param AP aesthetic parameters controlling arrow appearance
-#' @importFrom ggplot2 aes aes_string layer Stat
+#' @importFrom ggplot2 aes aes_string 
 #' @importFrom magrittr %>%
 #' @author Yutong Chen
 dim_red_3D <- function (plot_data, x, y, z, color_by, all_theta=0, all_phi=0,
@@ -302,7 +302,7 @@ text_3D_repel <- function (dat, AP, theta, phi, label_col,
 #' @param traj_data the dataframe for the trajectory data
 #' @param tx, ty, tz, tcolor similar to px, py, pz, pcolor
 #' @param ... pass to `dim_red_3D`
-#' @importFrom ggplot2 aes_string layer Stat
+#' @importFrom ggplot2 aes_string 
 #'
 #' @author Yutong Chen
 #' @references 
