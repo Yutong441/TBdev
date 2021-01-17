@@ -7,8 +7,8 @@
 \format{
 a dataframe
 \describe{
-\item {ori}{the term to be replaced}
-\item {sub}{the simplified term}
+\item{ori}{the term to be replaced}
+\item{sub}{the simplified term}
 }
 }
 \usage{

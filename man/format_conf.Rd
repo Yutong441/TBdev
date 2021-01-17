@@ -6,34 +6,34 @@
 \title{Configuration of aesthetic parameters}
 \format{
 a list
-\describe {
-\item {color_vec}{a named vector of colors to plot for specific names}
-\item {remove_keys}{what terms to remove from GO/KEGG/Reactome}
-\item {fontsize}{the font size of all graphical elements except
+\describe{
+\item{color_vec}{a named vector of colors to plot for specific names}
+\item{remove_keys}{what terms to remove from GO/KEGG/Reactome}
+\item{fontsize}{the font size of all graphical elements except
 \code{ggplot2::geom_text} and \code{ggrepel::geom_text_repel}}
-\item {point_fontsize}{the font size of labelled text in the graph by
+\item{point_fontsize}{the font size of labelled text in the graph by
 \code{geom_text} and \code{geom_text_repel}}
-\item {legend_point_size}{the point size in legend symbol, if the value is
+\item{legend_point_size}{the point size in legend symbol, if the value is
 discrete}
-\item {normal_shape}{shape of points, must be between 21 and 24}
-\item {highlight_shape}{shape of highlighted points in \code{plot_dim_red (select_cells=)} argument, must be between 21 and 24}
-\item {font_fam}{font family}
-\item {gfont_fam}{for \code{grid::gpar} argument, 'sans' mans 'Arial'}
-\item {highlight_font}{a list containing the fontface and fontsize. This is
+\item{normal_shape}{shape of points, must be between 21 and 24}
+\item{highlight_shape}{shape of highlighted points in \code{plot_dim_red (size_highlight=)} argument, must be between 21 and 24}
+\item{font_fam}{font family}
+\item{gfont_fam}{for \code{grid::gpar} argument, 'sans' mans 'Arial'}
+\item{highlight_font}{a list containing the fontface and fontsize. This is
 for the labelling letters in arranging multiple plots using \code{arrange_plots}}
-\item {ridge_alpha}{transparency of ridge plot}
-\item {heatmap_color}{a vector of 3 items corresponding to the color of low,
+\item{ridge_alpha}{transparency of ridge plot}
+\item{heatmap_color}{a vector of 3 items corresponding to the color of low,
 middle and high range of the heatmap}
-\item {date_color_vec}{a vector for plotting points related to the \code{date}
+\item{date_color_vec}{a vector for plotting points related to the \code{date}
 metadata field in a Seurat object}
-\item {palette}{color palette to use for \code{ggplot2::scale_color_continuous}}
-\item {arrow_angle}{the angle of arrow when plotting the arrow axis}
-\item {arrow_length}{the length of the head of the arrow}
-\item {arrow_length_unit}{the measurement unit of \code{arrow_length}}
-\item {arrow_type}{the shape of the arrow head}
-\item {arrow_thickness}{the thickness of the arrow}
-\item {arrow_linejoin}{the shape of the lateral ends of the arrow head}
-\item {cell_order}{the order of items that appear in the legend}
+\item{palette}{color palette to use for \code{ggplot2::scale_color_continuous}}
+\item{arrow_angle}{the angle of arrow when plotting the arrow axis}
+\item{arrow_length}{the length of the head of the arrow}
+\item{arrow_length_unit}{the measurement unit of \code{arrow_length}}
+\item{arrow_type}{the shape of the arrow head}
+\item{arrow_thickness}{the thickness of the arrow}
+\item{arrow_linejoin}{the shape of the lateral ends of the arrow head}
+\item{cell_order}{the order of items that appear in the legend}
 }
 }
 \usage{

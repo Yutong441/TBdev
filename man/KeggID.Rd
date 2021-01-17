@@ -6,9 +6,9 @@
 \title{KEGG ID conversion}
 \format{
 a dataframe
-\describe {
-\item {pathway}{the common name of a pathway}
-\item {kegg_id}{the KEGG ID of that pathway}
+\describe{
+\item{pathway}{the common name of a pathway}
+\item{kegg_id}{the KEGG ID of that pathway}
 }
 }
 \usage{

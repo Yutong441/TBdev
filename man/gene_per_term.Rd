@@ -33,5 +33,5 @@ KG <- modules::use ('KEGG_path.R')
 library (GOSemSim)
 d <- godata('org.Hs.eg.db', ont="BP")
 kk <- KG$compare_cluster_enrichment (markers, d, enrich_area='KEGG')
-path_val <- KG$gene_per_term (kk, 'JAK-STAT', return_val=T)
+path_val <- KG$gene_per_term (kk, 'JAK-STAT', org.Hs.eg.db, return_val=T)
 }

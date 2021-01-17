@@ -7,9 +7,9 @@
 \format{
 a list of cell types
 \describe{
-\item {TB_lineage}{the cell types within the trophoblast lineage}
-\item {non_emb_lineage}{the cell types not within the embryonic lineage}
-\item {in_vitro_cells}{the in vitro cell types}
+\item{TB_lineage}{the cell types within the trophoblast lineage}
+\item{non_emb_lineage}{the cell types not within the embryonic lineage}
+\item{in_vitro_cells}{the in vitro cell types}
 }
 }
 \usage{
