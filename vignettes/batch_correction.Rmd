@@ -131,9 +131,6 @@ syncytiotrophoblast (STB) and Oocyte and 4C overlap with cytotrophoblast (CTB).
 This is not because they are separated along the third dimension:
 ```{r, fig.width = 12, fig.height = 12}
 integrated <- Seurat::RunUMAP (integrated, assay='integrated', dims=1:30, n.components=3)
-setwd ('../TBdev')
-devtools::load_all ()
-setwd ('../vignette_test')
 plot_dim_red (integrated, group.by = c('Type', 'date', 'paper', 'cluster'), 
               DR='umap', dims=1:3, AP=AP, further_repel=F, all_theta=20)
 ```

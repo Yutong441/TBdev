@@ -37,7 +37,6 @@ reticulate::source_python (paste (script_root, 'GPLVM/GrandPrix.py', sep='/'))
 reticulate::source_python (paste (script_root, 'STREAM/fitting_prob.py', sep='/'))
 
 library (TBdev)
-library (ggplot2)
 ```
 
 # Load data
@@ -73,6 +72,7 @@ reached after 50~100 epochs.
 It may be better to set a higher number of epochs e.g. 1000 to ensure
 convergence for other datasets in general.
 ```{r, message = FALSE}
+reticulate::py_set_seed (100)
 Grand_out = fit_model (data=Y, # rows are cells and columns are genes
                        n_latent_dims=3L, #here 3 latent dimensions are computed
                        n_inducing_points=10L, #number of inducing points
