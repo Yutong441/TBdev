@@ -6,7 +6,7 @@ This respository contains the code to reproduce the results in the paper:
 
 ## Installation
 The package can be installed in R using:
-```{r}
+```r
 devtools::install_github ('Yutong441/TBdev')
 ```
 
@@ -87,7 +87,7 @@ inference results from STREAM. Secondly. GPLVM and B-RGPLVM were implemented in
 tensorflow 1. However, the STREAM package depends on tensorflow 2. We had to
 create two virtual environments as followed:
 
-```{bash}
+```bash
 # create environment for GPLVM and B-RGPLVM
 conda create -n ptime python=3.6
 conda activate ptime

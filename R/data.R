@@ -12,7 +12,7 @@
 #'         discrete}
 #'         \item {normal_shape}{shape of points, must be between 21 and 24}
 #'         \item {highlight_shape}{shape of highlighted points in `plot_dim_red
-#'         (select_cells=)` argument, must be between 21 and 24}
+#'         (size_highlight=)` argument, must be between 21 and 24}
 #'         \item {font_fam}{font family}
 #'         \item {gfont_fam}{for `grid::gpar` argument, 'sans' mans 'Arial'}
 #'         \item {highlight_font}{a list containing the fontface and fontsize. This is
@@ -30,7 +30,6 @@
 #'         \item {arrow_thickness}{the thickness of the arrow}
 #'         \item {arrow_linejoin}{the shape of the lateral ends of the arrow head}
 #'         \item {cell_order}{the order of items that appear in the legend}
-
 #' }
 "format_conf"
 
@@ -38,8 +37,8 @@
 #'
 #' @format a dataframe
 #' \describe{
-#' \item {ori}{the term to be replaced}
-#' \item {sub}{the simplified term}
+#'         \item {ori}{the term to be replaced}
+#'         \item {sub}{the simplified term}
 #' }
 "GOsimp"
 
