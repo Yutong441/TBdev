@@ -54,11 +54,14 @@ get_hori_bars <- function (x, group.by, group_order, default_color,
         return (list (hori_bar, HA_df, color_map_list) )
 }
 
-return_row_HA_ob <- function (df_list, col_list, vert_anna_param, show_legend=T){
+return_row_HA_ob <- function (df_list, col_list, vert_anna_param, AP, show_legend=T){
         ComplexHeatmap::HeatmapAnnotation (df=df_list, which='row', col=col_list,
                            show_annotation_name=F,
                            annotation_legend_param=vert_anna_param,
-                           show_legend=show_legend) 
+                           show_legend=show_legend,
+                           annotation_name_gp = grid::gpar (fontsize=AP$fontsize, 
+                                                      fontfamily=AP$gfont_fam)
+        ) 
 }
 
 #' Perform row or column scaling
@@ -165,6 +168,9 @@ make_multi_anno_legend <- function (anna_param, anno_df, color_map_list, anno_na
 #' @param column_rotation rotate column name labels, 90 is vertical, 0 is
 #' horizontal, there are no other choices
 #' @param annotation_name_side side of the annotation name for column side bar
+#' @param show_column_bars whether to show horizontal bars for the columns. It
+#' can be a vector of the same length as `group.by` to specify the group(s) to
+#' show the horizontal bars.
 #'
 #' @param cluster_columns whether to perform hierarchical clustering on columns
 #' @param cluster_rows whether to perform hierarchical clustering on rows
@@ -238,6 +244,7 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
                          annotation_name_side='left',
                          column_names_side = 'bottom',
                          row_names_side = 'left',
+                         show_column_bars = T,
 
                          # clustering
                          cluster_columns=F,
@@ -349,14 +356,17 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
         }
         print ('finally making horizontal bars')
         # NB: HeatmapAnnotation may fail system check when in `do.call`
-        hori_bars<- ComplexHeatmap::columnAnnotation (df=HA_df, 
-                                       col= color_map_list,
+        if (length(show_column_bars)==1){
+                show_column_bars <- rep (show_column_bars, length(group.by))
+        }
+        hori_bars<- ComplexHeatmap::columnAnnotation (df=HA_df [, show_column_bars, drop=F], 
+                                       col= color_map_list [show_column_bars],
                                        show_annotation_name=show_column_anna,
                                        show_legend =show_column_legend,
                                        annotation_name_side=annotation_name_side,
                                        annotation_legend_param=anna_param,
                                        annotation_name_gp = gpar (fontsize=AP$fontsize, 
-                                                                  fontfamily=AP$gfont_fam )
+                                                                  fontfamily=AP$gfont_fam)
         )
 
         print ('making vertical bar')
@@ -367,7 +377,7 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
 
                 vert_bars <- return_row_HA_ob (data.frame (Marker = color_row_names), 
                                              list(Marker=row_color),
-                                             vert_anna_param,
+                                             vert_anna_param, AP,
                                              show_legend=show_row_legend)
         }else{
                 row_color <- get_rainbow_col (color_row_names, AP,
@@ -378,7 +388,7 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
                 vert_bars <- return_row_HA_ob (data.frame (Marker = color_row_names,
                                                          highlight = highlight),
                                               list(Marker=row_color, highlight=label_high),
-                                              vert_anna_param, show_legend=F) 
+                                              vert_anna_param, AP, show_legend=F) 
         }
 
         print ('processing expression matrix')
@@ -414,7 +424,8 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
                  cluster_columns=cluster_columns, 
                  show_column_names=show_column_names,
                  column_names_side=column_names_side,
-                 column_names_gp=gpar (fontsize=AP$fontsize, fontfamily=AP$gfont_fam),
+                 column_names_gp=gpar (fontsize=AP$fontsize, 
+                                       fontfamily=AP$gfont_fam),
                  show_row_names=show_row_names,
                  top_annotation=hori_bars, 
                  left_annotation=vert_bars,
@@ -422,13 +433,14 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
                  column_split=column_split,
                  row_split=color_row_names, 
                  row_names_side=row_names_side, 
-                 row_names_gp = gpar (fontsize=AP$fontsize, fontfamily=AP$gfont_fam), 
+                 row_names_gp = gpar (fontsize=AP$fontsize, 
+                                      fontfamily=AP$gfont_fam), 
 
                  row_title=row_title,
                  row_title_rot=0,
                  column_title_rot=column_rotation,
-                 row_title_gp = gpar (fontsize=AP$fontsize, fontfamily=AP$gfont_fam),
-                 column_title_gp = gpar (fontsize=AP$fontsize, fontfamily=AP$gfont_fam), 
+                 row_title_gp = gpar (fontsize=AP$fontsize, fontfamily=AP$gfont_fam, fontface='bold'),
+                 column_title_gp = gpar (fontsize=AP$fontsize, fontfamily=AP$gfont_fam, fontface='bold'), 
 
                  col=color_scale,
                  width = main_width, height = main_height,
@@ -450,7 +462,7 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
                                                   function (x){make_multi_anno_legend (anna_param, 
                                                 HA_df, color_map_list, column_legend_labels, x) } )
                 }else{column_legends <- list (NULL) }
-                legend_list<- append (list(row_legend, heat_legend), column_legends)
+                legend_list<- append (list(row_legend, heat_legend), column_legends [show_column_bars])
                 legend_list<- legend_list [sapply (legend_list, function(x){!is.null(x)})]
                 pd <- ComplexHeatmap::packLegend (list=legend_list,
                                                   max_height=main_height,

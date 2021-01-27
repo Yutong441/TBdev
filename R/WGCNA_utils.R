@@ -61,11 +61,13 @@ wgcna_plot_save <- function (input_data, weight_power, show_markers, save_dir){
 #' @param cluster_num if it is 'all', then all cells will be selected
 #' @importFrom Seurat VariableFeatures
 subset_celltype <- function (x, top_markers=NULL, cluster_num='EVT',
-                             select_type='seurat_clusters'){
+                             select_type='seurat_clusters', assay='RNA',
+                             slot_data='data'){
         if (is.null(top_markers)){var_genes <- VariableFeatures(x)
         }else if (top_markers == 'all'){var_genes <- rownames (x)
         }else{var_genes <- unique(top_markers$gene)}
-        datExpr <- t (as.matrix(x[['RNA']]@data) [var_genes,])  # only use var.genes in analysis 
+        datExpr <- t (as.matrix(Seurat::GetAssayData (x, assay=assay, slot=slot_data)
+                                ) [var_genes,])  # only use var.genes in analysis 
         if (cluster_num != 'all'){
                 datExpr <- datExpr [x@meta.data[, select_type]== cluster_num, ]
         }
@@ -223,47 +225,6 @@ WGCNA_all <- function (x, top_markers, wgcna_dir, celltype, feature='reassign',
         if (return_con_mat ) {return (con_mat_final)}
 }
 
-#' Plot gene-gene correlation network in a WGCNA cluster
-#' 
-#' @param x a Seurat object
-#' @param color_row a vector of gene names
-#' @param cell_type the cell type in which correlation is computed. By default,
-#' all cell types will be used
-#' @param feature which metadata entry the cell type information is stored.
-#' Ignore it if `cell_type='all'`
-#' @param scale_edge_weight adjust the weight of the lines
-#' @param scale_node_size adjust the relative node size
-#' @param threshold only gene-gene pair with correlation beyond a threshold
-#' will be selected
-#' @importFrom igraph E "E<-"
-#' @importFrom magrittr %>%
-#' @export
-plot_WGCNA_net <- function (x, color_row, celltype='all', feature='revised',
-                            scale_edge_weight=0.2, scale_node_size=0.2,
-                            threshold=0.5){
-        datExpr <- subset_celltype (x[color_row,], 'all', celltype, featurue)
-        sim_mat <- WGCNA::cor (datExpr, method="pearson")
-        na_field <- apply (sim_mat, 1, function(x){mean (is.na (x)) }) == 1
-        sim_mat <- sim_mat [!na_field, !na_field]
-
-        sim_mat %>% data.frame () %>%
-                tibble::add_column (gene1 = rownames (sim_mat) ) %>%
-                tidyr::gather ('gene2', 'val', -gene1) %>%
-                dplyr::filter (val > threshold) -> select_sim
-        select_sim <- select_sim [select_sim$gene1 != select_sim$gene2,]
-        sel_genes <- unique (select_sim$gene1)
-        sim_mat <- sim_mat [sel_genes, sel_genes]
-
-        network <- igraph::graph_from_adjacency_matrix(sim_mat , 
-                        weighted=T, mode="undirected", diag=F)
-        E (network)$width <- E (network)$weight/scale_edge_weight
-
-        avg_exp <- colMeans (datExpr)
-        avg_exp <- avg_exp [ match (rownames (sim_mat), names (avg_exp) ) ]
-        igraph::plot.igraph (network, vertex.size=as.matrix (
-                                        avg_exp)/scale_node_size)
-}
-
 # ------------------
 # Eigengene analysis
 # ------------------
@@ -283,20 +244,20 @@ plot_WGCNA_net <- function (x, color_row, celltype='all', feature='revised',
 #' @export
 find_eigengene <- function (x, save_dir, cluster_num='all',
                             select_type='revised', save_eigen=T,
-                            return_eigengene=F, ...){
+                            return_eigengene=F, top_markers=NULL, ...){
         save_dir <- paste (save_dir, 'WGCNA', sep='/')
         if (!dir.exists (save_dir)){dir.create (save_dir) }
-        datExpr <- subset_celltype(x, cluster_num=cluster_num, select_type=select_type)
+        datExpr <- subset_celltype(x, cluster_num=cluster_num, 
+                                   top_markers=top_markers, select_type=select_type)
         print ('determining the power for scale-free network')
         weight_power <- determine_power_auto (datExpr, save_dir)
-        print ('removing ribosomal genes')
-        datExpr_noribo <- remove_ribosomal_genes (datExpr, row_is_gene=FALSE)
-        net <- block_with_parameter (datExpr_noribo, weight_power, ...)
+        #datExpr_noribo <- remove_ribosomal_genes (datExpr, row_is_gene=FALSE)
+        net <- block_with_parameter (datExpr, weight_power, ...)
         print ('saving gene clusters')
         if (save_eigen) {save_eigengene (net, save_dir)}
         if (return_eigengene){
                 print ('calculating eigengenes')
-                eig_genes <- WGCNA::moduleEigengenes (datExpr_noribo, net$colors)
+                eig_genes <- WGCNA::moduleEigengenes (datExpr, net$colors)
                 datME<- eig_genes$eigengene
                 return (datME)
         }
@@ -321,9 +282,14 @@ save_eigengene <- function (net, wgcna_dir) {
                 color_df [1:length (color_list[[i]]) ,i] <- color_list [[i]]
         }
 
-        names (color_list) <- all_colors
-        colnames (color_df) <- all_colors
+        new_colors <- colors2labels  (all_colors, prefix='GC')
+        colnames (color_df) <- new_colors
+        color_vec <- new_colors [match (net$colors, all_colors) ]
+        print (class (color_vec))
+        print (dim (color_vec))
+        names (color_vec) <- names (net$colors)
         utils::write.csv (color_df, paste (wgcna_dir, 'module_genes.csv', sep='/') )
+        utils::write.csv (color_vec, paste (wgcna_dir, 'module_net_genes.csv', sep='/') )
 }
 
 #' Convert WGCNA generated names to cluster names
@@ -333,4 +299,47 @@ colors2labels <- function (color_vec, prefix='cluster'){
         color_vec %>% as.factor () %>% as.numeric () -> num_vec
         num_vec <- paste (prefix, num_vec, sep='')
         return (gtools::mixedsort (num_vec))
+}
+
+#' Calculate intra modular connectivity
+#' 
+#' @param x a Seurat object
+#' @param ... parameters for `subset_celltype`
+#' @importFrom magrittr %>%
+#' @export
+hub_score <- function (x, weight_power, save_dir, ...){
+        datExpr <- subset_celltype(x, cluster_num='all', top_markers='all',
+                                   select_type='revised', ...)
+        # calculate the adjacency matrix
+        ADJ <- abs (WGCNA::cor (datExpr, use='p'))^weight_power
+
+        # sorting out the names
+        color_net <- utils::read.csv (paste (save_dir,
+                        'WGCNA/module_net_genes.csv', sep='/'))
+        color_net %>% tibble::deframe () -> color_net
+
+        intra_net <- WGCNA::intramodularConnectivity(ADJ, color_net)
+        intra_net %>% tibble::add_column (cluster=color_net) %>% 
+                tibble::add_column (gene=rownames (intra_net))
+}
+
+#' Save the hub score data frame
+#'
+#' @param markers a dataframe generated from `find_DE_genes`
+#' @param hub_df a dataframe generated from `hub_score`
+#' @importFrom magrittr %>%
+#' @export
+save_hub_score <- function (markers, hub_df, clusters, cell_types, save_dir,
+                            other_celltypes=NULL){
+        all_df <- list()
+        if (length (cell_types)==1){cell_types <- rep (cell_types, length (clusters))}
+        for (i in 1:length(clusters)){
+                sel_hub <- hub_df %>% dplyr::filter (cluster == clusters[i])
+                markers %>% dplyr::filter (group %in% c(cell_types[i])) 
+                sel_mark <- sel_mark [match (sel_hub$gene, sel_mark$feature), ]
+                all_df [[i]] <- cbind (sel_hub, sel_mark)
+        }
+        final_dir <- paste (save_dir, 'WGCNA', paste ('TF_', cell_types[1], '.csv', sep=''), sep='/')
+        do.call (rbind, all_df) %>% dplyr::arrange (dplyr::desc (kWithin) ) %>% 
+                utils::write.csv (final_dir)
 }

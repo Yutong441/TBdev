@@ -7,16 +7,49 @@
 save_DE_genes(
   x,
   save_dir,
+  markers = NULL,
   group.by = "revised",
   label = "all",
+  save_format = "excel",
+  weighting = "logFC",
+  cluster = "group",
+  gene = "feature",
   show_num = 30,
-  weight = "logFC",
-  cluster = "group"
+  value = "avgExpr",
+  AP = NULL,
+  organism_db = NULL
 )
 }
 \arguments{
 \item{x}{a Seurat object}
+
+\item{save_dir}{where to save the results}
+
+\item{group.by}{a column in the meta data to group the cell types}
+
+\item{label}{the file name would be: '$save_dir/DE_$group.by_$label.$suffix'}
+
+\item{save_format}{can be 'excel' or 'gene_table' for average expression only}
+
+\item{weighting}{which column to arrange the genes from top to bottom}
+
+\item{gene}{which column stores the gene names}
+
+\item{show_num}{how many DE genes to save per group. If 'all', everything
+will be saved}
+
+\item{value}{which column stores the average expression}
+
+\item{AP}{a list that contains the \code{cell_order} entry to arrange the cells}
+
+\item{organism_db}{a genome database, e.g. org.Hs.eg.db. It is optional
+unless you would like to add a ensemble ID column}
 }
 \description{
-Save Differentially Expressed Genes
+This function intends to save DE genes for presentation and
+publication but not for computing. For downstream analysis, the
+\code{find_DE_genes} function would be able to save the raw output.
+}
+\seealso{
+\code{find_DE_genes}
 }

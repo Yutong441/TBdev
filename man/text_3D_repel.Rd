@@ -11,7 +11,10 @@ text_3D_repel(
   phi,
   label_col,
   axes_names = c("x", "y", "z"),
-  repel_force = 1
+  repel_force = 1,
+  color_text = F,
+  magnify_text = 1,
+  ...
 )
 }
 \arguments{
@@ -26,6 +29,10 @@ text_3D_repel(
 \item{axes_names}{the column names for the x, y, and z coordinates in \code{dat}}
 
 \item{repel_force}{extent of repelling labels}
+
+\item{color_text}{whether to color the label text according to \code{label_col}}
+
+\item{magnify_text}{how much bigger to make the label text}
 }
 \value{
 a \code{geom_text_repel} layer

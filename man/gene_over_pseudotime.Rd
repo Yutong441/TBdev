@@ -11,6 +11,7 @@ gene_over_pseudotime(
   metadata,
   color_feature,
   num_col = 4,
+  num_row = NULL,
   branch_assignment = NULL,
   peak_data = NULL,
   gene_col = "feature",

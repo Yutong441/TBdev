@@ -111,22 +111,27 @@ theme_dotplot <- function (aes_param = list(fontsize=15,
               )
 }
 
-custom_round <- function (vec, num_out=3, more_precision=0, quantile_val=0){
+custom_round <- function (vec, num_out=3, more_precision=0, quantile_val=0, round_updown=F){
         min_vec <- stats::quantile(vec, quantile_val, na.rm=T)
         max_vec <- stats::quantile(vec, 1-quantile_val, na.rm=T)
         if (max_vec < 1){
                 nfig <- round (log10 (1/max_vec)) + more_precision
         }else{nfig <- 0}
-        min_vec <- ceiling (min_vec*10^(nfig))/10^(nfig)
-        max_vec <- floor (max_vec*10^(nfig))/10^(nfig)
+        if (round_updown){
+                min_vec <- ceiling (min_vec*10^(nfig))/10^(nfig)
+                max_vec <- floor (max_vec*10^(nfig))/10^(nfig)
+        }else{
+                min_vec <- round (min_vec*10^(nfig))/10^(nfig)
+                max_vec <- round (max_vec*10^(nfig))/10^(nfig)
+        }
         return (seq (min_vec, max_vec, length.out=num_out))
 }
 
 #' Make the x or y axis only show the min, middle and max points
 #'
 #' @export
-custom_tick <- function (vec, x_y='y'){
-        breaking <- custom_round (vec, 3)
+custom_tick <- function (vec, x_y='y', ...){
+        breaking <- custom_round (vec, 3, ...)
         if (x_y == 'y'){return (ggplot2::scale_y_continuous (breaks = breaking) )
         }else {return (ggplot2::scale_x_continuous (breaks = breaking) )}
 }

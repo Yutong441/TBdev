@@ -1,11 +1,10 @@
 # generate the figure 1 of the manuscript
 # unified atlas of trophoblast development
 
-#devtools::load_all ('..')
-library (TBdev)
+devtools::load_all ('..', export_all=F)
+#library (TBdev)
 library (tidyverse)
 library (org.Hs.eg.db)
-library (GOSemSim)
 
 root_dir <- '/mnt/c/Users/Yutong/Documents/bioinformatics/reproduction/'
 root <- paste (root_dir, 'results/', sep='/')
@@ -26,30 +25,46 @@ DE_genes <- unique_DE_genes (markers, 6)
 DE_genes %>% filter (!group %in% CT$non_TB_lineage) %>% 
         dplyr::select (group, feature) %>% deframe () -> show_genes
 
-# run GO and KEGG
-d <- godata(org.Hs.eg.db, ont="BP")
-markers %>% filter (!group %in% CT$non_TB_lineage) -> tb_markers
-kk <- compare_cluster_enrichment (tb_markers, d, enrich_area='KEGG')
-
-p1 <- plot_dim_red (in_vivo, group.by= c('broad_type'), DR='pca', all_labels=T,
-                    return_sep=F, nudge_ratio=0.2)
+p1 <- plot_dim_red (in_vivo, group.by= c('broad_type'), DR='pca', return_sep=T,
+                    nudge_ratio=0.2)
 p2 <- seurat_violin (in_vivo, features=plot_genes, group.by='broad_type')
 p3 <- seurat_heat (tb_only, color_row=show_genes, group.by = c('broad_type', 'date'), 
                        slot_data='data', heat_name='norm count', center_scale=T,
                        column_legend_labels=c('cell type', 'date'), row_scale=T)
 
-p4 <- display_cluster_enrichment (kk, show_graph='emap', feature_vec= tb_markers$group, 
-                                     show_num=20, vert_just=2.2) + labs (fill='')
-psea_df <- run_GSEA_all_types (tb_markers, org.Hs.eg.db, save_path = 
-                                  paste (sup_save_dir, 'PSEA_broad_type_all_vivo.csv', sep='/'))
-p5 <- ridge_all_types (psea_df, show_num=40, not_show_prop=0.01) + labs (fill='') 
+# run KEGG
+markers <- find_DE_genes (in_vivo, save_dir, group.by='broad_type', label='pairwise', method='pairwise')
+tb_ctb <- markers %>% filter (group == 'CTB' & compare_group == 'TB') 
+psea_tb_ctb <- run_GSEA_all_types (tb_ctb, org.Hs.eg.db)
+#devtools::load_all ('..', export_all=F)
+p4 <- enrich_bar (psea_tb_ctb, org.Hs.eg.db, show_num=5, markers=tb_ctb,
+            show_gene_labels=6, extend_axis_pos=1.2, extend_axis_neg=1.2, nudge_x=0.2, shrink_ratio=0.7)
 
-grob_list <- list (p1, p2 + xlab ('') + ylab ('norm count')+
+ctb_stb <- markers %>% filter (group == 'STB' & compare_group == 'CTB') 
+psea_ctb_stb <- run_GSEA_all_types (ctb_stb, org.Hs.eg.db)
+p5 <- enrich_bar (psea_ctb_stb, org.Hs.eg.db, show_num=5, markers=ctb_stb,
+            show_gene_labels=6, extend_axis_pos=1.2, extend_axis_neg=1.2, nudge_x=0.12, shrink_ratio=0.7)
+
+ctb_evt <- markers %>% filter (group == 'EVT' & compare_group == 'CTB') 
+psea_ctb_evt <- run_GSEA_all_types (ctb_evt, org.Hs.eg.db)
+p6 <- enrich_bar (psea_ctb_evt, org.Hs.eg.db, show_num=5, markers=ctb_evt,
+            show_gene_labels=6, extend_axis_pos=1.2, extend_axis_neg=3, nudge_x=0.2, shrink_ratio=0.7)
+
+grob_list <- list (p1[[1]]+labs (fill=''), p2 + xlab ('') + ylab ('norm count')+
                    theme (axis.title.x=element_blank (), aspect.ratio=1.5) , 
-                   p3, p4, p5+theme (aspect.ratio=2.5))
-lay_mat <- cbind (c(1,3,4), c(2,3,5))
-arrange_plots (grob_list, paste (save_dir, 'final_figure1.pdf', sep='/'), lay_mat )
+                   p3, p4 +theme (aspect.ratio=1.4), 
+                   p5+theme (aspect.ratio=1.4), p6+theme (aspect.ratio=1.4))
+lay_mat <- matrix(c(1, 1, 1, 2, 2, 2, 
+                    3, 3, 3, 3, 3, 3,
+                    4, 4, 5, 5, 6, 6),
+                  nrow=6) %>% t()
+arrange_plots (grob_list, paste (save_dir, 'final_figure1.pdf', sep='/'), lay_mat, plot_width=3)
 
-# genes in MAPK
-gene_per_enriched_term (psea_df, 'MAPK', org.Hs.eg.db)[[1]]
-gene_per_enriched_term (psea_df, 'cAMP', org.Hs.eg.db)[[1]]
+# save individual plots
+all_plots <- list (ctb=p4, stb=p5, evt=p6)
+
+for (i in 1:length(all_plots)){
+        cairo_pdf (paste (save_dir, '/GSEA_', names (all_plots)[i], '.pdf',sep=''), width=8, height=8)
+        print (all_plots[[i]])
+        dev.off ()
+}

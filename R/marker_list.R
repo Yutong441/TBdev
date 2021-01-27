@@ -120,6 +120,15 @@ partial_relevel <- function (x, reorder_levels=NULL, mixed_sorting=F,
         return (x)
 }
 
+#' Merge factor vectors
+#' 
+#' @param list_vec a list of vectors
+add_level_to_factor <- function (list_vec){
+        final_vec <- unlist(lapply (list_vec, as.character ))
+        final_level <- unlist(lapply (list_vec, function (x){levels (factor(x) ) }))
+        return (factor (final_vec, levels=final_level))
+}
+
 #' Append string before a numeric vector
 #'
 #' @description Append a string A to the beginning of another string B if

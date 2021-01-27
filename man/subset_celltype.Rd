@@ -8,7 +8,9 @@ subset_celltype(
   x,
   top_markers = NULL,
   cluster_num = "EVT",
-  select_type = "seurat_clusters"
+  select_type = "seurat_clusters",
+  assay = "RNA",
+  slot_data = "data"
 )
 }
 \arguments{

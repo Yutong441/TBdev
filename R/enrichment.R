@@ -258,3 +258,241 @@ ridge_all_types <- function (xx, x_col='value', y_col='category', sort_by=
         }
         return (plot_xx)
 }
+
+order_genes_one_cond <- function (sel_markers, gdf){
+        sel_markers [match (gdf$gene, sel_markers$feature),] %>%
+                dplyr::select (logFC) %>% cbind (gdf) %>%
+                dplyr::arrange (dplyr::desc (abs (logFC)))
+}
+
+order_genes <- function (genes_df, markers, compare_name){
+        clusters <- unique (genes_df$celltype)
+        markers <- markers [markers$compare_group == unique (compare_name),]
+        if (mean (clusters %in% markers$group) == 1){
+                glist <- lapply (as.list(clusters), function(x){
+                        order_genes_one_cond (markers[markers$group==x,],
+                                              genes_df[genes_df$celltype==x,]
+                        )})
+                return (do.call (rbind, glist))
+        }else{
+                print ('the DE gene marker dataframe is not obtained from the same
+                       clusters as the GSEA.')
+                return (genes_df)
+        }
+}
+
+#' Summarise the raw GSEA dataframe 
+#'
+#' @param xx raw dataframe from GSEA
+#' @param show_num how many terms to show per group
+#' @return a shorter dataframe
+#' @importFrom magrittr %>%
+summarise_gsea <- function (xx, show_num, category_col = 'category',
+                            cluster_col='cluster', pval_col='p.adjust',
+                            enrich_col='value'){
+        xx %>% dplyr::group_by (!!as.symbol (category_col), 
+                                !!as.symbol (cluster_col), compare_group) %>%
+                dplyr::summarise (pmean = mean (!!as.symbol (pval_col)), 
+                                  emean=mean (!!as.symbol (enrich_col) )) %>%
+                dplyr::ungroup () %>%
+                dplyr::mutate (enriched=sign (emean)) %>%
+                dplyr::group_by (!!as.symbol (cluster_col), enriched ) %>%
+                dplyr::arrange (dplyr::desc (abs (emean)) ) %>%
+                dplyr::slice_head (n=show_num) %>%  
+                dplyr::arrange (emean) %>% data.frame ()
+}
+
+gene_vec_to_df <- function (vec){
+        meta <- gsub ('__[0-9]+$', '', names (vec) )
+        term <- gsub ('___.*$', '', meta)
+        celltype <- gsub ('^.*___', '', meta)
+        data.frame (gene=vec, term=term, celltype=celltype, meta=meta)
+}
+
+#' Obtain the label information for enrichment barplot
+#'
+#' @description This function joins the enrichment term with the top
+#' differentially expressed genes in a single string, that will be shown in the
+#' enrichment barplot labels. 
+#' @param xx raw dataframe from GSEA
+#' @param sum_gsea a dataframe generated from `summarise_gsea`
+#' @param markers a dataframe generated from `find_DE_genes`. If NULL, the
+#' genes will be ordered alphabetically.
+#' @return a character vector of labels
+#' @importFrom magrittr %>%
+term_gene_labels <- function (xx, sum_gsea, organism_db, show_gene_labels=3,
+                              markers=NULL, category_col= 'category',
+                              cluster_col='cluster'){
+        cat_col <- sum_gsea [, category_col]
+        clust_col <- sum_gsea [, cluster_col]
+        text_df <- xx [xx [, category_col] %in% cat_col, ]
+
+        term_genes <- lapply (as.list(1:nrow(sum_gsea)), function (i){ 
+                rownames (text_df [text_df [, category_col] == cat_col[i] & text_df [
+                          , cluster_col] == clust_col[i], ] ) })
+        cat_clust <- paste (cat_col, '___', clust_col, sep='')
+        names (term_genes) <- paste (cat_clust, '__', sep='')
+
+        # merge all entrez ID into a single vector, which is converted into
+        # common gene names. This is much faster.
+        genes_vec <- gsea_entrez_to_name (do.call (c, term_genes), organism_db)
+        names (genes_vec) <- gsub ('__[0-9]+$', '', names (genes_vec) )
+        genes_df <- gene_vec_to_df (genes_vec)
+
+        if (!is.null (markers) ){
+                compare_name <- unique (xx$compare_group)
+                genes_df <- order_genes (genes_df, markers, compare_name)
+        }
+        term_genes <- lapply (as.list (cat_clust), function (x) {paste (line_break_every(
+                                genes_df[genes_df$meta==x, 'gene'][1:show_gene_labels]), 
+                                collapse=', ')}) %>% unlist()
+        # remove the NA terms that would appear if the number of enriched genes
+        # is smaller than `show_gene_labels`
+        term_genes <- gsub (', NA', '', term_genes)
+        # prevent extra commas from appearing after each line break
+        term_genes <- gsub ('\n,', '\n', term_genes)
+        # prevent empty spaces
+        term_genes <- gsub (',( \n)+$', '', term_genes)
+
+        return (paste (cat_col, '\n(', term_genes, ')', sep=''))
+}
+
+line_break_every <- function (vec, separator='\n', every_n=2){
+        vec <- as.character (vec)
+        n_interval <- floor(length(vec)/every_n)
+        total_n <- n_interval*(every_n+1) + length(vec)%%every_n
+        final_vec <- rep (separator, total_n)
+        final_ind <- rep (T, total_n)
+        final_ind [seq (every_n+1, total_n, by=every_n+1)] <- F
+
+        final_vec [final_ind] <- vec
+        return (final_vec)
+}
+
+#' @importFrom ggplot2 aes
+#' @importFrom magrittr %>%
+gg_enrich_bar <- function (plot_df, AP, shrink_ratio=1., band_ratio=5,
+                           extend_axis_neg=1., extend_axis_pos=1., nudge_x=0.1,
+                           label_shift_ratio=1.){
+        plot_df %>% dplyr::group_by (cluster, enriched) %>% 
+                dplyr::mutate (yval=as.character (gtools::mixedorder(abs (emean)))) %>%
+                dplyr::mutate (xmax=sign(emean)*max(abs (emean))) -> plot_df
+        
+        plot_df$enriched_cell <- plot_df$compare_group
+        enriched_index <- plot_df$enriched >0
+        plot_df$enriched_cell [enriched_index] <- plot_df$cluster [enriched_index]
+        max_x <- (1+ extend_axis_pos)*max (plot_df$emean)
+        min_x <- (1+ extend_axis_neg)*min (plot_df$emean)
+
+        plot_df$neg_label <- plot_df$glabel
+        plot_df$neg_label [enriched_index] <- NA
+        plot_df$glabel [!enriched_index] <- NA
+
+        ggplot2::ggplot (plot_df, aes (x=emean, y= yval)) +
+                ggplot2::geom_bar (aes (fill=enriched_cell), stat='identity', show.legend=F)+ 
+                ggplot2::geom_text (aes(label=glabel, 
+                                        x=xmax*label_shift_ratio),
+                                    family=AP$font_fam, hjust='left',
+                                    size=AP$point_fontsize*shrink_ratio)+
+                ggplot2::geom_text (aes(label=neg_label, 
+                                        x=xmax*label_shift_ratio),
+                                    family=AP$font_fam, hjust='outward',
+                                    size=AP$point_fontsize*shrink_ratio)+
+                ggplot2::ylab('Description')+ ggplot2::labs(fill='p value') +
+                ggplot2::xlab ('enrichment score') +
+                ggplot2::facet_wrap (~cluster, scales='free_y')+
+                theme_TB ('dotplot', feature_vec=plot_df$enriched_cell, rotation=0,
+                          color_fill=T, AP=AP)+
+                ggplot2::geom_vline (xintercept=0, linetype='dashed', 
+                                     size=AP$pointsize, color='black') +
+                ggplot2::theme (axis.text.y=ggplot2::element_blank (), 
+                                strip.text=ggplot2::element_blank ()) +
+                ggplot2::ylab ('')+ ggplot2::xlim (c(min_x, max_x))+
+                enrich_arrow (plot_df, AP, band_ratio, nudge_x)+
+                add_custom_color (feature_vec=c(as.character (plot_df$cluster),
+                                                as.character (plot_df$compare_group)),
+                color_fill=F, aes_param=AP)
+}
+
+#' @importFrom ggplot2 aes
+#' @importFrom magrittr %>%
+enrich_arrow <- function (plot_df, aes_param, band_ratio=5, nudge_x=0.1){
+        ymax <- plot_df$yval %>% as.numeric () %>% max () 
+        y_max <- as.character (ymax+1)
+        x_max_df <- plot_df %>% dplyr::group_by (cluster, compare_group) %>% 
+                dplyr::summarise (max_x = max (emean), min_x = -max(emean) )
+
+        layer1 <- ggplot2::geom_segment( aes(x=0, xend=max_x, y=y_max, yend=y_max, 
+                                             color=cluster), data=x_max_df,
+                    arrow = get_arrow (aes_param), size = band_ratio*aes_param$arrow_thickness, 
+                    linejoin=aes_param$arrow_linejoin, show.legend=F)
+
+        layer2 <- ggplot2::geom_segment( aes (x=0, xend=min_x, y=y_max, 
+                                yend=y_max, color=compare_group), data=x_max_df,
+                    arrow = get_arrow (aes_param), size = band_ratio*aes_param$arrow_thickness, 
+                    linejoin=aes_param$arrow_linejoin, show.legend=F)
+
+        layer3 <- ggplot2::geom_text (aes (x=max_x, y=y_max, label=cluster, 
+                                           color=cluster), data=x_max_df,
+                vjust='bottom', hjust='left', family=aes_param$font_fam,
+                size=aes_param$point_fontsize, nudge_x=nudge_x, show.legend=F)
+        layer4 <- ggplot2::geom_text (aes (x=min_x, y=y_max, label=compare_group, 
+                                           color=compare_group), data=x_max_df,
+                vjust='bottom', hjust='right', family=aes_param$font_fam,
+                size=aes_param$point_fontsize, nudge_x=-nudge_x, show.legend=F)
+        return (list(layer1, layer2, layer3, layer4))
+}
+
+#' Barplot for GSEA results
+#' 
+#' @param plot_data a dataframe generated from `run_GSEA_all_types`
+#' @param organism_db a gene database
+#' @param show_num how many terms to show
+#' @param markers a dataframe generated from `find_DE_genes` that contain the
+#' log fold change of gene expression. This information is used to order the
+#' appearance of genes in the plot labels.
+#' @param AP aesthetic parameters for plotting
+#' @param show_gene_labels how many genes to show after each term
+#' @param simplification whether to simplify the GO/KEGG/Reactome terms
+#' @param sim_dict a data frame with 2 columns: 'ori' for the original terms,
+#' 'sub' for the strings that will replace the original terms. The default is a
+#' a limited data frame built into this package.
+#' @param append_default_dict append default dictionary to simplify the terms
+#' @param compare_group_col which column in `markers` contain the
+#' comparison/reference group information.
+#' @param compare_group_name name of the comparison group if such a column does
+#' not exist.
+#' @param ... other parameters to pass onto `gg_enrich_bar`. They include:
+#' @param shrink_ratio by how much the fontsize of the labels should decrease
+#' @param band_ratio how much thicker the arrow should be compared to the
+#' `arrow_thickness` field in `AP`.
+#' @param label_shift_ratio by what percentage along the x axis to shift the
+#' term labels
+#' @param nudge_x by how much the labels for the arrow to shift away from the
+#' arrow head.
+#' @export
+enrich_bar <- function (plot_data, organism_db, show_num=4, markers=NULL,
+                        AP=NULL, show_gene_labels=3, simplification=T, 
+                        sim_dict=NULL, append_default_dict=T,
+                        compare_group_col='compare_group',
+                        compare_group_name='others', ...){
+        AP <- return_aes_param (AP)
+        sim_dict <- append_default_dictionary (sim_dict, append_default_dict)
+        if (simplification) {plot_data <- simplify_gsea (plot_data, sim_dict)} # from 'clean_terms.R'
+        if (!is.null (markers)){
+                if (compare_group_col %in% colnames (markers)){
+                        compare_group_name <- unique(markers$compare_group)
+                        if (length (compare_group_name) > 1){
+                                print ('Currently the function does not support 
+                                       multiple comparion groups')
+                                compare_group_name <- compare_group_name [1]
+                        }
+                        markers$compare_group <- markers [, compare_group_col]
+                }else{markers$compare_group <- compare_group_name}
+        }
+        plot_data$compare_group <- compare_group_name
+        plot_df <- summarise_gsea (plot_data, show_num)
+        plot_df$glabel <- term_gene_labels (plot_data, plot_df, organism_db,
+                                            show_gene_labels, markers)
+        return (gg_enrich_bar (plot_df, AP, ...))
+}

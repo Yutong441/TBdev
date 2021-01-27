@@ -11,6 +11,7 @@ find_eigengene(
   select_type = "revised",
   save_eigen = T,
   return_eigengene = F,
+  top_markers = NULL,
   ...
 )
 }

@@ -17,6 +17,10 @@ display_cluster_enrichment(
   AP = NULL,
   sim_dict = NULL,
   append_default_dict = T,
+  subset_cluster = NULL,
+  organism_db = NULL,
+  num_col = NULL,
+  markers = NULL,
   ...
 )
 }

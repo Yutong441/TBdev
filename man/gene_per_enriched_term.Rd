@@ -9,7 +9,8 @@ gene_per_enriched_term(
   term,
   organism_db,
   cell_type = NULL,
-  category_col = "category"
+  category_col = "category",
+  cluster_col = "cluster"
 )
 }
 \description{

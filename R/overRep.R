@@ -13,9 +13,10 @@ non_default_theme <- function (plot_ob, default_theme, AP, color_fill=F){
 }
 
 #' @importFrom ggplot2 aes
+#' @importFrom magrittr %>%
 #' @noRd
-gg_dot <- function (xx, showCategory){
-        AP <- return_aes_param (NULL)
+gg_dot <- function (xx, showCategory, AP=NULL){
+        AP <- return_aes_param (AP)
         plot_data <- xx@compareClusterResult
         plot_data$Cluster <- partial_relevel (plot_data$Cluster, AP$cell_order)
 
@@ -27,10 +28,68 @@ gg_dot <- function (xx, showCategory){
                 dplyr::mutate (GeneRatio = numer/denom) %>%
                 dplyr::group_by (Cluster) %>%
                 dplyr::arrange (dplyr::desc (GeneRatio)) %>%
-                dplyr::mutate (Description = factor (Description, levels = Description ) ) %>%
-                ggplot2::ggplot ( aes (x=Cluster, y=stats::reorder (Description, dplyr::desc (Description)), 
+                dplyr::mutate (Description = factor (Description, 
+                                levels = Description ) ) -> plot_df
+        ggplot2::ggplot (plot_df, aes (x=Cluster, y=stats::reorder (
+                                Description, dplyr::desc (Description)), 
                               color=p.adjust, size=GeneRatio) ) +
                 ggplot2::geom_point ()+ ggplot2::ylab('Description')
+}
+
+#' Plot barplot for overrepresented or enriched terms
+#' 
+#' @param xx a compareClusterResult subject
+#' @param AP aesthetic parameters for the plot
+#' @importFrom ggplot2 aes
+#' @importFrom magrittr %>%
+gg_bar <- function (xx, showCategory, organism_db=NULL, AP=NULL,
+                    rename_vec=NULL, show_gene_labels=3, num_col=3,
+                    markers=NULL){
+        AP <- return_aes_param (AP)
+        col_vec <- AP$heatmap_color
+        plot_data <- xx@compareClusterResult
+        plot_data$Cluster <- partial_relevel (plot_data$Cluster, AP$cell_order)
+
+        if (!is.null(rename_vec)){
+                plot_data$Description <- rename_vec
+                plot_data <- plot_data %>% filter (!is.na (Description))
+        }
+        plot_data %>% 
+                dplyr::group_by (Cluster) %>%
+                dplyr::arrange (p.adjust) %>%
+                dplyr::slice_head (n=showCategory) %>%
+                #dplyr::slice_min (p.adjust, n=showCategory) %>%
+                tidyr::separate (GeneRatio, c('numer', 'denom'), sep='/') %>%
+                dplyr::mutate_at (c('numer', 'denom'), as.numeric ) %>%
+                dplyr::mutate (GeneRatio = numer/denom) %>%
+                dplyr::arrange (dplyr::desc (GeneRatio)) %>%
+                dplyr::mutate (Description = factor (Description, 
+                                levels = Description ) ) -> plot_df
+
+        # extract the gene names
+        term_genes <- lapply (as.list (plot_df$Description), function(x){
+                        from_term_to_genes(plot_df, plot_df$Description==x, organism_db)} )
+        # arrange the gene order by their differential expression pattern
+        if (!is.null(markers)){
+                term_genes <- lapply (as.list(1:length(term_genes)), function (i){order_genes (
+                                        term_genes[[i]], NULL, markers) })
+        }
+        # paste gene names into a single string
+        term_genes <- lapply (term_genes, function (x) {paste (as.character (
+                                x[1:show_gene_labels]), collapse=', ')}) %>% unlist()
+        plot_df$label_genes <- term_genes
+        xmax <- max (plot_df$GeneRatio)
+
+        ggplot2::ggplot (plot_df, aes (x=GeneRatio, y=stats::reorder (Description, 
+                                        dplyr::desc (Description)))) +
+                ggplot2::geom_bar (aes (fill=p.adjust), stat='identity')+ 
+                geom_text (aes(label=stringr::str_wrap (label_genes) ),  
+                           x=xmax, hjust=1)+
+                ggplot2::ylab('Description')+ ggplot2::labs(fill='p value') +
+                ggplot2::facet_wrap (~Cluster, scales='free_y', ncol=num_col)+
+                theme_TB ('dotplot', feature_vec=plot_df$p.adjust, rotation=0)+
+                custom_tick (plot_df$GeneRatio, x_y='x', round_updown=F) +
+                ggplot2::scale_fill_continuous (high=col_vec[1], low=col_vec[3]) 
 }
 
 
@@ -118,9 +177,16 @@ display_cluster_enrichment <- function (xx, show_graph='emap',
                                         show_num=NULL, clean_results=T,
                                         simplification=T, AP=NULL,
                                         sim_dict=NULL,
-                                        append_default_dict=T,...){
+                                        append_default_dict=T,
+                                        subset_cluster=NULL,
+                                        organism_db=NULL,
+                                        num_col=NULL,
+                                        markers=NULL,...){
         AP <- return_aes_param (AP)
         sim_dict <- append_default_dictionary (sim_dict, append_default_dict)
+        if (!is.null (subset_cluster)){
+                xx <- subset_terms (xx, subset_cluster)
+        }
         if (clean_results){ 
                 ori_terms <- nrow (xx@compareClusterResult)
                 xx <- clean_terms (xx, AP) 
@@ -140,12 +206,17 @@ display_cluster_enrichment <- function (xx, show_graph='emap',
                 cluster_plot <- cluster_plot + add_custom_color (feature_vec, AP, color_fill=T)
         }else if (show_graph == 'dotplot') { 
                 if (is.null (show_num)){show_num=40}
-                cluster_plot <- gg_dot (xx, showCategory=show_num)
+                cluster_plot <- gg_dot (xx, showCategory=show_num, AP=AP)
                 cluster_plot <- non_default_theme (cluster_plot, default_theme, color_fill=T, AP=AP)
         }else if (show_graph == 'ridgeplot') {
                 if (is.null (show_num)){show_num=30}
                 cluster_plot <- ridgeplot (xx, showCategory=show_num)
                 cluster_plot <- non_default_theme (cluster_plot, default_theme, color_fill=T, AP=AP)
+        }else if (show_graph == 'barplot') {
+                if (is.null (show_num)){show_num=30}
+                cluster_plot <- gg_bar(xx, showCategory=show_num, AP=AP, rename_vec=
+                                       rename_vec, organism_db=organism_db,
+                               num_col=num_col, markers=markers, ...)
         }else{
                 cluster_plot <- gseaplot (xx, geneSetID=1)
                 cluster_plot <- non_default_theme (cluster_plot, default_theme, AP=AP)

@@ -205,7 +205,7 @@ get_module_score <- function (x, save_path, all_path=NULL, pgenes=NULL, append_m
                 }
                 names (pgenes) <- paste (names (pgenes), '_', sep='')
                 # calculate module scores
-                x <- Seurat::AddModuleScore(x, features = pgenes, name = names (pgenes) )
+                x <- Seurat::AddModuleScore(x, features = pgenes, name = names (pgenes), ctrl=50)
                 # this function tends to append numbers after gene module names, need
                 # to clean them using regexp
                 module_names <- paste (names (pgenes), 1:length(pgenes), sep='')
@@ -226,4 +226,75 @@ get_module_score <- function (x, save_path, all_path=NULL, pgenes=NULL, append_m
                 path_seurat <- Seurat::CreateSeuratObject (module_scores, meta.data=metadata)
                 return (path_seurat)
         }
+}
+
+#' Pathview
+#'
+#' @description Plot the average expression of a list of genes in one cell type
+#' on a pathview plot
+#' @param gene a vector of gene names
+#' @param markers a dataframe of gene expression. It can be generated from
+#' `find_DE_genes`
+#' @param cell_type which cell type to analyse
+#' @param organism_db the database for the organism to be investigated
+#' @param pathname which pathway to view
+#' @param save_dir where to save the results
+#' @param pathway_db a dataframe with 2 columns: 'pathway' for the common names
+#' of the pathway that is used for naming the output file, and 'kegg_id' for
+#' the KEGG ID for that pathway. This ID may be obtained from:
+#' https://www.genome.jp/kegg/pathway.html
+get_pathway_view <- function (genes, markers, cell_type, organism_db, pathname,
+                              save_dir, pathway_db=NULL, cluster_col='feature',
+                              organism_name='human'){
+        if (is.null (pathway_db)){data(KeggID, package='TBdev') }
+        # setting up saving diretory
+        final_dir <- paste (save_dir, cell_type, sep='/')
+        if (!dir.exists (final_dir) ){dir.create (final_dir) }
+        path_ID <- KeggID [KeggID$pathway==pathname, 'kegg_id']
+
+        # obtain a vector of entrez ID
+        sel_markers <- markers [markers [, cluster_col] %in% genes, ]
+        geneList <- get_gene_list (sel_markers, cell_type, org.Hs.eg.db)
+
+        kegg_name <- get_kegg (organism_name)
+        pathview::pathview(gene.data  = geneList,
+                 pathway.id = path_ID,
+                 species    = kegg_name,
+                 kegg.dir = final_dir
+        )
+
+        # move the file to `save_dir`
+        old_name <-  paste (path_ID, '.pathview.png', sep='') 
+        new_name <- paste ('Path_', pathname, '.png', sep='')
+        new_name <-  paste (final_dir, new_name, sep='/') 
+        file.rename (from=old_name, to=new_name)
+}
+
+#' Pathview
+#'
+#' @description Plot the average expression of a list of genes in one cell type
+#' on pathview plots for the major pathways in embryological development.
+#' @param gene a vector of gene names
+#' @param markers a dataframe of gene expression. It can be generated from
+#' `find_DE_genes`
+#' @param cell_type which cell type to analyse
+#' @param organism_db the database for the organism to be investigated
+#' @param save_dir where to save the results
+#' @param pathway_db a dataframe with 2 columns: 'pathway' for the common names
+#' of the pathway that is used for naming the output file, and 'kegg_id' for
+#' the KEGG ID for that pathway. This ID may be obtained from:
+#' https://www.genome.jp/kegg/pathway.html
+#' @export
+get_all_path_view <- function (genes, markers, cell_type, organism_db,save_dir, 
+                               pathway_db=NULL, cluster_col='feature',
+                               organism_name='human', ...){
+        if (is.null (pathway_db)){data(KeggID, package='TBdev'); pathway_db <- KeggID}
+        for (i in 1:nrow (pathway_db)){
+                get_pathway_view (genes, markers, cell_type, org.Hs.eg.db,
+                                  pathway_db$pathway[i], save_dir, ...)
+        }
+        junk <- dir (path = paste(save_dir, cell_type, sep='/'), pattern='hsa*.png')
+        file.remove (junk)
+        junk <- dir (path = paste(save_dir, cell_type, sep='/'), pattern='hsa*.xml')
+        file.remove (junk)
 }

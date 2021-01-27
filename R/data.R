@@ -45,7 +45,9 @@
 #' A list of transcriptional factors
 #'
 #' @format a vector
-#' @author Dr Penfold
+#' @references
+#' \url{https://www.cell.com/cell/comments/S0092-8674(18)30106-5#supplementaryMaterial}
+#' \url{http://humantfs.ccbr.utoronto.ca/download.php}
 "TF"
 
 #' Genes involved in cell cycle

@@ -49,6 +49,11 @@ plot_one_branch <- function (dat, branch_id, branch_col='epil_branch',
                 dplyr::mutate (y_ax = y_ax * br_sign) %>% 
                 dplyr::mutate (y_min = y_ax - thickness) %>%
                 dplyr::mutate (y_max = y_ax + thickness) -> plot_data
+        if (br_sign == 1){
+                plot_data %>% dplyr::mutate (y_min = pmax (y_min, 0)) -> plot_data
+        }else if (br_sign == -1){
+                plot_data %>% dplyr::mutate (y_max = pmin (y_max, 0)) -> plot_data
+        }
 
         if (!is.null(label_group)){ 
                 dat %>% dplyr::filter (!!as.symbol (color_col) %in% label_group) -> lab_dat

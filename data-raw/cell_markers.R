@@ -18,6 +18,6 @@ orders <- list (
                         'cleavage', 'ICM', 'EPI', 'PSA-EPI','PE', 'HYP', 'TB',
                         'TE', 'CTB', 'STB', 'EVT', 'STR'),
         time_order = c('early', 'intermediate', 'intermediate1', 'intermediate2', 'advanced'),
-        branch_order = c('main', 'EVT_b', 'STB_b')
+        branch_order = c('main', 'EVT_branch', 'STB_branch')
 )
 usethis::use_data (CT, orders, overwrite=T)

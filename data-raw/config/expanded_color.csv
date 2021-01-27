@@ -67,5 +67,5 @@ Orange1,E68600,intermediate2,
 Red3,960303,advanced,
 
 Green3,009926,main,
-Light-red3,992F03,EVT_b,
-Light-blue1,0039E6,STB_b,
+Light-red3,992F03,EVT_branch,
+Light-blue1,0039E6,STB_branch,

@@ -301,15 +301,19 @@ dim_3_to_2 <- function (dat, theta, phi, axes_names=c('x', 'y', 'z')){
 #' @param phi angle of vertical rotation
 #' @param axes_names the column names for the x, y, and z coordinates in `dat`
 #' @param repel_force extent of repelling labels
+#' @param color_text whether to color the label text according to `label_col`
+#' @param magnify_text how much bigger to make the label text
 #' @return a `geom_text_repel` layer
 text_3D_repel <- function (dat, AP, theta, phi, label_col, 
-                           axes_names=c('x', 'y', 'z'), repel_force=1){
+                           axes_names=c('x', 'y', 'z'), repel_force=1,
+                           color_text=F, magnify_text=1, ...){
         trans_dat <- dim_3_to_2 (dat, theta, phi, axes_names)
-        ggrepel::geom_text_repel (ggplot2::aes_string(x=axes_names[1],
-                                                      y=axes_names[2],
-                                                      label=label_col),
+        aes_arg <- list(x=axes_names[1], y=axes_names[2], label=label_col)
+        if (color_text){aes_arg <- c(aes_arg, list (color=label_col) )}
+        ggrepel::geom_text_repel (do.call(ggplot2::aes_string, aes_arg),
                                   data=trans_dat, inherit.aes=F, force=repel_force,
-                                  fontface='bold', size=AP$point_fontsize) %>% list ()
+                                  fontface='bold', size=AP$point_fontsize*magnify_text,
+                                  show.legend=F, ...) %>% list ()
 }
 
 #' Add trajectory line to 3D scatterplot
@@ -329,10 +333,14 @@ text_3D_repel <- function (dat, AP, theta, phi, label_col,
 #' \url{http://htmlpreview.github.io/?https://github.com/AckerDWM/gg3D/blob/master/gg3D-vignette.html}
 #' @export
 dim_red_3D_traj <- function (plot_data, px, py, pz, pcolor, traj_data, tx, ty,
-                             tz, tcolor, traj_color='black', all_theta=0, all_phi=0, ...){
+                             tz, tcolor, traj_color='black', all_theta=0,
+                             all_phi=0, AP=NULL, repel_force=1,
+                             further_repel=T, magnify_text=1,
+                             label_traj_text=NULL,...){
         # because gg3D scales everything to [0, 1]
         # To add new data on top of existing graph, it is necessary to add the
         # maximum and minimum of the existing graph to enable rescaling
+        AP <- return_aes_param (AP)
         print ('rescaling axes')
         tra_scaled <- traj_data %>% tidyr::drop_na () %>% dplyr::select (c(tx, ty, tz))
         tra_ref <- plot_data %>% dplyr::select (c(px, py, pz))
@@ -340,20 +348,32 @@ dim_red_3D_traj <- function (plot_data, px, py, pz, pcolor, traj_data, tx, ty,
 
         print ('add the grouping information')
         traj_data %>% tidyr::drop_na () %>% dplyr::select (!!as.symbol (tcolor) ) -> branch_epg
-        branch_epg <- c(branch_epg [, tcolor] , NA, NA)
+        branch_epg <- add_level_to_factor (list (branch_epg [, tcolor] , c(NA, NA) ))
 
         print ('add the color information')
         # add the color information, do not show the points labelled with NA,
         # which are only used for rescaling purpose
-        lab_epg <- c(rep ('black', nrow (tra_scaled) -2), 'white', 'white')
-        tra_scaled %>% as.data.frame () %>% tibble::add_column (branch = branch_epg  ) %>% 
-                tibble::add_column (lab_color =  lab_epg ) -> tra_scaled
+        tra_scaled %>% as.data.frame () %>% tibble::add_column (
+                                        branch = branch_epg  )-> tra_scaled
+
+        traj_color_vec <- custom_color (branch_epg, AP)
+        text_scale <- get_3D_label_position (tra_scaled, tx, ty, tz, 'branch',
+                                             further_repel=F)
+        if (!is.null (label_traj_text)){
+                text_scale$feature <- NA
+                text_scale <- data.table::rbindlist (text_scale, label_traj_text)
+        }
 
         print  ('start plotting')
-        dim_red_3D (plot_data, px, py, pz, pcolor, all_theta=all_theta, all_phi=all_phi, ...) +
-                Stat3D (aes_string (group= 'branch', color= 'lab_color', x=tx, y=ty, z=tz),
+        dim_red_3D (plot_data, px, py, pz, pcolor, all_theta=all_theta,
+                    all_phi=all_phi, AP=AP, repel_force=repel_force,
+                    further_repel=further_repel,...) +
+                Stat3D (aes_string (group= 'branch', color= 'branch', x=tx, y=ty, z=tz),
                          inherit.aes=F, geom='path', theta=all_theta, phi=all_phi,
-                         data=tra_scaled, size=2, linetype='dashed') +
-                ggplot2::scale_color_manual (values=c('black'= traj_color, 'white'=NA))+ 
-                ggplot2::guides (color=F)
+                         data=tra_scaled, size=2, linetype='dashed')+ 
+                text_3D_repel (text_scale, AP, all_theta, all_phi, 'feature',
+                               repel_force=repel_force, color_text=T,
+                               magnify_text=magnify_text, vjust=-0.9)+
+                ggplot2::scale_color_manual (values=traj_color_vec, na.translate=F)+
+                override_legend_symbol (AP, color_fill=F)
 }

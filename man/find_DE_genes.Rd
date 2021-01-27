@@ -9,7 +9,10 @@ find_DE_genes(
   directory = NULL,
   group.by = "seurat_clusters",
   filename = NULL,
-  label = "all"
+  label = "all",
+  method = "group",
+  assay = "RNA",
+  slot_data = "data"
 )
 }
 \arguments{
@@ -18,6 +21,14 @@ find_DE_genes(
 \item{directory}{where to save the computed markers}
 
 \item{group.by}{a column in the meta data to group the cell types}
+
+\item{filename}{the name of the data file. If NULL, it will be generated
+automatically in the format of '$directory/marker_list_$group.by_$label.csv'}
+
+\item{method}{either 'group' to run DE gene of one group with respect to the
+rest of the dataset using \code{presto::wilcoxauc}, or 'pairwise' to run DE gene
+between any possible pairs of groups using \code{find_DE_pairwise}. The pairwise
+option can be very computationally expensive.}
 }
 \description{
 Find DE genes across a particular feature

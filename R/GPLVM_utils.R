@@ -53,7 +53,7 @@ preprocess_df <- function (x_df, sel_col, genes){
 #' @importFrom magrittr %>%
 #' @export
 gene_over_pseudotime <- function (x, exp_mat, genes, metadata, color_feature,
-                                  num_col=4, branch_assignment=NULL, 
+                                  num_col=4, num_row=NULL, branch_assignment=NULL, 
                                   peak_data=NULL, gene_col='feature', AP=NULL){
         AP <- return_aes_param (AP)
         mean_df <- preprocess_df (x, 'mean_', genes)
@@ -83,7 +83,7 @@ gene_over_pseudotime <- function (x, exp_mat, genes, metadata, color_feature,
         ggplot2::ggplot (plot_df ) +
                 ggplot2::geom_point (aes (x=pseudotime, y=mean_, color=color_by), data=point_df, shape=20)+
                 ggplot2::geom_ribbon (aes (x=x, y=mean_, ymin=ymin, ymax=ymax, fill=branch), alpha=0.8 )+
-                ggplot2::facet_wrap (~gene, scales='free', ncol=num_col) +
+                ggplot2::facet_wrap (~gene, scales='free', ncol=num_col, nrow=num_row) +
                 theme_TB ('no_arrow', feature_vec=point_df$color_by, AP=AP) +
                 theme_TB (feature_vec = plot_df$branch, AP=AP, color_fill=T) +
                 ggplot2::xlab ('pseudotime') + ggplot2::ylab ('gene expression') +

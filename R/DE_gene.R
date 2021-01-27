@@ -1,5 +1,23 @@
 # devtools::install_github('immunogenomics/presto')
 
+#' filter out genes with low expressions
+#' 
+#' @description I am not really sure the most efficient way to do this given
+#' that Seurat object does not have rowData. Therefore this function is quite
+#' slow.
+#' @param x a Seurat object
+#' @param quantile_val filter away genes whose expressions are below a certain
+#' percentile
+#' @export
+filter_genes <- function (x, quantile_val, assay='RNA', slot_data='data'){
+        exp_mat <- as.matrix (Seurat::GetAssayData (x, assay=assay, slot=slot_data) )
+        mean_gene <- rowMeans (exp_mat)
+        filter_thres <- stats::quantile (mean_gene, quantile_val)
+        filter_genes <- mean_gene > filter_thres
+        print (paste ('filtering away', sum (!filter_genes), 'genes'))
+        return (x [filter_genes, ])
+}
+
 # ----------------
 # DE gene analysis
 # ----------------
@@ -9,10 +27,17 @@
 #' @param x a Seurat object
 #' @param group.by a column in the meta data to group the cell types
 #' @param directory where to save the computed markers
+#' @param filename the name of the data file. If NULL, it will be generated
+#' automatically in the format of '$directory/marker_list_$group.by_$label.csv'
+#' @param method either 'group' to run DE gene of one group with respect to the
+#' rest of the dataset using `presto::wilcoxauc`, or 'pairwise' to run DE gene
+#' between any possible pairs of groups using `find_DE_pairwise`. The pairwise
+#' option can be very computationally expensive.
 #' @importFrom Seurat Idents<-
 #' @export
 find_DE_genes <- function (x, directory=NULL, group.by='seurat_clusters',
-                           filename= NULL, label='all'){
+                           filename= NULL, label='all', method='group',
+                           assay='RNA', slot_data='data'){
 
         if (is.null (filename)){
                 filename <- paste ('marker_cluster_', group.by, '_', label, '.csv', sep='')
@@ -27,14 +52,61 @@ find_DE_genes <- function (x, directory=NULL, group.by='seurat_clusters',
                 Idents (x) <- x@meta.data [, group.by]
                 # Don't use the `FindMarkers` function in Seurat which is too
                 # slow
-                markers <- presto::wilcoxauc (x, group.by, assay='data'  )
+                if (method == 'group'){
+                        markers <- presto::wilcoxauc (x, group.by, 
+                                assay= slot_data, seurat_assay=assay)
+                }else if (method == 'pairwise'){
+                        markers <- find_DE_pairwise (x, group.by, 
+                                slot_data= slot_data, assay=assay)
+                }
                 if (!is.null (directory)) {utils::write.csv (markers, file_name)}
         }else{
                 print ('loading precomputed DE genes')
-                markers <- utils::read.csv (file_name, row.names=1)
+                # use data table to read csv is much faster for large files
+                markers <- data.frame (data.table::fread(file_name))
         }
         return (markers)
 }
+
+find_DE_onepair <- function (x, group.by, group1, group2, assay='RNA', slot_data='data'){
+        sel_x <- x [, x@meta.data [, group.by] %in% c(group1, group2)]
+        onepair_marker <- presto::wilcoxauc (sel_x, group.by, assay=slot_data, 
+                                             seurat_assay=assay)
+        compare_vec <- onepair_marker$group == group1
+        onepair_marker$compare_group <- data.table::fifelse (compare_vec, group2, group1)
+        return (onepair_marker)
+}
+
+#' Find pairwise DE gene expression
+#'
+#' @param x a Seurat object
+#' @param group.by a column in the meta data to group the cell types
+#' @importFrom magrittr %>%
+find_DE_pairwise <- function (x, group.by, assay='RNA', slot_data='data'){
+        all_types <- x@meta.data [, group.by] %>% unique () %>% as.character ()
+        N <- length (all_types)
+        all_pairs <- matrix (0, N, N)
+        # do not select the diagonal terms
+        all_pairs [lower.tri (all_pairs, diag=F)] <- 1
+        all_list <- list ()
+        k <- 1
+        for (i in 1:N){
+                for (j in 1:N){
+                        if (all_pairs [i, j] == 1){
+                                print (paste ('comparing', all_types[i], all_types[j] ))
+                                all_list [[k]] <- find_DE_onepair (x, group.by, 
+                                all_types[i], all_types[j], assay=assay,
+                                slot_data=slot_data)
+                                k <- k+ 1
+                        }
+                }
+        }
+        return (do.call (rbind, all_list))
+}
+
+# ---------------
+# Select DE genes
+# ---------------
 
 #' Select the top DE genes from each cluster
 #'
@@ -55,29 +127,6 @@ unique_DE_genes <- function (DE_genes, top_number, gene='feature',
                 dplyr::ungroup () %>%
                 dplyr::arrange (desc (!!as.symbol (weighting) ) ) %>%
                 dplyr::distinct (!!as.symbol (gene), .keep_all=T ) 
-}
-
-#' Save Differentially Expressed Genes
-#'
-#' @param x a Seurat object
-#' @importFrom magrittr %>%
-#' @export
-save_DE_genes <- function (x, save_dir, group.by='revised', label='all', 
-                           show_num=30, weight='logFC', cluster='group'){
-        markers <- find_DE_genes (x, save_dir, group.by=group.by, label=label)
-        markers %>% group_by (!!as.symbol (cluster) ) %>%
-                top_n (n=show_num, wt=!!as.symbol (weight) ) %>%
-                ungroup () %>% as.data.frame () -> top_markers
-
-        cell_types <- unique (top_markers [, cluster])
-        save_name <- paste ('Sum_table_DE_', group.by, '_', label, '.xlsx', sep='')
-        for (i in 1:length (cell_types)){
-                if (i==1) {append_sheet <- F}else{append_sheet <- T}
-                top_markers [top_markers [, cluster ] == as.character (cell_types[i]),] %>%
-                        dplyr::arrange (desc (!!as.symbol (weight)  )) %>%
-                        xlsx::write.xlsx (file=paste (save_dir, save_name, sep='/'), 
-                        sheetName = as.character (cell_types [i]), append=append_sheet)
-        }
 }
 
 list_DE_genes <- function (x, directory, group.by, top_number=8, label='all',
@@ -101,6 +150,121 @@ DE_lineage_genes <- function (x, directory, top_number=3, label='all',
         all_genes <- all_genes [ gtools::mixedorder (names (all_genes)) ]
         return (all_genes)
 }
+
+
+# ----------------------------------
+# Exporting DE genes for publication
+# ----------------------------------
+
+#' Save Differentially Expressed Genes
+#'
+#' @description This function intends to save DE genes for presentation and
+#' publication but not for computing. For downstream analysis, the
+#' `find_DE_genes` function would be able to save the raw output.
+#' @param x a Seurat object
+#' @param save_dir where to save the results
+#' @param group.by a column in the meta data to group the cell types
+#' @param label the file name would be: '$save_dir/DE_$group.by_$label.$suffix'
+#' @param save_format can be 'excel' or 'gene_table' for average expression only
+#' @param weighting which column to arrange the genes from top to bottom
+#' @param gene which column stores the gene names
+#' @param value which column stores the average expression
+#' @param show_num how many DE genes to save per group. If 'all', everything
+#' will be saved
+#' @param AP a list that contains the `cell_order` entry to arrange the cells
+#' @param organism_db a genome database, e.g. org.Hs.eg.db. It is optional
+#' unless you would like to add a ensemble ID column
+#' @seealso `find_DE_genes`
+#' @importFrom magrittr %>%
+#' @export
+save_DE_genes <- function (x, save_dir, markers=NULL, 
+                           # save path related
+                           group.by='revised', 
+                           label='all', 
+                           save_format='excel',
+
+                           # dataframe columns
+                           weighting='logFC', 
+                           cluster='group',
+                           gene='feature', 
+
+                           # other options
+                           show_num=30, 
+                           value='avgExpr', 
+                           AP=NULL, 
+                           organism_db=NULL
+                           ){
+        AP <- return_aes_param (AP)
+        if (is.null(markers)){
+                markers <- find_DE_genes (x, save_dir, group.by=group.by, label=label)
+        }
+        if (show_num != 'all'){
+        markers %>% dplyr::group_by (!!as.symbol (cluster) ) %>%
+                dplyr::top_n (n=show_num, wt=!!as.symbol (weighting) ) %>%
+                dplyr::ungroup () %>% as.data.frame () -> top_markers
+        }else{top_markers <- markers}
+
+        cell_types <- unique (top_markers [, cluster])
+        cell_types <- sort (partial_relevel (cell_types, AP$cell_order))
+        save_name <- paste ('DE_', group.by, '_', label, '.xlsx', sep='')
+        save_path <- paste (save_dir, save_name, sep='/')
+
+        if (save_format == 'excel'){
+                save_DE_excel (top_markers, cell_types, weighting, cluster, save_path)
+        }else{
+                save_path <- gsub ('.xlsx', '_sim.csv', save_path)
+                save_DE_gene_table (top_markers, value, cluster, gene, save_path, AP, organism_db)
+        }
+}
+
+#' @importFrom magrittr %>%
+save_DE_excel <- function (top_markers, cell_types, weighting, cluster, save_path){
+        for (i in 1:length (cell_types)){
+                if (i==1) {append_sheet <- F}else{append_sheet <- T}
+                top_markers [top_markers [, cluster ] == as.character (cell_types[i]),] %>%
+                        dplyr::arrange (desc (!!as.symbol (weighting)  )) %>%
+                        xlsx::write.xlsx (file=save_path, 
+                        sheetName = as.character (cell_types [i]), append=append_sheet)
+        }
+}
+
+#' @importFrom magrittr %>%
+save_DE_gene_table <- function (top_markers, value, cluster, gene, save_path, AP, organism_db){
+        data (TF, package='TBdev')
+        top_markers %>% dplyr::select (dplyr::all_of (c(value, cluster, gene)) ) %>%
+                magrittr::set_colnames(c('avgExpr', 'cluster', 'gene')) %>%
+                dplyr::mutate (cluster =partial_relevel (cluster, AP$cell_order)) %>%
+                reshape2::dcast (gene ~ cluster, mean, value.var='avgExpr') %>%
+                dplyr::mutate (transcription_factor = gene %in% TF) -> final_df
+        if (!is.null (organism_db)) {
+                final_df$ensemble_ID <- AnnotationDbi::mapIds (organism_db, 
+                        keys=as.character (final_df$gene), keytype='SYMBOL',
+                        column='ENSEMBL')
+        }
+        utils::write.csv (final_df, save_path)
+}
+
+
+#' Save pairwise DE gene in excel files
+#' 
+#' @description As many xlsx files will be created as there are comparison
+#' groups. Each file contains the comparison groups
+#' @param ... arguments passing to `save_DE_genes`
+#' @importFrom magrittr %>%
+save_DE_pairwise <- function (DE_df, group.by, directory, ...){
+        all_types <- DE_df$compare_group %>% unique () %>% as.character () 
+        if (!dir.exists (directory)){dir.create (directory)}
+        for (i in all_types){
+                DE_df [DE_df$compare_group == i,] %>% 
+                        dplyr::select (!compare_group) -> sel_DE
+                save_DE_genes (x=NULL, save_dir=directory, group.by=group.by, 
+                               markers=sel_DE, label=i,...)
+        }
+}
+
+# --------
+# Plotting
+# --------
 
 #'  Visualise DE genes
 #'
@@ -176,6 +340,52 @@ strong_gene_violin <- function (x, group.by, dim_num=1, DR='pca', assay='RNA',
         abs (strong_gene) %>% dplyr::top_n (20) -> gene_plot
         vln_plot <- seurat_violin (x, rownames (gene_plot), 'species_type', assay, slot_data)
         return (vln_plot + ggplot2::ggtitle (colnames (feature_load)[dim_num] ) )
+}
+
+#' Volcano plot
+#'
+#' @param markers a dataframe, result generated from `find_DE_genes`
+#' @param group1 comparison group1
+#' @param group2 comparison group2
+#' @param group1_col a column in `markers` where `group1` information is stored
+#' @param group2_col a column in `markers` where `group2` information is stored
+#' @param label_genes which genes to show in the volcano plot
+#' @param weighting the x axis, i.e. log fold change
+#' @param pval the p value for the y axis
+#' @param gene where the gene names are stored
+#' @param AP aesthetic parameter for controlling the plot
+#' @importFrom magrittr %>%
+#' @importFrom ggplot2 aes aes_string
+#' @export
+seurat_volcano <- function (markers, group1, group2, group1_col = 'group',
+                            group2_col = 'compare_group', label_genes=NULL,
+                            weighting='logFC', pval='padj', gene='feature',
+                            AP=NULL){
+        AP <- return_aes_param (AP)
+        markers %>% dplyr::filter (!!as.symbol (group1_col) == group1 ) %>%
+                dplyr::filter (!!as.symbol (group2_col) == group2 ) %>%
+                dplyr::mutate (logp = - log10 (!!as.symbol (pval) )) -> plot_data
+        ggplot2::ggplot (plot_data, aes_string (x=weighting, y='logp') )+
+                ggplot2::geom_point () +
+                ggplot2::ylab ('-log10 P') -> plot_ob
+        if (!is.null (label_genes)){
+                plot_data %>% dplyr::filter (!!as.symbol (gene) %in% label_genes) -> text_df
+                if (!is.null (names (label_genes) )){
+                        text_df$color_by <- names (label_genes) [match (text_df[, gene], label_genes)]
+                        text_df$color_by <- partial_relevel (text_df$color_by, AP$cell_order)
+                }else{
+                        text_df$color_by <- data.table::fifelse (text_df [, weighting] > 0, 
+                                                                 'positive', 'negative')
+                }
+                aes_arg_list <- list (label=gene, color='color_by')
+                aes_arg <- do.call (aes_string, aes_arg_list)
+                plot_ob <- plot_ob + 
+                        ggrepel::geom_text_repel( aes_arg, data=text_df, 
+                                size=AP$point_fontsize, family=AP$font_fam)
+                feature_vec <- text_df$color
+        }else{feature_vec <- NULL}
+        return (plot_ob + theme_TB ('dotplot', rotation=0, AP=AP, color_fill=F,
+                                    feature_vec=feature_vec) )
 }
 
 #' Gene expression in two categories

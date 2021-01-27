@@ -18,6 +18,11 @@ dim_red_3D_traj(
   traj_color = "black",
   all_theta = 0,
   all_phi = 0,
+  AP = NULL,
+  repel_force = 1,
+  further_repel = T,
+  magnify_text = 1,
+  label_traj_text = NULL,
   ...
 )
 }

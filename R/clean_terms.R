@@ -66,6 +66,18 @@ clean_terms <- function (xx, AP, attr_name='compareClusterResult',
         return (xx)
 }
 
+#' Show terms from specific groups
+#'
+#' @param xx a compareClusterResult object
+#' @param subset_class which clusters to show
+subset_terms <- function (xx, subset_class, group_col='Cluster',
+                          attr_name='compareClusterResult'){
+        xx_res <- attr (xx, attr_name) 
+        xx_res <- xx_res [xx_res [, group_col] %in% subset_class, ]
+        attr (xx, attr_name) <- xx_res
+        return (xx)
+}
+
 simplify_terms <- function (xx, simple_terms, term_col='Description',
                             attr_name='compareClusterResult'){
         dat <- attr (xx, attr_name) 
@@ -111,6 +123,13 @@ append_default_dictionary <- function (new_dict, append_default){
         return (new_dict)
 }
 
+from_term_to_genes <- function (xx_df, term_index, organism_db){
+        all_genes <- xx_df$geneID [term_index ]
+        all_genes <- strsplit (all_genes, '/') [[1]]
+        return (AnnotationDbi::mapIds(organism_db, as.character (
+                                        all_genes),  'SYMBOL', 'ENTREZID'))
+}
+
 #' For the results from `compareClusterResult` object
 #'
 #' @description This function will print all the GO/KEGG/Reactome terms that
@@ -137,10 +156,8 @@ gene_per_term <- function (xx, term, organism_db, category_col='Description', re
         for (i in 1:length (all_index)){
                 print (paste ('the genes for', xx_df[all_index [i], category_col ] ))
                 print (paste ('pvalue is', xx_df$p.adjust [all_index [i] ] ) )
-                all_genes <- xx_df$geneID [all_index [i] ]
-                all_genes <- strsplit (all_genes, '/') [[1]]
-                gene_entrez <- AnnotationDbi::mapIds(organism_db, as.character (
-                                                all_genes),  'SYMBOL', 'ENTREZID')
+
+                gene_entrez <- from_term_to_genes (xx_df, all_index[i], organism_db)
                 names(gene_entrez) <- NULL
                 all_terms[[i]] <- gene_entrez
                 print (paste ('there are', length (gene_entrez), 'genes' ) )
@@ -151,15 +168,25 @@ gene_per_term <- function (xx, term, organism_db, category_col='Description', re
         }
 }
 
+gsea_entrez_to_name <- function (all_genes, organism_db){
+        all_genes <- sapply (all_genes, function (x) {strsplit (x, '\\.')[[1]][3]})
+        gene_entrez <- AnnotationDbi::mapIds(organism_db, as.character (
+                                        all_genes),  'SYMBOL', 'ENTREZID')
+        names (gene_entrez) <- names (all_genes)
+        return (gene_entrez)
+}
+
 #' Obtain genes of each enriched terms
 #'
 #' @description For the data frame generated from enrichment analysis, achieves
 #' the same function as `gene_per_term`
 #' @importFrom magrittr %>%
 #' @export
-gene_per_enriched_term <- function (xx, term, organism_db, cell_type=NULL, category_col='category'){
+gene_per_enriched_term <- function (xx, term, organism_db, cell_type=NULL,
+                                    category_col='category',
+                                    cluster_col='cluster'){
         if (!is.null (cell_type) ){
-                xx_df <- xx %>% filter (cluster == cell_type)
+                xx_df <- xx %>% dplyr::filter (!!as.symbol (cluster_col) == cell_type)
         }else{ xx_df <- xx }
         all_index <- grep (term, xx_df [, category_col], ignore.case=T)
         uniq_terms <- unique ( xx_df [all_index, category_col] )
@@ -168,10 +195,7 @@ gene_per_enriched_term <- function (xx, term, organism_db, cell_type=NULL, categ
                 print (paste ('the genes for', uniq_terms [i] ))
                 xx_df %>% dplyr::filter ( !!as.symbol (category_col) %in% uniq_terms[i] ) %>%
                         rownames () -> all_genes
-                all_genes <- sapply (all_genes, function (x) {strsplit (x, '\\.')[[1]][3]})
-
-                gene_entrez <- AnnotationDbi::mapIds(organism_db, as.character (
-                                                all_genes),  'SYMBOL', 'ENTREZID')
+                gene_entrez <- gsea_entrez_to_name (all_genes, organism_db)
                 names(gene_entrez) <- NULL
                 all_terms[[i]] <- gene_entrez
         }

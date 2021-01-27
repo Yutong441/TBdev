@@ -40,6 +40,10 @@ Viral protein interaction with cytokine and cytokine receptor,Cytokine signaling
 Hematopoietic cell lineage,Hematopoietic lineage
 Natural killer cell mediated cytotoxicity,Cytotoxicity
 mRNA surveillance pathway,mRNA surveillance
+Biosynthesis of cofactors,Cofactor synthesis
+Olfactory transduction,Olfaction
+Osteoclast differentiation,Osteoclast
+Cell adhesion molecules,Cell adhesion
 
 Eukaryotic Translation Elongation,Translation Elongation
 Eukaryotic Translation Termination,Translation Termination
@@ -72,3 +76,4 @@ RHO GTPases Activate Formins,RHO GTPases
 Mitotic Metaphase and Anaphase,Mitosis
 Separation of Sister Chromatids,Chromatid separation
 G alpha (s) signaling events,GPCR signaling
+"Activation of the mRNA upon binding of the cap-binding complex and eIFs, and subsequent binding to 43S",translation initiation

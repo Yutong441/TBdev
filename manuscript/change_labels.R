@@ -74,8 +74,8 @@ all_data <- clean_metadata (all_data)
 all_data <- run_dim_red (all_data, run_diff_map=F, var_scale=T,
                          normalize=F, find_var_features=F, run_umap=F,
                          select_cells=!in_vitro_cells)
-plot_dim_red (all_data, by_group= c('revised', 'date', 'assigned_cluster', 
-                'broad_type'), DR='pca', all_labels=T, return_sep=F, size_high=in_vitro_cells)
+plot_dim_red (all_data, group.by= c('revised', 'date', 'assigned_cluster', 
+                'broad_type'), DR='pca', return_sep=F, size_high=in_vitro_cells)
 save(all_data, file=paste (merge_dir, 'final_merged_tb.Robj', sep='/') )
 
 # ----------save data for pseudotime analysis ----------
@@ -118,14 +118,18 @@ new_meta$epil_branch <- branch_lab [match (rownames (new_meta), rownames (branch
 
 # the python labels are 'branch0', 'branch1' etc. I need to convert them into 
 # more meaningful labels
-assign_branch <- c('main', 'EVT_b', 'STB_b')
+assign_branch <- c('main', 'EVT_branch', 'STB_branch')
 new_meta$epil_branch <- assign_branch [as.factor (new_meta$epil_branch) ]
 new_meta$epil_branch <- factor (new_meta$epil_branch, levels= assign_branch)
 # MGP_PT are pseudotimes derived from mixtures of GPLVM
 new_meta$MGP_PT <- pseudotime [match (rownames (new_meta), rownames (branch_lab) ), 'pt_mean']
 
 all_data@meta.data <- new_meta
-save(all_data, file=paste (merge_dir, 'final_merged_tb.Robj', sep='/') )
 
 # check cell types
 table (all_data@meta.data [!is.na (all_data$MGP_PT), 'broad_type'])
+
+# set the earliest pseudotime to be 0
+all_data$ori_MGP_PT <- all_data$MGP_PT
+all_data$MGP_PT <- all_data$MGP_PT - min(all_data$MGP_PT, na.rm=T)
+save(all_data, file=paste (merge_dir, 'final_merged_tb.Robj', sep='/') )
