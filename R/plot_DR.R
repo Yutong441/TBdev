@@ -65,7 +65,7 @@ get_feature_names <- function (name, seurat_ob, assay, slot_data){
 gg_DimPlot <- function (x, feature, DR='pca', dims=c(1,2), size_highlight=NULL,
                         highlight_font=4, label_col=NULL, further_repel=T,
                         repel_force=1, reverse_x=F, reverse_y=F, assay='RNA',
-                        slot_data = 'data', AP=NULL,...){
+                        slot_data = 'data', AP=NULL, plot_type='dim_red',...){
         AP <- return_aes_param (AP)
         dim_red <- x@reductions[[DR]]@cell.embeddings [, dims]
         #feature_names <- as.factor(x@meta.data[, feature])  
@@ -93,7 +93,7 @@ gg_DimPlot <- function (x, feature, DR='pca', dims=c(1,2), size_highlight=NULL,
         plot_ob <- plot_data %>%
                 ggplot2::ggplot (aes_string (x=x_axis, y=y_axis ) ) +
                 ggplot2::geom_point (aes_string (fill = feature, size='size_high', shape='size_high'), 
-                            alpha=1, color=AP$point_edge_color, stroke=1) +
+                            alpha=1, color=AP$point_edge_color, stroke=0.8) +
                 ggplot2::scale_size_manual (values = c('non-select'=AP$pointsize, 
                                               'select'=AP$pointsize*1.5), guide=F) +
                 # shape code: 16=filled circle, 17 = filled triangle up
@@ -112,7 +112,7 @@ gg_DimPlot <- function (x, feature, DR='pca', dims=c(1,2), size_highlight=NULL,
         }
         if (reverse_x){plot_ob <- plot_ob + ggplot2::scale_x_reverse ()}
         if (reverse_y){plot_ob <- plot_ob + ggplot2::scale_y_reverse ()}
-        plot_ob + theme_TB ('dim_red', plot_ob=plot_ob, feature_vec=
+        plot_ob + theme_TB (plot_type, plot_ob=plot_ob, feature_vec=
                             plot_data [,feature], color_fill=T, aes_param=AP,
                     reverse_x=reverse_x, reverse_y=reverse_y,...) 
 }
@@ -172,7 +172,7 @@ dim_red_3D <- function (plot_data, x, y, z, color_by, all_theta=0, all_phi=0,
         ggplot2::ggplot (plot_data, aes_string (x=x, y=y, z=z) ) +
                 Stat3D (aes_string (fill=color), geom='point',
                          theta=all_theta, phi=all_phi, color= AP$point_edge_color,
-                         shape=AP$normal_shape, stroke=1, size=AP$pointsize) -> plot_ob
+                         shape=AP$normal_shape, stroke=0.8, size=AP$pointsize) -> plot_ob
 
         if (length (color_by) > 1){ plot_ob <- plot_ob + ggplot2::facet_wrap (~variable, ncol=num_col) }
         plot_ob + theme_TB ('no_arrow', feature_vec = plot_data [,
@@ -361,7 +361,7 @@ dim_red_3D_traj <- function (plot_data, px, py, pz, pcolor, traj_data, tx, ty,
                                              further_repel=F)
         if (!is.null (label_traj_text)){
                 text_scale$feature <- NA
-                text_scale <- data.table::rbindlist (text_scale, label_traj_text)
+                text_scale <- rbind (text_scale, label_traj_text)
         }
 
         print  ('start plotting')

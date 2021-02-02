@@ -15,7 +15,7 @@ arrange_plots(
   panel_spacing = 0.1975,
   plot_width = 9,
   plot_height = 9,
-  aes_param = list(highlight_font = list(fontface = "bold", fontsize = 18), font_fam =
+  aes_param = list(highlight_font = list(fontface = "bold", fontsize = 30), font_fam =
     "Arial")
 )
 }

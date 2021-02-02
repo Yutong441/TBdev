@@ -12,6 +12,7 @@ theme_TB(
   color_fill = F,
   color_vec = NULL,
   rotation = 90,
+  more_prec = 2,
   aes_param = list(fontsize = 15, point_fontsize = 6, font_fam = "Arial", pointsize =
     3, legend_point_size = 5),
   ...

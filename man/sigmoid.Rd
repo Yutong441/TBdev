@@ -4,7 +4,7 @@
 \alias{sigmoid}
 \title{Use sigmoid function to draw the curve}
 \usage{
-sigmoid(x, slope, off_set)
+sigmoid(x, slope, off_set, elevation = 0)
 }
 \arguments{
 \item{x}{a vector}

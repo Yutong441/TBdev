@@ -118,7 +118,7 @@ new_meta$epil_branch <- branch_lab [match (rownames (new_meta), rownames (branch
 
 # the python labels are 'branch0', 'branch1' etc. I need to convert them into 
 # more meaningful labels
-assign_branch <- c('main', 'EVT_branch', 'STB_branch')
+assign_branch <- c('TB_stem', 'EVT_branch', 'STB_branch')
 new_meta$epil_branch <- assign_branch [as.factor (new_meta$epil_branch) ]
 new_meta$epil_branch <- factor (new_meta$epil_branch, levels= assign_branch)
 # MGP_PT are pseudotimes derived from mixtures of GPLVM
@@ -132,4 +132,15 @@ table (all_data@meta.data [!is.na (all_data$MGP_PT), 'broad_type'])
 # set the earliest pseudotime to be 0
 all_data$ori_MGP_PT <- all_data$MGP_PT
 all_data$MGP_PT <- all_data$MGP_PT - min(all_data$MGP_PT, na.rm=T)
+
+all_data$epil_branch <- as.character (all_data$epil_branch)
+all_data$epil_branch [all_data$epil_branch == 'main'] <- 'TB_stem'
+all_data$epil_branch <- factor (all_data$epil_branch, levels= assign_branch)
+save(all_data, file=paste (merge_dir, 'final_merged_tb.Robj', sep='/') )
+
+# reassign clusters in a meaningful way
+all_data <- get (load (paste (merge_dir, 'final_merged_tb.Robj', sep='/') ))
+new_assign <- read.csv ('data-raw/config/cluster_names.csv')
+all_data$final_cluster <- new_assign$sub [match (all_data$assigned_cluster, new_assign$ori) ]
+all_data$final_cluster <- partial_relevel (all_data$final_cluster)
 save(all_data, file=paste (merge_dir, 'final_merged_tb.Robj', sep='/') )

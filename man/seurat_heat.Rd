@@ -19,6 +19,9 @@ seurat_heat(
   annotation_name_side = "left",
   column_names_side = "bottom",
   row_names_side = "left",
+  show_column_bars = T,
+  row_title_fontface = "bold",
+  column_title_fontface = "bold",
   cluster_columns = F,
   cluster_rows = F,
   column_split = 1,
@@ -40,6 +43,7 @@ seurat_heat(
   column_legend_labels = NULL,
   left_HA = T,
   top_HA = T,
+  row_titles = character(0),
   group_order = NULL,
   main_width = NULL,
   main_height = NULL,
@@ -77,6 +81,10 @@ rows because this function only supports one row sidebar}
 horizontal, there are no other choices}
 
 \item{annotation_name_side}{side of the annotation name for column side bar}
+
+\item{show_column_bars}{whether to show horizontal bars for the columns. It
+can be a vector of the same length as \code{group.by} to specify the group(s) to
+show the horizontal bars.}
 
 \item{cluster_columns}{whether to perform hierarchical clustering on columns}
 
@@ -136,6 +144,8 @@ supply as many items as the number of column sidebars}
 \item{left_HA}{whether to show row sidebars}
 
 \item{top_HA}{whether to show column sidebars}
+
+\item{row_titles}{whether to show row titles. choose NULL if not}
 
 \item{group_order}{the ordering of each column}
 

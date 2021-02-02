@@ -111,17 +111,45 @@ find_DE_pairwise <- function (x, group.by, assay='RNA', slot_data='data'){
 #' Select the top DE genes from each cluster
 #'
 #' @description If 1 DE gene appears in 2 clusters, the cluster with the
-#' highest avg_logFC will be chosen. NB: only upregulated genes will be selected
-#'
+#' highest avg_logFC will be chosen. 
+#' Then the user can specify the option in `iterative` whether the other DE
+#' genes from the group will be chosen to ensure at the end the number of DE
+#' genes in each group is the same.
+#' NB: only upregulated genes will be selected
+#' 
 #' @param DE_genes a dataframe
 #' @param top_number how many DE genes per cluster/group to choose
 #' @param gene which column has the gene symbols
 #' @param weighting which column has the gene rankings
 #' @param cluster which column has the cluster names/numbers
+#' @param iterative how many iterations to run until the number of DE genes in
+#' each group is the same. By default, no iteration will be performed. I
+#' recommend choosing a moderate size e.g. 10~20 to ensure the end result. I
+#' could have implemented a while loop but until I consider all possible
+#' scenarios, I would not do so. 
 #' @importFrom magrittr %>%
 #' @export
 unique_DE_genes <- function (DE_genes, top_number, gene='feature',
-                             weighting='logFC', cluster='group'){
+                             weighting='logFC', cluster='group', iterative=NULL){
+        if (is.null(iterative)){iterative<-1}
+        top_num <- top_number
+        for (i in 1:iterative){
+                DE_frame <- unique_DE_genes_one_iter (DE_genes, top_num,
+                                                      gene, weighting, cluster)
+                DE_frame %>% dplyr::group_by (!!as.symbol (cluster)) %>%
+                        dplyr::slice_max (!!as.symbol(weighting), n=top_number) -> DE_frame
+                count_mean <- DE_frame %>% dplyr::count (!!as.symbol (cluster)) %>%
+                        tibble::deframe () %>% mean ()
+                if (count_mean != top_number){
+                        top_num <- top_num + 1
+                }else{break}
+        }
+        return (DE_frame)
+}
+
+#' @importFrom magrittr %>%
+unique_DE_genes_one_iter <- function (DE_genes, top_number, gene, weighting,
+                                      cluster){
         DE_genes %>% dplyr::group_by (!!as.symbol (cluster) ) %>%
                 dplyr::top_n (n=top_number, wt=!!as.symbol (weighting) ) %>%
                 dplyr::ungroup () %>%
@@ -308,7 +336,7 @@ plot_DE_genes <- function (x, markers, top_gene=1, by_group='cluster',
 #' @export
 seurat_violin <- function (x, features, group.by, assay='RNA',
                            slot_data='data', num_col=NULL, free_xy='fixed',
-                           AP=NULL){
+                           AP=NULL, box_plot=T){
         AP <- return_aes_param (AP)
         datExpr <- as.matrix ( Seurat::GetAssayData (x [features, ], 
                                         assay=assay, slot=slot_data)   ) 
@@ -320,14 +348,16 @@ seurat_violin <- function (x, features, group.by, assay='RNA',
                 dplyr::mutate ( gene = factor(gene, levels=features) ) -> plot_data
 
         plot_ob <- ggplot2::ggplot (plot_data, aes ( x= feature, y=expr_val, fill=feature) ) +
-                #geom_violin (show.legend=F) + 
-                ggplot2::geom_jitter (shape=21, color='white', size=AP$pointsize) +
                 ggplot2::facet_wrap (.~gene, ncol=num_col, scales=free_xy) +
                 ggplot2::theme (axis.text.x = element_text (angle=90) ) +
                 ggplot2::labs (fill='')+ ggplot2::xlab ('')+
                 theme_TB ('dotplot', feature_vec=x@meta.data[, group.by],
-                          color_fill=T, aes_param=AP)
-        if (free_xy == 'fixed') {plot_ob <- plot_ob + custom_tick (plot_data$expr_val) }
+                          color_fill=T, aes_param=AP)+
+                ggplot2::guides( fill= guide_legend(override.aes = list(alpha=1)))
+        if (free_xy == 'fixed') {plot_ob <- plot_ob + custom_tick (plot_data$expr_val, more_prec=1) }
+        if (box_plot){plot_ob <- plot_ob + ggplot2::geom_boxplot()
+        }else{plot_ob <- plot_ob +ggplot2::geom_jitter (shape=AP$normal_shape, 
+                                size=AP$pointsize, color='white')}
         return (plot_ob)
 }
 

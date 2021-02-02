@@ -18,7 +18,7 @@ format_conf <- list (
         pointsize = 3,
         legend_point_size = 5,
         normal_shape = 21, # circle, has to be larger than 20
-        point_edge_color = 'white',
+        point_edge_color = 'black',
         highlight_shape = 24, # triangle
         font_fam = 'Arial',
         # for grid::gpar argument, 'sans' mans 'Arial'

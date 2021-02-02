@@ -85,3 +85,56 @@ save_peak_genes <- function (xx, save_path, pathway=NULL, pathway_df=NULL,
         xx %>% dplyr::arrange (dplyr::desc (abs (!!as.symbol (arrange_val) ) ) ) %>% 
                 utils::write.csv (save_path)
 }
+
+#' @importFrom magrittr %>%
+get_gene_one_group <- function (xx_df, group_name, gene_num){
+        xx_df %>% dplyr::filter (group == group_name) %>% 
+                dplyr::slice_max (val, n=gene_num)
+}
+
+#' @importFrom magrittr %>%
+get_gene_all_groups <- function (xx_df, peak_df, min_genes){
+        peak_df %>% dplyr::count (group) %>% tibble::deframe () -> count_group
+        count_group <- round (count_group*min_genes/min(count_group))
+        group_uniq <- as.list (unique (xx_df$group))
+        xx_df_sel <- lapply (group_uniq, function (x){
+                                get_gene_one_group (xx_df, x, count_group[x]) 
+                             })
+        return (do.call (rbind, xx_df_sel))
+}
+
+#' Get genes for labelling in heatmap
+#'
+#' @param xx a dataframe generated from `find_peak`. For the columns that it
+#' should contain, see `find_peak`
+#' @param plot_quantile the top quantile of genes in `xx` to show in heatmap
+#' @param min_genes minimum number of genes to show in the heatmap row labels
+#' @importFrom magrittr %>%
+#' @export
+peak_gene_for_heatmap <- function (xx, plot_quantile=0.95, min_genes=2){
+        # get the genes to plot in heatmap
+        xx %>% dplyr::filter (val > stats::quantile (xx$val, plot_quantile) ) %>% 
+                arrange (desc(val)) -> label_peak
+
+        label_peak %>% dplyr::arrange (change_sign*val ) %>% 
+                dplyr::select (group, feature) %>% 
+                dplyr::arrange (group) %>% 
+                tibble::deframe () -> sel_genes
+
+        # get the genes to show in heatmap row labels
+        xx_df <- get_gene_all_groups (xx, label_peak, min_genes)
+        xx_df %>% dplyr::group_by (group) %>%  
+                dplyr::select (group, feature) %>%
+                dplyr::summarise (all_genes = paste (feature, collapse=', ')) %>% 
+                data.frame ()-> gene_list
+
+        gene_list$all_genes <- paste (gene_list$group, '\n(', gene_list$all_genes, ')', sep='')
+        gene_list$all_genes <- sapply (gene_list$all_genes, function(x){
+                                        paste (line_break (strsplit (x, ',')[[1]]), collapse=',')
+                             }) # see `line_break` in `enrichment.R`
+        # remove the trailing comma
+        gene_list$all_genes <- gsub (',$', '', gene_list$all_genes)
+        gene_list$all_genes <- gsub (',\n$', '', gene_list$all_genes)
+        names (sel_genes) <- gene_list$all_genes [match (names(sel_genes), gene_list$group)]
+        return (sel_genes)
+}

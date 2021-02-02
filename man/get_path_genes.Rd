@@ -4,7 +4,7 @@
 \alias{get_path_genes}
 \title{Obtain the gene in a particular pathway}
 \usage{
-get_path_genes(pathway, path_name)
+get_path_genes(pathway, path_name, species = "human")
 }
 \arguments{
 \item{pathway}{a dataframe with \code{pathway} column being the comon pathway

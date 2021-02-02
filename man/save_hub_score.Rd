@@ -4,7 +4,14 @@
 \alias{save_hub_score}
 \title{Save the hub score data frame}
 \usage{
-save_hub_score(markers, hub_df, clusters, cell_types, save_dir)
+save_hub_score(
+  markers,
+  hub_df,
+  clusters,
+  cell_types,
+  save_dir,
+  other_celltypes = NULL
+)
 }
 \arguments{
 \item{markers}{a dataframe generated from \code{find_DE_genes}}

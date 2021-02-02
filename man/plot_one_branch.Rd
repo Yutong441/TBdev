@@ -18,7 +18,16 @@ plot_one_branch(
   select_cells = NULL,
   label_group = NULL,
   text_offset = 0,
-  AP = NULL
+  AP = NULL,
+  elevation = 0,
+  time_df = NULL,
+  time_time_col = NULL,
+  time_color_col = NULL,
+  time_group_col = NULL,
+  branch_name = NA,
+  repel_force = 0.001,
+  save_dir = NULL,
+  plot_branch_names = T
 )
 }
 \arguments{
@@ -48,6 +57,12 @@ flip}
 \item{select_cells}{which cells in \code{dat} to plot}
 
 \item{text_offset}{how much the labels deviate from the top of the ribbon}
+
+\item{elevation}{how much the curve is vertically translated. The direction
+is the same as \code{br_sign}}
+}
+\value{
+a list of ggplot layers
 }
 \description{
 Plot sigmoid curve for one branch

@@ -19,6 +19,7 @@ gg_DimPlot(
   assay = "RNA",
   slot_data = "data",
   AP = NULL,
+  plot_type = "dim_red",
   ...
 )
 }

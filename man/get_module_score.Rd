@@ -4,7 +4,16 @@
 \alias{get_module_score}
 \title{Calculate the module score of KEGG pathway}
 \usage{
-get_module_score(x, save_path, all_path = NULL, pgenes = NULL, append_meta = F)
+get_module_score(
+  x,
+  save_path,
+  all_path = NULL,
+  pgenes = NULL,
+  append_meta = F,
+  regexp = "^X",
+  species = "human",
+  control_num = 50
+)
 }
 \arguments{
 \item{x}{a Seurat object}
@@ -21,6 +30,9 @@ names, and the \code{kegg_id} column being the KEGG ID for the pathways}
 expression matrix being the module scores and metadata inherited from the
 input Seurat object. This output will be more convenient for doing violin
 plot and heatmap}
+
+\item{regexp}{remove a part of cell ID names that may arise because of some
+tidyverse manipulations. If NULL, no changes will happen}
 }
 \value{
 a matrix or a Seurat object whose rows are gene module names in

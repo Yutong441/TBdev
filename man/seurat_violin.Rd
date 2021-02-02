@@ -12,7 +12,8 @@ seurat_violin(
   slot_data = "data",
   num_col = NULL,
   free_xy = "fixed",
-  AP = NULL
+  AP = NULL,
+  box_plot = T
 )
 }
 \arguments{

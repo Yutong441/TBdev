@@ -5,9 +5,12 @@
 #' @param pathway a dataframe with `pathway` column being the comon pathway
 #' names, and the `kegg_id` column being the KEGG ID for the pathways
 #' @param path_name the common name of a pathway
-get_path_genes <- function (pathway, path_name) {
+get_path_genes <- function (pathway, path_name, species='human') {
+        species_id <- get_kegg (species)
+        pathway$kegg_id <- gsub ('^hsa', species_id, pathway$kegg_id)
         if (path_name %in% pathway$pathway){
-                path_genes <- KEGGREST::keggGet(pathway [ pathway$pathway == path_name, 'kegg_id'])[[1]]$GENE
+                path_genes <- KEGGREST::keggGet(pathway [ pathway$pathway == path_name, 
+                                'kegg_id'])[[1]]$GENE
                 print (paste ('found', length (path_genes), 'genes'))
                 if (length (path_genes) != 0 ){
                         path_genes <- path_genes [seq ( 2, length (path_genes), 2 ) ]
@@ -85,13 +88,13 @@ pathway_heat_pca <- function (x, gene_list, save_dir, cutoff=70,
 #' @export
 all_pathways_heat_pca <- function (x, save_dir, all_path=NULL,
                                    highlight_cells=NULL, DE_dir=NULL,
-                                   DE_label=NULL){
+                                   DE_label=NULL, species='human'){
         if (is.null(all_path)){data (KeggID, package='TBdev'); all_path <- KeggID
         }
         if (!dir.exists (save_dir)){dir.create (save_dir)}
         for (one_pathway in all_path$pathway){
                 print (paste ('analysing', one_pathway, 'pathway') )
-                one_path <- get_path_genes (all_path, one_pathway)
+                one_path <- get_path_genes (all_path, one_pathway, species=species)
                 if (length (one_path) !=0 ){
                         pathway_heat_pca ( x, one_path,  paste (save_dir, 
                                 paste (one_pathway, '.pdf', sep=''), sep='/'),
@@ -181,10 +184,14 @@ path_eigen <- function (x, all_path=NULL, threshold=0.02,
 #' expression matrix being the module scores and metadata inherited from the
 #' input Seurat object. This output will be more convenient for doing violin
 #' plot and heatmap
+#' @param regexp remove a part of cell ID names that may arise because of some
+#' tidyverse manipulations. If NULL, no changes will happen
 #' @return a matrix or a Seurat object whose rows are gene module names in
 #' `pgenes` and whose columns are cell names
 #' @export
-get_module_score <- function (x, save_path, all_path=NULL, pgenes=NULL, append_meta=F){
+get_module_score <- function (x, save_path, all_path=NULL, pgenes=NULL,
+                              append_meta=F, regexp='^X', species='human',
+                              control_num=50){
         if (is.null(all_path)){data (KeggID, package='TBdev'); all_path <- KeggID
         }
         if ( file.exists (save_path) ){
@@ -195,7 +202,8 @@ get_module_score <- function (x, save_path, all_path=NULL, pgenes=NULL, append_m
                         pgenes <- list ()
                         for (i in 1:length (all_path$pathway) ){
                                 print (paste ('geting genes from', all_path$pathway[i], 'pathway') )
-                                pgenes [[i]] <- get_path_genes (all_path, all_path$pathway [i] )
+                                pgenes [[i]] <- get_path_genes (all_path, 
+                                        all_path$pathway [i], species=species)
                         }
 
                         names (pgenes) <- all_path$pathway
@@ -205,7 +213,8 @@ get_module_score <- function (x, save_path, all_path=NULL, pgenes=NULL, append_m
                 }
                 names (pgenes) <- paste (names (pgenes), '_', sep='')
                 # calculate module scores
-                x <- Seurat::AddModuleScore(x, features = pgenes, name = names (pgenes), ctrl=50)
+                x <- Seurat::AddModuleScore(x, features = pgenes, name = names (
+                                                pgenes), ctrl=control_num)
                 # this function tends to append numbers after gene module names, need
                 # to clean them using regexp
                 module_names <- paste (names (pgenes), 1:length(pgenes), sep='')
@@ -217,7 +226,9 @@ get_module_score <- function (x, save_path, all_path=NULL, pgenes=NULL, append_m
         # e.g. PI3K-Akt signaling may be changed to PI3K.Akt, need to
         # change it back
         rownames (module_scores) <- gsub ('\\.', '-', rownames (module_scores) )
-        colnames (module_scores) <- gsub ('^X', '', colnames (module_scores))
+        if (!is.null (regexp)){
+                colnames (module_scores) <- gsub (regexp, '', colnames (module_scores))
+        }
 
         if (!append_meta){return (module_scores)
         }else{

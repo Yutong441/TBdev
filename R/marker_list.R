@@ -78,7 +78,6 @@ fill_na_labels <- function (x, reference, fill_label){
 #' @param leading_char ignore the leading character when releveling
 #' @return a factor vector
 #' @importFrom magrittr %>%
-#' @importFrom gtools mixedsort
 #' @examples
 #' library (gtools)
 #' reorder_levels <- c('Zy', '4C', '8C') # 'Zy' would be shown first in  the
@@ -103,7 +102,7 @@ partial_relevel <- function (x, reorder_levels=NULL, mixed_sorting=F,
                         escape_char <- paste ( rep ('.', skip_char), sep='' )
                         regx <- paste ('^' , '^[e,i,a,v,s,u]?', escape_char, reorder_levels[i], sep='') }
                 # regexpr can handle regular expression but not grep
-                ori_level [regexpr (regx, ori_level) != -1] %>% mixedsort () -> level_i
+                ori_level [regexpr (regx, ori_level) != -1] %>% mixed_order_sort () -> level_i
                 level_i %>% stringr::str_extract ('^[e,i,a,u,v,s]?') %>% 
                         factor (levels=c('e', 'i', 'a', 's', 'v', 'u', '')) %>% 
                         order() -> level_order
@@ -115,9 +114,21 @@ partial_relevel <- function (x, reorder_levels=NULL, mixed_sorting=F,
 
         if (length (final_order) != 0 & mixed_sorting == FALSE){
                 x <- factor (x, levels=unique (c ( final_order , not_mentioned )) )
-        }else{ x <- factor (x, levels= mixedsort (unique(as.character (x) )) )
+        }else{ x <- factor (x, levels= mixed_order_sort (unique(as.character (x) )) )
         }
         return (x)
+}
+
+#' Slight modification to `mixedsort`
+#'
+#' @description `gtools::mixedsort` is a wonderful function. However, if a
+#' string contains a hyphen followed by a number, the function would mistake it
+#' as a negative function and sort the values accordingly. This function
+#' prevents `mixedsort` from doing so.
+mixed_order_sort <- function (vec){
+        contain_hyphen <- sum (grepl ('-[0-9]+$', vec))
+        if (contain_hyphen > 0){gtools::mixedsort (vec, decreasing=T)
+        }else{gtools::mixedsort (vec)}
 }
 
 #' Merge factor vectors

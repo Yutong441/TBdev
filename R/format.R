@@ -47,18 +47,20 @@ theme_dim_red <- function (aes_param, color_fill){
               panel.grid.minor = element_blank(), 
               panel.background = element_blank(),
               panel.border = element_blank(),
+              
+              # axis setting
               axis.text.x = element_blank(),
               axis.text.y = element_blank(),
               axis.title.x = element_blank(),
               axis.title.y = element_blank(),
               axis.ticks.x = element_blank(),
               axis.ticks.y = element_blank(),
-              plot.title = element_text (hjust=0.5, size=aes_param$point_fontsize*3,
-                                         family=aes_param$font_fam),
               legend.background= element_blank(),
               legend.key = element_blank(),
               strip.background = element_blank (),
               text=element_text (size=aes_param$fontsize, family=aes_param$font_fam),
+              plot.title = element_text (hjust=0.5, size=aes_param$fontsize*1.5,
+                                         family=aes_param$font_fam, face='bold.italic'),
               aspect.ratio=1,
               strip.text = element_text (size=aes_param$point_fontsize*3, family=aes_param$font_fam),
               legend.text = element_text (size=aes_param$fontsize, family=aes_param$font_fam),
@@ -94,7 +96,6 @@ theme_dotplot <- function (aes_param = list(fontsize=15,
               axis.ticks.y = element_blank(),
 
               # legend setting
-              plot.title = element_text (hjust=0.5, size=aes_param$point_fontsize*3, family=aes_param$font_fam),
               legend.background= element_blank(),
               legend.key = element_blank(),
               text=element_text (size=aes_param$fontsize, family=aes_param$font_fam),
@@ -104,9 +105,10 @@ theme_dotplot <- function (aes_param = list(fontsize=15,
 
               # facet setting
               strip.background = element_blank (),
-              strip.text = element_text (size=aes_param$point_fontsize*3, family=aes_param$font_fam)
+              strip.text = element_text (size=aes_param$point_fontsize*3, family=aes_param$font_fam),
+              plot.title = element_text (hjust=0.5, size=aes_param$fontsize*2, 
+                                         family=aes_param$font_fam, face='bold.italic')
               ),
-
               override_legend_symbol (aes_param, color_fill)[[1]]
               )
 }
@@ -114,12 +116,10 @@ theme_dotplot <- function (aes_param = list(fontsize=15,
 custom_round <- function (vec, num_out=3, more_precision=0, quantile_val=0, round_updown=F){
         min_vec <- stats::quantile(vec, quantile_val, na.rm=T)
         max_vec <- stats::quantile(vec, 1-quantile_val, na.rm=T)
-        if (max_vec < 1){
-                nfig <- round (log10 (1/max_vec)) + more_precision
-        }else{nfig <- 0}
+        nfig <- round (pmin (log10 (1/max_vec), 0)) + more_precision
         if (round_updown){
-                min_vec <- ceiling (min_vec*10^(nfig))/10^(nfig)
-                max_vec <- floor (max_vec*10^(nfig))/10^(nfig)
+                min_vec <- floor (min_vec*10^(nfig))/10^(nfig)
+                max_vec <- ceiling (max_vec*10^(nfig))/10^(nfig)
         }else{
                 min_vec <- round (min_vec*10^(nfig))/10^(nfig)
                 max_vec <- round (max_vec*10^(nfig))/10^(nfig)
@@ -130,8 +130,8 @@ custom_round <- function (vec, num_out=3, more_precision=0, quantile_val=0, roun
 #' Make the x or y axis only show the min, middle and max points
 #'
 #' @export
-custom_tick <- function (vec, x_y='y', ...){
-        breaking <- custom_round (vec, 3, ...)
+custom_tick <- function (vec, x_y='y', more_prec=3,...){
+        breaking <- custom_round (vec, more_precision=more_prec, ...)
         if (x_y == 'y'){return (ggplot2::scale_y_continuous (breaks = breaking) )
         }else {return (ggplot2::scale_x_continuous (breaks = breaking) )}
 }
@@ -154,12 +154,29 @@ custom_scale <- function (vec, x_y='y', extend_ratio_min=0, extend_ratio_max=0){
         }else {return (ggplot2::xlim (c(min_vec, max_vec)) )}
 }
 
+#' Customise color
+#'
+#' @param feature_vec a vector of factors or characters of the names to plot
+#' @param aes_param aesthetic parameters. The most important of which is
+#' `color_vec`, a named vector for the colors with the names corresponding to
+#' those in `feature_vec`. This needs not to be an exhaustive list. Any names
+#' in `feature_vec` but not in `color_vec` will be automatically colored.
+#' @param remove_NA remove NA values from `feature_vec`, i.e., do not color the
+#' NA values
+#' @param regexp which parts of the string in `feature_vec` to remove, in order
+#' for it to match `color_vec`. This setting is useful when you try to cope
+#' with varying names with the same `color_vec`.
 #' @importFrom gtools mixedsort
 custom_color <- function (feature_vec, aes_param = list (color_vec=NULL, 
-                                  date_color_vec=NULL), remove_NA=T){
+                                  date_color_vec=NULL), remove_NA=T, regexp=NULL){
         # determine if the feature corresponds to cell types
         # NB: the `color_vec` refers to the color_vec defined above in this
         # script
+        if (!is.null(regexp)){
+                ori_feature <- feature_vec
+                feature_vec <- gsub (regexp, '', feature_vec)
+        }
+
         feature_vec <- feature_vec [!is.na (feature_vec) & feature_vec != 'NA']
         if (is.factor (feature_vec) & remove_NA){
                 new_level <- levels (feature_vec) [levels (feature_vec) != 'NA']
@@ -199,6 +216,13 @@ custom_color <- function (feature_vec, aes_param = list (color_vec=NULL,
                         new_color_vec <- new_color_vec[new_order]
                 }
         }
+        if (!is.null(regexp)){
+                match_index <- names (new_color_vec) %in% unique(feature_vec)
+                match_index2 <- match (names (new_color_vec), unique(feature_vec))
+                names (new_color_vec) <- as.character (names (new_color_vec))
+                names (new_color_vec)[match_index] <- as.character (unique(
+                                ori_feature)[match_index2][match_index])
+        }
         if (proceed != 'not') {return (new_color_vec)}
 }
 
@@ -210,11 +234,11 @@ add_custom_color_discrete <- function (feature_vec, aes_param, color_fill=F){
         }
 }
 
-add_custom_color_continuous <- function (feature_vec, aes_param, color_fill=F){
-        breaks <- custom_round (feature_vec, 2, more_precision=2, quantile_val=0.)
+add_custom_color_continuous <- function (feature_vec, aes_param, more_prec=2, color_fill=F){
+        breaks <- custom_round (feature_vec, 2, more_precision=more_prec, quantile_val=0., round_updown=T)
         if (color_fill){
-                ggplot2::scale_fill_continuous (type=aes_param$palette, breaks=breaks)
-        }else{ggplot2::scale_color_continuous (type=aes_param$palette, breaks=breaks)
+                ggplot2::scale_fill_continuous (type=aes_param$palette, breaks=breaks, limits=breaks)
+        }else{ggplot2::scale_color_continuous (type=aes_param$palette, breaks=breaks, limits=breaks)
         }
 }
 
@@ -224,97 +248,12 @@ add_custom_color_continuous <- function (feature_vec, aes_param, color_fill=F){
 #' @param feature_vec a vector of features for which colors will be assigned
 #' @param color_fill whether `scale_color_*` or `scale_fill_*` is used
 #' @return a `scale_*` object
-add_custom_color <- function (feature_vec, aes_param, color_fill=T){
+add_custom_color <- function (feature_vec, aes_param, more_prec=0.2, color_fill=T){
         if (!is.numeric (feature_vec)){
                 add_custom_color_discrete (feature_vec, aes_param, color_fill)
         }else{
-                add_custom_color_continuous (feature_vec, aes_param, color_fill)
+                add_custom_color_continuous (feature_vec, aes_param, color_fill, more_prec=more_prec)
         }
-}
-
-
-#' Obtain arrow object
-#'
-#' @param AP aesthetic parameter determining arrow types, relevant ones are
-#' 'arrow_angle', 'arrow_length', 'arrow_type'
-#' @return a ggplot arrow object
-get_arrow <- function (AP){
-        ggplot2::arrow(angle=AP$arrow_angle, length = grid::unit(
-                       AP$arrow_length, AP$arrow_length_unit), type= AP$arrow_type)
-}
-
-#' Create miniature arrow to replace axes
-#'
-#' @param length_ratio the ratio of the length of the arrow relative to the
-#' span of the data
-#' @param nudge_ratio how much the arrow labels should move away from the arrow
-#' tip as a ratio of the length of the arrow
-#' @param move_x move the arrow axies position by how much to the left,
-#' negative value is to the right
-#' @param aes_param setting for pointsize, font_fam, point_fontsize,
-#' arrow_angle, arrow_length, arrow_length_unit, arrow_type, arrow_thickness,
-#' arrow_linejoin
-#' @param return a list of geoms for the arrow segment and axis labels
-#' @importFrom ggplot2 geom_text 
-#' @export
-arrow_axis <- function (plot_ob, length_ratio=0.05, nudge_ratio=0., move_x=0,
-                        move_y=0, reverse_x=F, reverse_y=F, 
-                        aes_param = list (pointsize=3, font_fam='Arial',
-                                          point_fontsize=6) 
-                        ){
-        plot_build <- ggplot2::ggplot_build (plot_ob)
-        if (reverse_x){rx = -1}else{rx = 1}
-        if (reverse_y){ry = -1}else{ry = 1}
-        origin_x <- rx*plot_build$layout$panel_scales_x[[1]]$range$range[1]
-        end_x <- rx*plot_build$layout$panel_scales_x[[1]]$range$range[2]
-        origin_y <- ry*plot_build$layout$panel_scales_y[[1]]$range$range[1]
-        end_y <- ry*plot_build$layout$panel_scales_y[[1]]$range$range[2]
-        x <- gsub ('_', ' ', plot_build$plot$labels$x)
-        y <- gsub ('_', ' ', plot_build$plot$labels$y)
-
-        dist_x <- length_ratio*(end_x - origin_x)
-        dist_y <- length_ratio*(end_y - origin_y)
-        dist_xy <- max (dist_x, dist_y)
-
-        df_arrow <- data.frame (x1=c(origin_x, origin_x), 
-                                y1=c(origin_y, origin_y), 
-                                x2=c(origin_x+dist_x, origin_x), 
-                                y2=c(origin_y, origin_y+dist_y))
-
-        # offset
-        df_arrow$x1 <- df_arrow$x1 - dist_x*move_x
-        df_arrow$x2 <- df_arrow$x2 - dist_x*move_x
-        df_arrow$y1 <- df_arrow$y1 - dist_y*move_y
-        df_arrow$y2 <- df_arrow$y2 - dist_y*move_y
-
-        df_arrow$axis_labels <- c(x, y)
-        df_arrow %>% 
-                dplyr::mutate (xlabel = x2 + 0.2*dist_x*c(1, 0)  ) %>%
-                dplyr::mutate (ylabel = y2 + 0.2*dist_y*c(0, 1)  ) -> df_arrow
-
-        return (list(
-                # type = 'closed' produces a solid triangle at the arrow end
-                # linejoin = 'mitre' produces triangle with sharp edges
-                ggplot2::geom_segment( aes(x = x1, y = y1, xend = x2, yend = y2), data = df_arrow, 
-                            arrow = get_arrow (aes_param), size = aes_param$arrow_thickness, 
-                            linejoin=aes_param$arrow_linejoin),
-
-                # x axis
-                geom_text (aes (x=xlabel, y=ylabel, label=axis_labels), data =
-                           df_arrow[1,], nudge_y=0, nudge_x=rx*nudge_ratio*dist_x, 
-                           size=aes_param$point_fontsize, hjust='left', vjust=0.5,
-                           fontface='italic', angle=0, family=aes_param$font_fam),
-
-                # y axis
-                geom_text (aes (x=xlabel, y=ylabel, label=axis_labels), data =
-                           df_arrow [2,], nudge_y=ry*nudge_ratio*dist_y, nudge_x=0, 
-                           size=aes_param$point_fontsize, vjust=0.5, hjust='bottom',
-                           fontface='italic', angle=90, family=aes_param$font_fam),
-                # add a dot at the end of the arrows
-                ggplot2::geom_point (x = rx*(origin_x - dist_x*move_x), 
-                                     y = ry*(origin_y - dist_y*move_y), 
-                                     size=aes_param$pointsize, shape=16)
-        ))
 }
 
 #' Append this function at the end of a ggplot to provide the style in this
@@ -340,6 +279,7 @@ arrow_axis <- function (plot_ob, length_ratio=0.05, nudge_ratio=0., move_x=0,
 #' @export
 theme_TB <- function (plot_type='no_arrow', plot_ob=NULL, feature_vec=NULL,
                       color_fill=F, color_vec = NULL, rotation=90, 
+                      more_prec=2,
                       aes_param = list(fontsize=15, point_fontsize=6,
                                        font_fam='Arial', pointsize=3,
                                        legend_point_size=5),
@@ -348,6 +288,10 @@ theme_TB <- function (plot_type='no_arrow', plot_ob=NULL, feature_vec=NULL,
         if (plot_type == 'dim_red'){
                 theme_list <- append ( theme_dim_red (aes_param, color_fill), arrow_axis (
                                          plot_ob, aes_param=aes_param, ...) )
+        }
+        if (plot_type == 'dim_red_sim'){
+                theme_list <- append ( theme_dim_red (aes_param, color_fill), arrow_axis (
+                                         plot_ob, aes_param=aes_param, axis_label_sim=T,...) )
         }
         if (plot_type == 'no_arrow'){
                 theme_list <- theme_dim_red (aes_param, color_fill) 
@@ -358,7 +302,7 @@ theme_TB <- function (plot_type='no_arrow', plot_ob=NULL, feature_vec=NULL,
         if (!is.null (feature_vec)){
                 if (is.numeric (feature_vec)){theme_list <- theme_list [1:length(theme_list) != 2]}
                 theme_list <- append (theme_list, add_custom_color (feature_vec, 
-                                                        aes_param, color_fill) )
+                                                        aes_param, more_prec, color_fill) )
         }
         return (theme_list)
 }

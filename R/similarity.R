@@ -59,12 +59,14 @@ compute_all_cor <- function (x, method='correlation', assay='integrated',
 #' @param column_scale zero the mean across columns, make standard deviation 1
 #' @param num_col number of columns in which the facets of the subplots will be
 #' arranged
+#' @param legend_col in how many columns the legend should be
 #' @param AP aesthetic parameters, `cell_order` controls the orderring of
 #' cells in the violin plot legend and other fields for plotting.
 #' @importFrom magrittr %>%
 #' @export
 cell_violin <- function (all_cor, metadata, feature, column_scale=T,
-                         row_scale=F, num_col=1, AP=list ()){
+                         row_scale=F, num_col=1, box_plot=F, AP=list (),
+                         legend_col=1){
         AP <- return_aes_param (AP)
         if (length (feature) == 1){feature <- rep (feature, 2)}
         add_type <- metadata [match (colnames (all_cor), 
@@ -85,16 +87,23 @@ cell_violin <- function (all_cor, metadata, feature, column_scale=T,
         plot_corr %>% dplyr::select (!all_cells) %>%
                 tidyr::gather ('cell_type2', 'expr_val', -cell_type) -> plot_data
         ggplot2::ggplot (plot_data, ggplot2::aes (x=cell_type, y=expr_val, fill=cell_type) ) +
-                ggplot2::geom_jitter (position=ggplot2::position_jitter(0.2), shape=AP$normal_shape, 
-                                      color=AP$point_edge_color, stroke=0.3,
-                                      size=AP$pointsize)+
                 ggplot2::facet_wrap (~cell_type2, ncol=num_col) +
                 ggplot2::ylab ('mean correlation')+
-                theme_TB ('dotplot', feature_vec=plot_corr$cell_type, color_fill=T, aes_param=AP)+
-                ggplot2::guides (fill=ggplot2::guide_legend(ncol=1, override.aes=list( 
+                theme_TB ('dotplot', feature_vec=plot_corr$cell_type, color_fill=T, aes_param=AP) +
+                custom_tick (plot_data$expr_val, more_prec=1, x_y='y') -> plot_ob
+        if (box_plot){
+                plot_ob + ggplot2::geom_boxplot ()+
+                        ggplot2::guides (fill=ggplot2::guide_legend (ncol=1, 
+                                                override.aes=list(alpha=1))) -> plot_ob
+        }else{
+              plot_ob + ggplot2::geom_jitter (position=ggplot2::position_jitter(0.2), 
+                                    shape=AP$normal_shape,
+                                    color=AP$point_edge_color, stroke=0.3,
+                                    size=AP$pointsize) +
+                ggplot2::guides (fill=ggplot2::guide_legend(ncol=legend_col, override.aes=list( 
                                                            size=AP$legend_point_size, 
-                                                           shape=AP$normal_shape) ))+
-                custom_tick (plot_data$expr_val)
+                                                           shape=AP$normal_shape) )) -> plot_ob
+        }
 }
 
 #' Plot correlation matrix

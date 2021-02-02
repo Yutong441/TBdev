@@ -9,13 +9,17 @@ plot_two_branch(
   branch_col = "epil_branch",
   color_col = "broad_type",
   time_col = "MGP_PT",
-  branch1 = c("main", "EVT_b"),
-  branch2 = c("main", "STB_b"),
+  branch1 = c("TB_stem", "STB_branch"),
+  branch2 = c("TB_stem", "EVT_branch"),
   select_cells1 = NULL,
   select_cells2 = NULL,
   AP = NULL,
   time_axis = T,
   axis_label = "time",
+  vert_trans = 0,
+  branch_names = c(NA, NA, NA),
+  plot_branch_names = T,
+  thickness = 0.01,
   ...
 )
 }
@@ -27,11 +31,17 @@ plot_two_branch(
 \item{time_axis}{whether to plot the x axis}
 
 \item{axis_label}{what to label the \code{time_axis}}
+
+\item{vert_trans}{the extent of vertical translation}
+}
+\value{
+a list of ggplot layers
 }
 \description{
 Draw 2 sigmoid curves
 }
 \examples{
+ggplot () +
 plot_two_branch (meta, 
                  select_cells1 = meta$broad_type != 'STB',
                  select_cells2 = meta$broad_type != 'EVT',

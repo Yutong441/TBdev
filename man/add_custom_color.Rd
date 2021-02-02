@@ -4,7 +4,7 @@
 \alias{add_custom_color}
 \title{Customise the colors that correspond to particular features}
 \usage{
-add_custom_color(feature_vec, aes_param, color_fill = T)
+add_custom_color(feature_vec, aes_param, more_prec = 0.2, color_fill = T)
 }
 \arguments{
 \item{feature_vec}{a vector of features for which colors will be assigned}

@@ -65,6 +65,33 @@ plot_all_WGCNA_nets <- function (x, all_groups, save_dir, ...){
         grDevices::dev.off()
 }
 
+#' @importFrom igraph V
+hide_node <- function (igraph_net, manual_xy=NULL, hide_node_thres=NULL){
+        if (is.null(manual_xy)){
+                manual_xy <- graphlayouts::layout_with_stress(igraph_net)
+        }
+        if (!is.null(hide_node_thres)){
+                hide_vec <- V(igraph_net)$size < hide_node_thres
+                node_name <- attr (V(igraph_net), 'names')
+                manual_xy_hide <- manual_xy [!hide_vec,]
+                igraph_hide <- igraph::delete_vertices (igraph_net, node_name[hide_vec])
+                size_vec <- V(igraph_net)$size
+                names (size_vec) <- node_name
+                return (list (igraph_hide, manual_xy_hide))
+        }else{
+                return (list (igraph_net, manual_xy))
+        }
+}
+
+order_net_leftright <- function (igraph_net, ascend_order){
+        xy <- graphlayouts::layout_with_stress(igraph_net)
+        xy_new <- xy [order (xy[,1]),]
+        old_genes <- attr (V(igraph_net), 'names')
+        new_genes <- old_genes [order (V(igraph_net)$pseudotime, 
+                                       decreasing=!ascend_order)]
+        return ( xy_new [match (old_genes, new_genes),])
+}
+
 #' Customise igraph objects using ggraph
 #'
 #' @param igraph_net an igraph object
@@ -73,32 +100,48 @@ plot_all_WGCNA_nets <- function (x, all_groups, save_dir, ...){
 #' a feature of the vertices, e.g. pseudotime. If this is set to be NULL, no
 #' reordering will occur unless `manual_xy` is not NULL. If `order_leftright`
 #' is not NULL, the setting will override that in `manual_xy`.
+#' @param ascend_order order the pseudotime in the ascending order, i.e. the
+#' lowest value will be colored purple, highest yellow according to the viridis
+#' scale.
+#' @param coloring a vector with the same length as the number of nodes that
+#' provide the colors
+#' @param nudge_ratio by how much the labels are radiated from the center
+#' @param hide_node_thres below which node size are the nodes and the
+#' associated connections hidden.
+#' @return a ggplot object
 #' @export
 custom_net <- function (igraph_net, AP=NULL, limits=NA, ranges=c(0,15),
                         manual_xy=NULL, order_leftright='pseudotime',
-                        ascend_order=T){
+                        ascend_order=T, coloring=NULL, nudge_ratio=0., 
+                        hide_node_thres=NULL, plot_title=NULL){
         AP <- return_aes_param (AP)
+        if (is.null(coloring)){coloring <- V(igraph_net)$pseudotime}
         if (is.na (limits[1])){limits <- range (V(igraph_net)$size) }
-        if (!is.null(order_leftright)){
-                xy <- graphlayouts::layout_with_stress(igraph_net)
-                xy_new <- xy [order (xy[,1]),]
-                old_genes <- attr (V(graph_net), 'names')
-                new_genes <- old_genes [order (V(graph_net)$pseudotime, 
-                                               decreasing=!ascend_order)]
-                manual_xy <- xy_new [match (old_genes, new_genes),]
-        }
         if (is.null(manual_xy)){
-                gnet <- ggraph::ggraph (igraph_net, layout='kk') 
-        }else{
-                gnet <- ggraph::ggraph (igraph_net, 'manual', x=manual_xy[,1], y=manual_xy[,2]) 
+                if (!is.null(order_leftright)){
+                        manual_xy <- order_net_leftright (igraph_net, ascend_order)
+                }else{manual_xy <- graphlayouts::layout_with_stress(igraph_net)}
         }
-        gnet+   ggraph::geom_edge_link (ggplot2::aes(edge_width=width), edge_color='gray') +
-                ggraph::geom_node_point (ggplot2::aes (size=size, fill=pseudotime), shape=21)+
-                ggraph::geom_node_text (ggplot2::aes(label=name), vjust='bottom', 
-                                        repel=T, size=AP$point_fontsize) +
-                TBdev::theme_TB ('no_arrow')+ ggplot2::scale_fill_viridis_c ()+
+        com_list <- hide_node (igraph_net, manual_xy, hide_node_thres)
+        igraph_net <- com_list[[1]]
+        manual_xy <- com_list[[2]]
+
+        ggraph::ggraph (igraph_net, 'manual', x=manual_xy[,1], y=manual_xy[,2]) -> gnet
+        gnet +  ggraph::geom_edge_link (ggplot2::aes(edge_width=width), edge_color='gray') +
+                ggraph::geom_node_point (ggplot2::aes (size=size, fill=pseudotime), 
+                                         shape=21)+
+                ggraph::geom_node_text (ggplot2::aes(label=name), 
+                                        repel=F, size=AP$point_fontsize,
+                                        nudge_x = gnet$data$x*nudge_ratio,
+                                        nudge_y = gnet$data$y*nudge_ratio
+                                        ) +
                 ggplot2::scale_size (range=ranges, limits=limits)+
-                ggplot2::labs (size='norm count')
+                ggplot2::labs (size='norm count')+
+                ggplot2::guides(size=F) -> g_ob
+
+        if (!is.null(plot_title)){g_ob <- g_ob + ggplot2::ggtitle (plot_title) }
+        g_ob + TBdev::theme_TB ('no_arrow', feature_vec=coloring,
+                                 color_fill=T, more_prec=3, aes_param=AP)
 }
 
 #' @export
@@ -149,13 +192,81 @@ change_expre_level <- function (markers, igraph_net, celltype, group.by='group',
         return (igraph_net)
 }
 
+#' Delete those nodes with a small expression levels
+#'
+#' @param graph_ob an igraph object
+#' @param size_thres the threshold of expression below which nodes are removed
+#' @description This function removes nodes from graph completely. Thus the
+#' underlying graph structure will change during ploting. If you wish to
+#' preserve the graph structure, use `hide_node`
+#' @return an igraph object
+filter_expression <- function (graph_ob, size_thres){
+        node_names <- attr (V(graph_ob), 'names')
+        small_nodes <- V(graph_ob)$size < size_thres
+        igraph::delete_vertices(graph_ob, node_names[small_nodes])
+}
+
+#' @importFrom igraph V
 #' @export
-custom_net_cells <- function (markers, igraph_net, celltypes, limits=NA,
-                              AP=NULL,...){
+custom_net_cells <- function (markers, igraph_net, celltypes, limits=NULL,
+                              AP=NULL, return_sep=F, normalize_cell=NULL, ...){
+        if (!is.null (normalize_cell)){
+                igraph_net <- change_expre_level (markers, igraph_net, normalize_cell)
+                normalize_vec <- V(igraph_net)$size
+        }
         graph_list <- list()
         for (i in 1:length(celltypes)){
                 one_graph <- change_expre_level (markers, igraph_net, celltypes[i])
-                graph_list[[i]] <- custom_net (one_graph, limits=limits, ...)
+                if (!is.null (normalize_cell)) {
+                        V(one_graph)$size <- V(one_graph)$size/normalize_vec
+                }
+                graph_list[[i]] <- one_graph
         }
-        return (ggpubr::ggarrange (plotlist=graph_list, labels=celltypes) )
+        xy <- order_net_leftright (igraph_net, ascend_order=T)
+        if (is.null(limits)){limits <- range (do.call (c, lapply (graph_list, function (gx){V(gx)$size} ) )) }
+        graph_list <- lapply (graph_list, function (x){custom_net (x, limits=limits, manual_xy=xy,...)})
+        if (!return_sep){
+                return (ggpubr::ggarrange (plotlist=graph_list, labels=celltypes) )
+        }else{
+                return (graph_list)
+        }
+}
+
+#' Create an igraph object from seurat
+#'
+#' @description a convenient wrapper for `plot_WGCNA_net`, then
+#' `add_pseudotime_to_net` and `change_expre_level` and `filter_expression`
+#' @param ... arguments to `add_pseudotime_to_net`
+custom_net_from_seurat <- function(x, genes, markers, celltype, thres=0.6,
+                                   size_thres=0., ...){
+        graph_net <- plot_WGCNA_net (x, genes, return_igraph=T, thres=thres)
+        graph_net <- add_pseudotime_to_net (x, graph_net, ...)
+        graph_net <- change_expre_level (markers, graph_net, celltype)
+        graph_net <- filter_expression (graph_net, size_thres)
+        return (graph_net)
+}
+
+#' Multiple network graphs
+#'
+#' @param x a Seurat object
+#' @param size_thres filter out nodes with expression levels smaller than a
+#' certain threshold
+#' @param ... argments to pass to `custom_net`
+#' @importFrom igraph V
+#' @export
+custom_net_diff_nets <- function (x, gene_list, markers, size_thres=0., ...){
+        all_genes <- do.call(c,gene_list)
+        limits <- range (x[all_genes,][['RNA']]@data)
+
+        # plot net
+        graph_list <- lapply (as.list(1:length(gene_list)), function(i){
+               custom_net_from_seurat (x, gene_list[[i]], markers, names
+                                       (gene_list)[i], size_thres=size_thres)
+                              })
+
+        pt_limits <- do.call (c, lapply (graph_list, function(gx){V(gx)$pseudotime}) )
+        lapply (as.list (1:length(graph_list)), function (i){
+                        custom_net (graph_list [[i]], limits=limits, 
+                                    coloring=pt_limits, 
+                                    plot_title=names (gene_list)[i],...)})
 }

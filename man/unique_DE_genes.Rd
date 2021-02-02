@@ -9,7 +9,8 @@ unique_DE_genes(
   top_number,
   gene = "feature",
   weighting = "logFC",
-  cluster = "group"
+  cluster = "group",
+  iterative = NULL
 )
 }
 \arguments{
@@ -22,8 +23,18 @@ unique_DE_genes(
 \item{weighting}{which column has the gene rankings}
 
 \item{cluster}{which column has the cluster names/numbers}
+
+\item{iterative}{how many iterations to run until the number of DE genes in
+each group is the same. By default, no iteration will be performed. I
+recommend choosing a moderate size e.g. 10~20 to ensure the end result. I
+could have implemented a while loop but until I consider all possible
+scenarios, I would not do so.}
 }
 \description{
 If 1 DE gene appears in 2 clusters, the cluster with the
-highest avg_logFC will be chosen. NB: only upregulated genes will be selected
+highest avg_logFC will be chosen.
+Then the user can specify the option in \code{iterative} whether the other DE
+genes from the group will be chosen to ensure at the end the number of DE
+genes in each group is the same.
+NB: only upregulated genes will be selected
 }

@@ -369,11 +369,77 @@ line_break_every <- function (vec, separator='\n', every_n=2){
         return (final_vec)
 }
 
+strsplit_add_sep <- function (string, sep){
+        vec <- str_split (string, sep)[[1]]
+        if (length(vec)>1){vec <- paste (vec, sep,sep='')}
+        vec[length(vec)] <- gsub (sep, '', vec[length(vec)])
+        return (vec)
+}
+
+#' @importFrom magrittr %>%
+wrap_one_long_sentence <- function (sentence, index_sepa, break_sepa, thres){
+        # break up a sentence into lines that already exist
+        str_x <- strsplit (sentence, break_sepa)[[1]]
+        sapply (str_x, function (i){
+                # if the sentence is long enough
+                if (length (strsplit(i,'')[[1]]) > thres){
+                        # for each line, search for points that 
+                        # allow for breaking, e.g. commas
+                        str_i <- strsplit_add_sep (i, index_sepa)
+                        sapply (1:length(str_i), function (k) {
+                                all_len <- length (strsplit (str_i[k], '')[[1]])
+                                # need to break if the next word is too long
+                                if (k + 1 <= length (str_i)) {
+                                        all_len2 <- length (strsplit (str_i[k+1], '')[[1]])
+                                }else{all_len2 <- all_len}
+                                if (all_len > thres | all_len2 > thres){
+                                        paste (str_i[k], break_sepa, sep='')
+                                }else{str_i[k]}
+                        # because `strsplit_add_sep` above, there is no need to
+                        # collapse with a separator
+                        }) %>% paste (collapse='') %>% return ()
+                # if the sentence is short, there is no need for breaking
+                }else{return (i)}
+        }) %>% paste (collapse=break_sepa) %>% return ()
+}
+
+#' Line break after very long words
+#'
+#' @param vec a character vector, e.g. `c('HLA-G','TBX3','CGA')`
+#' @param index_sepa where may a line break be inserted
+#' @param break_sepa the separator for line break, i.e. '\n' for most
+#' applications except `<br>` for markdown syntax.
+#' @param thres how many letters maximum in each line
+#' @description I could have used `stringr::str_wrap` but that function does
+#' not consider if the input string already has breaks
+wrap_long_sentence <- function (vec, index_sepa=',', break_sepa='\n', thres=8){
+        sapply (vec, function(x){
+                wrap_one_long_sentence (x, index_sepa, break_sepa, thres)
+        })
+}
+
+line_break <- function (vec, separator='\n', every_n=2, thres=8){
+        vec <- paste (line_break_every(vec, separator, every_n), collapse=',')
+        vec <- wrap_long_sentence (vec, break_sepa=separator, thres=thres)
+        # remove duplicated line breaks, i.e. don't want any empty lines
+        vec <- gsub ('\n\n','\n', vec)
+        # remove duplicated commas
+        vec <- gsub (',,',',', vec)
+
+        # remove NA fields
+        vec <- gsub (', NA', '', vec)
+        # prevent extra commas from appearing after each line break
+        vec <- gsub ('\n,', '\n', vec)
+        # prevent empty spaces
+        vec<- gsub (',( \n)+$', '', vec)
+        return (vec)
+}
+
 #' @importFrom ggplot2 aes
 #' @importFrom magrittr %>%
 gg_enrich_bar <- function (plot_df, AP, shrink_ratio=1., band_ratio=5,
                            extend_axis_neg=1., extend_axis_pos=1., nudge_x=0.1,
-                           label_shift_ratio=1.){
+                           label_shift_ratio=0.05){
         plot_df %>% dplyr::group_by (cluster, enriched) %>% 
                 dplyr::mutate (yval=as.character (gtools::mixedorder(abs (emean)))) %>%
                 dplyr::mutate (xmax=sign(emean)*max(abs (emean))) -> plot_df
@@ -389,13 +455,18 @@ gg_enrich_bar <- function (plot_df, AP, shrink_ratio=1., band_ratio=5,
         plot_df$glabel [!enriched_index] <- NA
 
         ggplot2::ggplot (plot_df, aes (x=emean, y= yval)) +
-                ggplot2::geom_bar (aes (fill=enriched_cell), stat='identity', show.legend=F)+ 
+                ggplot2::geom_bar (aes (fill=enriched_cell), stat='identity',
+                                   show.legend=F, width=0.3)+ 
                 ggplot2::geom_text (aes(label=glabel, 
-                                        x=xmax*label_shift_ratio),
+                                        x=emean+xmax*label_shift_ratio
+                                        #x=xmax*label_shift_ratio
+                                        ),
                                     family=AP$font_fam, hjust='left',
                                     size=AP$point_fontsize*shrink_ratio)+
                 ggplot2::geom_text (aes(label=neg_label, 
-                                        x=xmax*label_shift_ratio),
+                                        x=emean+xmax*label_shift_ratio
+                                        #x=xmax*label_shift_ratio
+                                        ),
                                     family=AP$font_fam, hjust='outward',
                                     size=AP$point_fontsize*shrink_ratio)+
                 ggplot2::ylab('Description')+ ggplot2::labs(fill='p value') +
@@ -404,7 +475,7 @@ gg_enrich_bar <- function (plot_df, AP, shrink_ratio=1., band_ratio=5,
                 theme_TB ('dotplot', feature_vec=plot_df$enriched_cell, rotation=0,
                           color_fill=T, AP=AP)+
                 ggplot2::geom_vline (xintercept=0, linetype='dashed', 
-                                     size=AP$pointsize, color='black') +
+                                     size=AP$pointsize/3, color='black') +
                 ggplot2::theme (axis.text.y=ggplot2::element_blank (), 
                                 strip.text=ggplot2::element_blank ()) +
                 ggplot2::ylab ('')+ ggplot2::xlim (c(min_x, max_x))+

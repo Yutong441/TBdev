@@ -24,11 +24,11 @@ load_all_data <- function (save_robj=NULL, root=NULL, all_data = NULL,
                         dataset <- get (r_obj)
                         rm (r_obj)
                         all_data [[i]] <- dataset
-                        if (is.null (paper_ID)){
-                                all_data [[i]]$paper <- strsplit (save_robj[i], '/')[[1]][[1]]
-                        }else{
-                                all_data [[i]]$paper <- paper_ID[i]
-                        }
+                }
+                if (is.null (paper_ID)){
+                        all_data [[i]]$paper <- strsplit (save_robj[i], '/')[[1]][[1]]
+                }else{
+                        all_data [[i]]$paper <- paper_ID[i]
                 }
                 all_genes [[i]] <- rownames(all_data[[i]])
         }
@@ -70,6 +70,13 @@ merge_seurat <- function (list_obj, assays, slot_data='data'){
                 colnames (list_data[[i]]) <- paste (colnames (list_data[[i]]), i, sep='.')
                 meta_list [[i]] <- list_obj[[i]]@meta.data
                 meta_list[[i]]$ID_col <- colnames (list_data [[i]])
+        }
+        mismatches <- rownames (list_data[[1]]) == rownames (list_data[[2]])
+        if (mean(mismatches) !=1 ){
+                print ('there are mismatches in rownames')
+                common_genes <- rownames (meta_list[[1]])
+                meta_list <- lapply (meta_list, function(x){x [match (common_genes, rownames (x) ),] })
+                print (table (rownames (list_data[[1]]) == rownames (list_data[[2]])) )
         }
         print ('merge assay data')
         all_assays <- do.call (cbind, list_data)
@@ -172,9 +179,16 @@ label_transfer <- function (merged_data, feature, by_paper=NULL){
         }
         query <- merged_data [, !known_cells]
         reference <- merged_data [, known_cells]
+        query <- Seurat::FindVariableFeatures (query)
+        query <- Seurat::ScaleData(query)
+
+        reference <- Seurat::FindVariableFeatures (reference)
+        reference <- Seurat::ScaleData(reference)
+
         proj_anchors <- Seurat::FindTransferAnchors(reference = reference, query = query, dims = 1:30)
         predictions <- Seurat::TransferData(anchorset = proj_anchors, refdata =
                                     reference@meta.data[,feature],  dims = 1:30)
+        rm (query, reference)
 
         predicted_feature <- paste ('predicted', feature, sep='_')
         merged_data@meta.data [, predicted_feature] <- NA

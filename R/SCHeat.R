@@ -1,6 +1,7 @@
 # heatmap for scRNA-seq
 
-get_rainbow_col <- function (named_vector, AP, default=T, provided_color=NULL){
+get_rainbow_col <- function (named_vector, AP, default=T, provided_color=NULL,
+                             regexp=NULL){
         all_matches <- unique (named_vector) %in% names (provided_color)
         if (!is.null (provided_color) & mean (all_matches) == 1 ){
                 print ('entering provided color')
@@ -12,7 +13,7 @@ get_rainbow_col <- function (named_vector, AP, default=T, provided_color=NULL){
                         names (col_color) <- as.character(label_group)
                         names (col_color) [is.na (names (col_color))] <- 'NA'
                 }else{
-                        col_color <- custom_color (named_vector, AP)
+                        col_color <- custom_color (named_vector, AP,regexp=regexp)
                 }
         }
         return (col_color)
@@ -216,6 +217,7 @@ make_multi_anno_legend <- function (anna_param, anno_df, color_map_list, anno_na
 #' supply as many items as the number of column sidebars
 #' @param left_HA whether to show row sidebars
 #' @param top_HA whether to show column sidebars
+#' @param row_titles whether to show row titles. choose NULL if not
 #' @param group_order the ordering of each column
 #' @param main_width width of the heatmap in cm
 #' @param main_height height of the heatmap in cm
@@ -245,6 +247,8 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
                          column_names_side = 'bottom',
                          row_names_side = 'left',
                          show_column_bars = T,
+                         row_title_fontface='bold',
+                         column_title_fontface='bold',
 
                          # clustering
                          cluster_columns=F,
@@ -270,6 +274,7 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
                          row_legend_labels='DE genes',
                          column_legend_labels=NULL, 
                          left_HA=T, top_HA=T,
+                         row_titles=character(0),
                          group_order=NULL, 
                          main_width=NULL, main_height=NULL,
                          grid_height=8,
@@ -323,6 +328,7 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
         if (mean (color_row_names == 'NA') == 1){
                 color_row_names <- rep ('no values', length(color_row_names))
                 left_HA <- F
+                row_titles <-NULL 
         }
 
         # order vectors
@@ -372,8 +378,8 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
         print ('making vertical bar')
         vert_anna_param <- append (anna_param, list (title=row_legend_labels))
         if ( is.null (highlight) | is.null (highlight_names)  ){
-                row_color <- get_rainbow_col (color_row_names,AP,
-                                              default=default_color)
+                row_color <- get_rainbow_col (color_row_names ,AP,
+                                              default=default_color, regexp='\n(.*)$')
 
                 vert_bars <- return_row_HA_ob (data.frame (Marker = color_row_names), 
                                              list(Marker=row_color),
@@ -417,7 +423,6 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
 
         if (!top_HA){hori_bars <- NULL}
         if (!left_HA){vert_bars <- NULL}
-        if (!left_HA){row_title <- NULL}else{row_title <- character (0)}
 
         print ('drawing heatmap')
         Heatmap (plot_data, cluster_rows=cluster_rows, 
@@ -436,11 +441,13 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
                  row_names_gp = gpar (fontsize=AP$fontsize, 
                                       fontfamily=AP$gfont_fam), 
 
-                 row_title=row_title,
+                 row_title=row_titles,
                  row_title_rot=0,
                  column_title_rot=column_rotation,
-                 row_title_gp = gpar (fontsize=AP$fontsize, fontfamily=AP$gfont_fam, fontface='bold'),
-                 column_title_gp = gpar (fontsize=AP$fontsize, fontfamily=AP$gfont_fam, fontface='bold'), 
+                 row_title_gp = gpar (fontsize=AP$fontsize, fontfamily=AP$gfont_fam, 
+                                      fontface=row_title_fontface),
+                 column_title_gp = gpar (fontsize=AP$fontsize, fontfamily=AP$gfont_fam, 
+                                         fontface=column_title_fontface), 
 
                  col=color_scale,
                  width = main_width, height = main_height,
@@ -454,7 +461,9 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
                 heat_legend <- make_heat_legend (main_legend_param, color_scale, heat_name)
 
                 if (left_HA){
-                        row_legend <- make_anno_legend (anna_param, levels(color_row_names), 
+                        row_leg_lab <- gsub ('\n(.*)$', '', levels(color_row_names))
+                        names (row_color) <- gsub ('\n(.*)$', '', names(row_color))
+                        row_legend <- make_anno_legend (anna_param, row_leg_lab, 
                                                              row_color, row_legend_labels )
                 }else{row_legend <- NULL}
                 if (top_HA ){

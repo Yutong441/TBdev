@@ -37,11 +37,23 @@ get_kegg <- function (name){
         org_names <- c('human'='hsa', 'mouse'='mmu', 'marmoset'='cjc')
         if (!name %in% names (org_names)){
                 org <- KEGGREST::keggList ('organism')
-                kegg_name <- org [grep (name, org [, 'species']), 'organism']
+                kegg_name <- org [grep (name, org [, 'species'], 
+                                        ignore.case=T)[1], 'organism']
                 rm (org)
                 return (kegg_name[1])
         }else{
                 return (org_names [names (org_names) == name ])
+        }
+}
+
+#' Convert gene names into entrez ID
+#'
+#' @export
+gene_name_to_entrez <- function (genename, organism_db){
+        if (class (organism_db == 'Mart') ){
+        }else{
+                entrez <- AnnotationDbi::mapIds(organism_db, as.character (
+                                        genename), 'ENTREZID', 'SYMBOL')
         }
 }
 

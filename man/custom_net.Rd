@@ -4,10 +4,44 @@
 \alias{custom_net}
 \title{Customise igraph objects using ggraph}
 \usage{
-custom_net(igraph_net, AP = NULL, limits = NA, ranges = c(0, 15))
+custom_net(
+  igraph_net,
+  AP = NULL,
+  limits = NA,
+  ranges = c(0, 15),
+  manual_xy = NULL,
+  order_leftright = "pseudotime",
+  ascend_order = T,
+  coloring = NULL,
+  nudge_ratio = 0,
+  hide_node_thres = NULL,
+  plot_title = NULL
+)
 }
 \arguments{
 \item{igraph_net}{an igraph object}
+
+\item{manual_xy}{the x and y coordinates for the plots}
+
+\item{order_leftright}{order the points from left to right according to the
+a feature of the vertices, e.g. pseudotime. If this is set to be NULL, no
+reordering will occur unless \code{manual_xy} is not NULL. If \code{order_leftright}
+is not NULL, the setting will override that in \code{manual_xy}.}
+
+\item{ascend_order}{order the pseudotime in the ascending order, i.e. the
+lowest value will be colored purple, highest yellow according to the viridis
+scale.}
+
+\item{coloring}{a vector with the same length as the number of nodes that
+provide the colors}
+
+\item{nudge_ratio}{by how much the labels are radiated from the center}
+
+\item{hide_node_thres}{below which node size are the nodes and the
+associated connections hidden.}
+}
+\value{
+a ggplot object
 }
 \description{
 Customise igraph objects using ggraph

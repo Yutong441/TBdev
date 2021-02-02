@@ -23,7 +23,7 @@ pseudo_real_time <- function (dat, real_time, pseudotime, color_by, AP=NULL){
                 ggplot2::ggtitle ( paste ('\u03c1 =', format (round (time_cor, 2), nsmall=2) ) ) +
                 theme_TB ('dotplot', feature_vec=dat [, color_by], color_fill=T, rotation=90, AP=AP)+
                 custom_tick (dat [, pseudotime]) +
-                labs (fill='') + ylab ('pseudotime') 
+                ggplot2::labs (fill='') + ggplot2::ylab ('pseudotime') 
 }
 
 #' Remove the `mean_` and `var_` prefixes from a vector
@@ -347,3 +347,4 @@ time_cluster_plot <- function (peak_plot, metadata, show_text_prop=0.95,
                 ggplot2::ylab ('maximum gradient') + ggplot2::xlab ('pseudotime') +
                 ggplot2::xlim ( c(min_val, max_val) )
 }
+

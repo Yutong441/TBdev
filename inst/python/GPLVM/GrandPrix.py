@@ -201,7 +201,7 @@ class GrandPrixModel(object):
             else:
                 #self.X_prior_mean = X_prior_mean
                 prior_mean = (X_prior_mean - X_prior_mean.mean())/X_prior_mean.std()
-                self.X_prior
+                self.X_prior_mean = prior_mean
         else:
             self.X_prior_mean = np.zeros((self.N, self.Q))
 
@@ -226,7 +226,8 @@ class GrandPrixModel(object):
             self.X_mean = MapTo01(gpflow.models.PCA_reduce(self.Y, self.Q))
             # I added the 2 lines below
             if X_prior_mean is not None:
-                self.X_mean [:,-1] = (X_prior_mean - X_prior_mean.mean())/X_prior_mean.std()
+                self.X_mean [:,-1] = ((X_prior_mean - X_prior_mean.mean(
+                    keepdims=True))/X_prior_mean.std(keepdims=True))[:,0]
 
     def set_X_var(self, X_var):
         if type(X_var) is str:

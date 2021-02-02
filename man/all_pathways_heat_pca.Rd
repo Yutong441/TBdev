@@ -10,7 +10,8 @@ all_pathways_heat_pca(
   all_path = NULL,
   highlight_cells = NULL,
   DE_dir = NULL,
-  DE_label = NULL
+  DE_label = NULL,
+  species = "human"
 )
 }
 \arguments{

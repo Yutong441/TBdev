@@ -11,7 +11,9 @@ cell_violin(
   column_scale = T,
   row_scale = F,
   num_col = 1,
-  AP = list()
+  box_plot = F,
+  AP = list(),
+  legend_col = 1
 )
 }
 \arguments{
@@ -30,6 +32,8 @@ arranged}
 
 \item{AP}{aesthetic parameters, \code{cell_order} controls the orderring of
 cells in the violin plot legend and other fields for plotting.}
+
+\item{legend_col}{in how many columns the legend should be}
 }
 \description{
 Take the mean of a correlation matrix \code{all_cor} of the cell

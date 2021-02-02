@@ -43,7 +43,7 @@ arrange_plots <- function (grob_list, save_path, grid_layout, panel_label=NULL,
                            margin_width=0.79, margin_height=0.79,
                            panel_spacing=0.1975, plot_width=9, plot_height=9, 
                            aes_param=list (highlight_font = list (fontface='bold', 
-                                        fontsize=18), font_fam = 'Arial') ){
+                                        fontsize=30), font_fam = 'Arial') ){
         
         highlight_font <- get_highlight_font (aes_param$highlight_font$fontface, 
                                               aes_param$highlight_font$fontsize, 
@@ -88,7 +88,11 @@ arrange_plots <- function (grob_list, save_path, grid_layout, panel_label=NULL,
                 # need different functions for ggplot, table and ComplexHeatmap
                 # objects
                 if ( 'ggplot' %in% class (grob_list[[i]] ) ){
-                        grid.draw (grid.grabExpr ( print (grob_list[[i]])))
+                        #grid.draw (grid.grabExpr ( print (grob_list[[i]])))
+                        # prevent text from being cutoff from the borders
+                        gt <- ggplot2::ggplot_gtable(ggplot2::ggplot_build(grob_list[[i]]))
+                        gt$layout$clip[gt$layout$name == "panel"] <- "off"
+                        grid::grid.draw(gt)
                 }else if ('data.frame' %in% class (grob_list[[i]] ) ) {
                         colnames (grob_list [[i]] ) <- gsub ('\\.', ' ', colnames (grob_list [[i]]))
                         gridExtra::grid.table (grob_list [[i]], rows=NULL)
