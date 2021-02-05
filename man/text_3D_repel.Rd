@@ -14,6 +14,7 @@ text_3D_repel(
   repel_force = 1,
   color_text = F,
   magnify_text = 1,
+  fontface = "bold",
   ...
 )
 }

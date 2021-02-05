@@ -88,7 +88,7 @@ cell_violin <- function (all_cor, metadata, feature, column_scale=T,
                 tidyr::gather ('cell_type2', 'expr_val', -cell_type) -> plot_data
         ggplot2::ggplot (plot_data, ggplot2::aes (x=cell_type, y=expr_val, fill=cell_type) ) +
                 ggplot2::facet_wrap (~cell_type2, ncol=num_col) +
-                ggplot2::ylab ('mean correlation')+
+                ggplot2::ylab ('scaled mean correlation')+
                 theme_TB ('dotplot', feature_vec=plot_corr$cell_type, color_fill=T, aes_param=AP) +
                 custom_tick (plot_data$expr_val, more_prec=1, x_y='y') -> plot_ob
         if (box_plot){
@@ -159,7 +159,7 @@ plot_prob_line <- function (prob_data, select_cells, selected_lines=NULL,
                             branch_ind='branch', sel_branch='branch1',
                             meta=NULL, meta_time='MGP_PT',
                             meta_type='broad_type', vjust=1.2, thickness=0.1,
-                            normalize_data=F, AP=NULL){
+                            normalize_data=F, remove_underscore=T, AP=NULL){
         AP <- return_aes_param (AP)
         if (normalize_data){
                 prob_data %>% dplyr::mutate_at (select_cells, 
@@ -176,6 +176,13 @@ plot_prob_line <- function (prob_data, select_cells, selected_lines=NULL,
         }else{label_data -> vline_data}
 
         lim_x <- c( min (plot_data [, time_ind]), max (plot_data [, time_ind])  )
+        # remove all underscores in names
+        if (remove_underscore){
+                plot_data$cell_type <- gsub ('_', '-', plot_data$cell_type)
+                vline_data$cell_type <- gsub ('_', '-', vline_data$cell_type)
+        }
+        ylabel <- 'probability'
+        if (normalize_data){ylabel <- paste ('normalised', ylabel)}
         ggplot2::ggplot (plot_data) +
                 ggplot2::geom_line (aes_string(x=time_ind, y='prob', color='cell_type'), 
                                     size=band_thick, alpha=band_trans)+
@@ -184,7 +191,7 @@ plot_prob_line <- function (prob_data, select_cells, selected_lines=NULL,
                 ggplot2::geom_vline (aes (xintercept=x, color=cell_type), 
                                      data=vline_data, linetype='dashed', show.legend=F)+
                 theme_TB('dotplot', feature_vec=plot_data$cell_type, rotation=0, AP=AP)+
-                ggplot2::xlab ('pseudotime') + ggplot2::ylab ('probability') + 
+                ggplot2::xlab ('pseudotime') + ggplot2::ylab (ylabel) + 
                 custom_tick (plot_data$prob) +
                 ggplot2::xlim (lim_x) + ggplot2::theme (aspect.ratio=0.5) -> plot_ob
 
@@ -197,4 +204,15 @@ plot_prob_line <- function (prob_data, select_cells, selected_lines=NULL,
                         add_custom_color (feature_vec=meta[, meta_type], AP, color_fill=T)
         }
         return (plot_ob)
+}
+
+#' Relative probability
+#'
+#' @description calculate probability relative to the maximum value in the same
+#' category
+#' @importFrom magrittr %>%
+#' @export
+normalize_prob <- function (x_df, features){
+        x_df %>% dplyr::mutate_at (features, function (x){x/max(x)}) %>%
+                magrittr::set_rownames (rownames (x_df))
 }

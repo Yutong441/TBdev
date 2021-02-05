@@ -4,7 +4,7 @@
 \alias{incorporate_TSC}
 \title{Incorporate Trophoblast stem cells into Seurat object}
 \usage{
-incorporate_TSC(x, analyse_by = "new_cluster2")
+incorporate_TSC(x, analyse_by = "new_cluster2", add_by = "revised")
 }
 \description{
 a specific function unlikely to be helpful

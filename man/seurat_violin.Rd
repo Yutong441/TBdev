@@ -13,7 +13,8 @@ seurat_violin(
   num_col = NULL,
   free_xy = "fixed",
   AP = NULL,
-  box_plot = T
+  box_plot = T,
+  ...
 )
 }
 \arguments{
@@ -24,6 +25,8 @@ seurat_violin(
 \item{group.by}{by which cell feature}
 
 \item{num_col}{in how many columns the facets are arranged}
+
+\item{...}{additional arguments for \code{custom_tick}}
 }
 \description{
 Similar to Seurat VlnPlot, with more graphic controls

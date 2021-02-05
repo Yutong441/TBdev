@@ -13,16 +13,20 @@
 #' @importFrom ggplot2 aes_string
 #' @importFrom magrittr %>%
 #' @export
-pseudo_real_time <- function (dat, real_time, pseudotime, color_by, AP=NULL){
+pseudo_real_time <- function (dat, real_time, pseudotime, color_by, AP=NULL, ...){
         AP <- return_aes_param (AP)
         gsub ('^D', '', dat[, real_time]) %>% as.numeric () -> numer_date
         time_cor <- stats::cor (numer_date, dat [, pseudotime])
+        ylevel <- max (dat [, pseudotime])
+        anno_grob <-  grid::textGrob (paste ('\u03c1 =', format (round (time_cor, 2), nsmall=2) ),
+                                      gp = grid::gpar (fontsize=AP$fontsize, fontfamily=AP$font_fam)
+        ) 
         dat %>% ggplot2::ggplot (aes_string (x=real_time, y=pseudotime, fill=color_by) ) + 
                 ggplot2::geom_point (shape=AP$normal_shape, color=AP$point_edge_color, 
                                      size=AP$pointsize)+
-                ggplot2::ggtitle ( paste ('\u03c1 =', format (round (time_cor, 2), nsmall=2) ) ) +
+                ggplot2::annotation_custom (anno_grob, ymin=ylevel, ymax=ylevel) +
                 theme_TB ('dotplot', feature_vec=dat [, color_by], color_fill=T, rotation=90, AP=AP)+
-                custom_tick (dat [, pseudotime]) +
+                custom_tick (min_prec=1, num_out=3, ...) +
                 ggplot2::labs (fill='') + ggplot2::ylab ('pseudotime') 
 }
 
@@ -76,7 +80,8 @@ gene_over_pseudotime <- function (x, exp_mat, genes, metadata, color_feature,
                 dplyr::select (c(new_genes, 'pseudotime', 'cell_ID')) %>%
                 tidyr::gather ('gene', 'mean_', -pseudotime, -cell_ID) %>%
                 dplyr::mutate (gene = factor (gene, levels=new_genes) ) -> point_df
-        point_df$color_by <- metadata [match (point_df$cell_ID, rownames (metadata)), color_feature]
+        point_df$color_by <- metadata [match (point_df$cell_ID, 
+                                              rownames (metadata)), color_feature]
         point_df %>% dplyr::filter (!is.na (color_by)) -> point_df
 
         print ('plotting')
@@ -84,9 +89,12 @@ gene_over_pseudotime <- function (x, exp_mat, genes, metadata, color_feature,
                 ggplot2::geom_point (aes (x=pseudotime, y=mean_, color=color_by), data=point_df, shape=20)+
                 ggplot2::geom_ribbon (aes (x=x, y=mean_, ymin=ymin, ymax=ymax, fill=branch), alpha=0.8 )+
                 ggplot2::facet_wrap (~gene, scales='free', ncol=num_col, nrow=num_row) +
-                theme_TB ('no_arrow', feature_vec=point_df$color_by, AP=AP) +
-                theme_TB (feature_vec = plot_df$branch, AP=AP, color_fill=T) +
-                ggplot2::xlab ('pseudotime') + ggplot2::ylab ('gene expression') +
+                theme_TB ('dotplot', feature_vec=point_df$color_by, AP=AP, rotation=0) +
+                theme_TB ('dotplot', feature_vec = plot_df$branch, AP=AP, color_fill=T, rotation=0) +
+                ggplot2::theme (axis.text.x=ggplot2::element_blank (),
+                                axis.text.y=ggplot2::element_blank ()) +
+                ggplot2::xlab ('pseudotime') + 
+                ggplot2::ylab (expression (italic('mRNA levels'))) +
                 ggplot2::labs (color='cell type') -> plot_ob
 
         print ('plot vertical lines at peak times')

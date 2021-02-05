@@ -122,8 +122,8 @@ arrow_to_graph_sim <- function (Arr, aes_param, nudge_ratio, dim_elevation=0.2){
         dim_lab_y <- dim_elevation*(Arr$df[2,]$ylabel - Arr$df[1,]$ylabel) + Arr$df[1,]$ylabel
         layer5 <- geom_text (aes (x=xlabel, y=dim_lab_y, label=Arr$dim_name), data =
                    Arr$df[1,], nudge_y=0, nudge_x=Arr$rx*nudge_ratio*Arr$dx, 
-                   size=aes_param$point_fontsize, hjust='center', vjust='bottom',
-                   fontface='italic', angle=0, family=aes_param$font_fam)
+                   size=aes_param$point_fontsize*1.3, hjust='center', vjust='bottom',
+                   angle=0, family=aes_param$font_fam)
         return (list (layer1, layer2, layer3, layer4, layer5))
 }
 

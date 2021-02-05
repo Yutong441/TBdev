@@ -90,11 +90,21 @@ get_phase_score <- function (x, gene_vec = NULL, norm_factor=F, norm_column=F, n
 #'
 #' @param x a matrix containing the phase scores
 #' @param seurat_ob a seurat object that provides the metadata
-#' @param group.by which feature to plot the row color bar for the heatmap
+#' @param group.by which feature to plot the row color bar for the heatmap.
+#' Only 1 feature allowed if `direction` is vertical
+#' @param direction either vertical or horizontal
 #' @export
-make_cycle_heat <- function (x, seurat_ob, group.by=NULL, AP=NULL, ...){
+make_cycle_heat <- function (x, seurat_ob, group.by=NULL, AP=NULL, direction='vertical',...){
+        if (direction=='vertical'){
+                make_cycle_heat_vertical (x, seurat_ob, group.by, AP, ...)
+        }
+        if (direction=='horizontal'){
+                make_cycle_heat_horizontal (x, seurat_ob, group.by, AP, ...)
+        }
+}
+
+make_cycle_heat_vertical <- function (x, seurat_ob, group.by=NULL, AP=NULL, ...){
         cycle_names <- factor ( colnames (x), levels=get_cycle_order() )
-        print (cycle_names)
         x_seurat <- Seurat::CreateSeuratObject (x, meta.data=data.frame (
                         cell_cycle=cycle_names, row.names=colnames (x)) )
         cell_vec <- rownames (x_seurat)
@@ -108,6 +118,19 @@ make_cycle_heat <- function (x, seurat_ob, group.by=NULL, AP=NULL, ...){
                      column_legend_labels = 'cell cycle',
                      row_legend_labels = 'cell type', center_scale=T,
                      column_reorder_levels=list (get_cycle_order()), AP=AP, ...)
+}
+
+make_cycle_heat_horizontal <- function (x, seurat_ob, group.by=NULL, AP=NULL, ...){
+        cycle_names <- factor ( colnames (x), levels=get_cycle_order() )
+        meta <- seurat_ob@meta.data [match(rownames (x), colnames (seurat_ob)),]
+        x_seurat <- Seurat::CreateSeuratObject (t(x), meta.data=meta)
+        seurat_heat (x_seurat, color_row=cycle_names, group.by=group.by,
+                     slot_data='counts', show_column_names=F, cluster_columns=T,
+                     row_scale=F, cluster_rows=F, heat_name = 'phase score', 
+                     column_legend_labels = 'cell type',
+                     row_legend_labels = 'cell cycle', center_scale=T,
+                     column_rotation=90, column_title_fontface='plain', AP=AP,
+                     ...)
 }
 
 #' Correlation of phase score with PC

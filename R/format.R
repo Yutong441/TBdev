@@ -60,9 +60,10 @@ theme_dim_red <- function (aes_param, color_fill){
               strip.background = element_blank (),
               text=element_text (size=aes_param$fontsize, family=aes_param$font_fam),
               plot.title = element_text (hjust=0.5, size=aes_param$fontsize*1.5,
-                                         family=aes_param$font_fam, face='bold.italic'),
+                                         family=aes_param$font_fam, face='bold'),
               aspect.ratio=1,
-              strip.text = element_text (size=aes_param$point_fontsize*3, family=aes_param$font_fam),
+              strip.text = element_text (size=aes_param$point_fontsize*3, 
+                                         family=aes_param$font_fam, face='bold'),
               legend.text = element_text (size=aes_param$fontsize, family=aes_param$font_fam),
               legend.title = element_text (size=aes_param$fontsize, family=aes_param$font_fam) ),
               override_legend_symbol (aes_param, color_fill)[[1]]
@@ -105,35 +106,63 @@ theme_dotplot <- function (aes_param = list(fontsize=15,
 
               # facet setting
               strip.background = element_blank (),
-              strip.text = element_text (size=aes_param$point_fontsize*3, family=aes_param$font_fam),
-              plot.title = element_text (hjust=0.5, size=aes_param$fontsize*2, 
-                                         family=aes_param$font_fam, face='bold.italic')
+              strip.text = element_text (size=aes_param$point_fontsize*3, 
+                                         family=aes_param$font_fam, face='bold'),
+              plot.title = element_text (hjust=0.5, size=aes_param$fontsize*1.5, 
+                                         family=aes_param$font_fam, face='bold')
               ),
               override_legend_symbol (aes_param, color_fill)[[1]]
               )
 }
 
-custom_round <- function (vec, num_out=3, more_precision=0, quantile_val=0, round_updown=F){
+custom_round <- function (vec, num_out=3, more_precision=0, quantile_val=0,
+                          round_updown=F, round_downup=F, no_rounding=F,
+                          lower_b=NULL, upper_b=NULL){
         min_vec <- stats::quantile(vec, quantile_val, na.rm=T)
         max_vec <- stats::quantile(vec, 1-quantile_val, na.rm=T)
-        nfig <- round (pmin (log10 (1/max_vec), 0)) + more_precision
-        if (round_updown){
-                min_vec <- floor (min_vec*10^(nfig))/10^(nfig)
-                max_vec <- ceiling (max_vec*10^(nfig))/10^(nfig)
-        }else{
-                min_vec <- round (min_vec*10^(nfig))/10^(nfig)
-                max_vec <- round (max_vec*10^(nfig))/10^(nfig)
+        if (!is.null(lower_b)) {min_vec <- pmax (min_vec, lower_b)}
+        if (!is.null(upper_b)) {max_vec <- pmin (min_vec, upper_b)}
+        nfig <- round (pmin (log10 (1/max_vec), 0, na.rm=T)) + more_precision
+        if (!no_rounding){
+                if (round_updown){
+                        min_vec <- floor (min_vec*10^(nfig))/10^(nfig)
+                        max_vec <- ceiling (max_vec*10^(nfig))/10^(nfig)
+                }else{
+                        min_vec <- round (min_vec*10^(nfig))/10^(nfig)
+                        max_vec <- round (max_vec*10^(nfig))/10^(nfig)
+                }
+                if (round_downup){
+                        min_vec <- ceiling (min_vec*10^(nfig))/10^(nfig)
+                        max_vec <- floor (max_vec*10^(nfig))/10^(nfig)
+                }
         }
         return (seq (min_vec, max_vec, length.out=num_out))
+}
+
+custom_labeller <- function (vec, num_out=3, min_prec=0){
+        min_vec <- min (vec, na.rm=T)
+        max_vec <- max (vec, na.rm=T)
+        nfig <- min_prec
+        seq_vec <- seq (min_vec, max_vec, length.out=num_out)
+        return_vec <- round (seq_vec, nfig)
+        for (i in 1:5){
+                if (return_vec[1]==return_vec[length(return_vec)]){
+                        nfig <- nfig + 1
+                        return_vec <- round (seq_vec, nfig)
+                }else{break}
+        }
+        return (format (return_vec, nsmall=nfig))
 }
 
 #' Make the x or y axis only show the min, middle and max points
 #'
 #' @export
-custom_tick <- function (vec, x_y='y', more_prec=3,...){
-        breaking <- custom_round (vec, more_precision=more_prec, ...)
-        if (x_y == 'y'){return (ggplot2::scale_y_continuous (breaks = breaking) )
-        }else {return (ggplot2::scale_x_continuous (breaks = breaking) )}
+custom_tick <- function (vec=NULL, x_y='y', more_prec=3, min_prec=1, num_out=2,...){
+        breaking <- function (x){custom_round (x, more_precision=more_prec, 
+                                               num_out=num_out, no_rounding=T,...)}
+        labelling <- function (x){custom_labeller (x, min_prec=min_prec, num_out=num_out)}
+        if (x_y == 'y'){return (ggplot2::scale_y_continuous (breaks = breaking, labels=labelling) )
+        }else {return (ggplot2::scale_x_continuous (breaks = breaking, labels=labelling) )}
 }
 
 #' Extend the axis scale
@@ -234,11 +263,14 @@ add_custom_color_discrete <- function (feature_vec, aes_param, color_fill=F){
         }
 }
 
-add_custom_color_continuous <- function (feature_vec, aes_param, more_prec=2, color_fill=F){
+add_custom_color_continuous <- function (feature_vec, aes_param, more_prec=2, color_fill=F, ...){
         breaks <- custom_round (feature_vec, 2, more_precision=more_prec, quantile_val=0., round_updown=T)
+        print (breaks)
         if (color_fill){
                 ggplot2::scale_fill_continuous (type=aes_param$palette, breaks=breaks, limits=breaks)
-        }else{ggplot2::scale_color_continuous (type=aes_param$palette, breaks=breaks, limits=breaks)
+        }else{
+                print (aes_param$palette)
+                ggplot2::scale_color_continuous (type=aes_param$palette, breaks=breaks, limits=breaks)
         }
 }
 

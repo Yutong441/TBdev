@@ -12,10 +12,10 @@ arrange_plots(
   panel_label = NULL,
   margin_width = 0.79,
   margin_height = 0.79,
-  panel_spacing = 0.1975,
+  panel_spacing = 0.01,
   plot_width = 9,
   plot_height = 9,
-  aes_param = list(highlight_font = list(fontface = "bold", fontsize = 30), font_fam =
+  aes_param = list(highlight_font = list(fontface = "bold", fontsize = 40), font_fam =
     "Arial")
 )
 }

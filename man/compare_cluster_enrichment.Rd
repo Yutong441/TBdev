@@ -10,7 +10,9 @@ compare_cluster_enrichment(
   organism_db,
   organism_name = "human",
   logFC_term = "logFC",
+  pval_term = "padj",
   log_FC_thres = 0.25,
+  pval_thres = 0.05,
   enrich_area = "KEGG"
 )
 }

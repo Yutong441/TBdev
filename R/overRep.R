@@ -107,10 +107,13 @@ gg_bar <- function (xx, showCategory, organism_db=NULL, AP=NULL,
 #' @param enrich_area either KEGG or GO or reactome
 #' @export
 compare_cluster_enrichment <- function (markers, GO_data, organism_db, organism_name='human', 
-                                        logFC_term = 'logFC',
-                                        log_FC_thres=0.25, enrich_area='KEGG'){
+                                        logFC_term = 'logFC', pval_term='padj',
+                                        log_FC_thres=0.25, pval_thres=0.05, enrich_area='KEGG'){
         if (class (markers) == 'data.frame'){
-                markers %>% filter ( !!as.symbol (logFC_term) > log_FC_thres ) -> markers
+                markers %>% dplyr::filter ( !!as.symbol (logFC_term) > log_FC_thres ) -> markers
+                if (pval_term %in% colnames (markers)){
+                        markers %>% dplyr::filter (!!as.symbol(pval_term) < pval_thres) -> markers
+                }
                 cell_type <- unique (markers$group)
                 markers$entrez <- AnnotationDbi::mapIds(organism_db, as.character (
                                                 markers$feature), 'ENTREZID', 'SYMBOL')

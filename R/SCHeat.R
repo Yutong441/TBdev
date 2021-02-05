@@ -23,7 +23,7 @@ get_rainbow_col <- function (named_vector, AP, default=T, provided_color=NULL,
 #' @noRd
 get_heat_param <- function (AP, title_pos, grid_height){
         list (labels_gp=gpar(fontsize=AP$fontsize, fontfamily=AP$gfont_fam),
-              title_gp=gpar(fontsize=AP$fontsize, fontfamily=AP$gfont_fam),
+              title_gp=gpar(fontsize=AP$fontsize, fontfamily=AP$gfont_fam, fontface='italic'),
               title_position=title_pos, 
               grid_height= unit (grid_height, 'mm')
         )
@@ -75,6 +75,32 @@ scaling <- function (xx, row_scale, column_scale){
         if (column_scale){ xx %>% scale () -> xx }
         xx [is.na (xx) ]<- 0
         return (xx)
+}
+
+#' @export
+scale_seurat <- function (x, row_scale=F, column_scale=F, slot_data='data',
+                          assay='RNA'){
+        exp_mat <- Seurat::GetAssayData (x, slot=slot_data, assay=assay)
+        exp_mat <- scaling (exp_mat, row_scale, column_scale)
+        return (Seurat::SetAssayData (x, slot=slot_data, assay=assay, new.data=exp_mat))
+}
+
+#' @export
+scale_seurat_with_seurat <- function (x, ref, slot_data=c('data', 'data'), 
+                                      assay=c('RNA', 'RNA'), row_scale=F, 
+                                      column_scale=F){
+        exp_mat <- as.matrix (Seurat::GetAssayData (x, slot=slot_data[1], assay=assay[1]))
+        exp_ref <- as.matrix (Seurat::GetAssayData (ref, slot=slot_data[2], assay=assay[2]))
+        if (row_scale){
+                mean_ref <- rowMeans (exp_ref)
+                sd_ref <- apply (exp_ref, 1, stats::sd)
+                exp_mat <- (exp_mat - mean_ref )/sd_ref
+                exp_mat [is.na (exp_mat)] <- NA
+        }
+        if (column_scale){
+                print ('column scaling is not supported')
+        }
+        return (Seurat::SetAssayData (x, slot=slot_data[1], assay=assay[1], new.data=exp_mat))
 }
 
 #' Obtain color gradient for heatmap
@@ -245,7 +271,9 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
                          show_column_anna=T, column_rotation=0,
                          annotation_name_side='left',
                          column_names_side = 'bottom',
+                         column_title_side = 'top',
                          row_names_side = 'left',
+                         row_title_side = 'left',
                          show_column_bars = T,
                          row_title_fontface='bold',
                          column_title_fontface='bold',
@@ -429,6 +457,7 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
                  cluster_columns=cluster_columns, 
                  show_column_names=show_column_names,
                  column_names_side=column_names_side,
+                 column_title_side=column_title_side,
                  column_names_gp=gpar (fontsize=AP$fontsize, 
                                        fontfamily=AP$gfont_fam),
                  show_row_names=show_row_names,
@@ -438,6 +467,7 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
                  column_split=column_split,
                  row_split=color_row_names, 
                  row_names_side=row_names_side, 
+                 row_title_side=row_title_side,
                  row_names_gp = gpar (fontsize=AP$fontsize, 
                                       fontfamily=AP$gfont_fam), 
 

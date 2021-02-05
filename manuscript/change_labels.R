@@ -143,4 +143,9 @@ all_data <- get (load (paste (merge_dir, 'final_merged_tb.Robj', sep='/') ))
 new_assign <- read.csv ('data-raw/config/cluster_names.csv')
 all_data$final_cluster <- new_assign$sub [match (all_data$assigned_cluster, new_assign$ori) ]
 all_data$final_cluster <- partial_relevel (all_data$final_cluster)
+invitro <- all_data$date=='in_vitro'
+
+all_data$broad_type <- as.character (all_data$broad_type)
+all_data$broad_type [invitro] <- as.character (all_data$final_cluster [invitro])
+all_data$broad_type <- partial_relevel (all_data$broad_type)
 save(all_data, file=paste (merge_dir, 'final_merged_tb.Robj', sep='/') )

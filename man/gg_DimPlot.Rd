@@ -10,7 +10,7 @@ gg_DimPlot(
   DR = "pca",
   dims = c(1, 2),
   size_highlight = NULL,
-  highlight_font = 4,
+  highlight_ratio = 1.5,
   label_col = NULL,
   further_repel = T,
   repel_force = 1,
@@ -19,6 +19,7 @@ gg_DimPlot(
   assay = "RNA",
   slot_data = "data",
   AP = NULL,
+  seg_color = NA,
   plot_type = "dim_red",
   ...
 )
@@ -29,7 +30,7 @@ gg_DimPlot(
 \item{size_highlight}{a character, logical or numeric vector specifying
 which cells to magnify in size}
 
-\item{highlight_font}{how large the highlighted cells should be}
+\item{highlight_ratio}{how much larger the highlighted cells should be}
 
 \item{label_col}{which column contains the label information}
 

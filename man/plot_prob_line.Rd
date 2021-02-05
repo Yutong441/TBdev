@@ -19,6 +19,7 @@ plot_prob_line(
   vjust = 1.2,
   thickness = 0.1,
   normalize_data = F,
+  remove_underscore = T,
   AP = NULL
 )
 }

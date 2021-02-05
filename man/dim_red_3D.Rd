@@ -23,6 +23,7 @@ dim_red_3D(
   hor_just = 0,
   further_repel = F,
   repel_force = 1,
+  fontface = "bold",
   AP = NULL
 )
 }

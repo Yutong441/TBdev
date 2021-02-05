@@ -4,7 +4,14 @@
 \alias{custom_tick}
 \title{Make the x or y axis only show the min, middle and max points}
 \usage{
-custom_tick(vec, x_y = "y", more_prec = 3, ...)
+custom_tick(
+  vec = NULL,
+  x_y = "y",
+  more_prec = 3,
+  min_prec = 1,
+  num_out = 2,
+  ...
+)
 }
 \description{
 Make the x or y axis only show the min, middle and max points

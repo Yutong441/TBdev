@@ -52,7 +52,7 @@ run_GSEA <- function (markers, cluster_num, organism_db, organism_name
                 return (kk)
         }
         if (enrich_area == 'reactome'){
-                ra <- clusterProfiler::gsePathway(
+                ra <- ReactomePA::gsePathway(
                                geneList     = sort (geneList, decreasing=T),
                                organism     = organism_name,
                                minGSSize    = 120,
@@ -435,6 +435,10 @@ line_break <- function (vec, separator='\n', every_n=2, thres=8){
         return (vec)
 }
 
+deparse_labels <- function (f1, f2){
+        deparse (bquote (atop (bold (.(f1)), .(f2))))
+}
+
 #' @importFrom ggplot2 aes
 #' @importFrom magrittr %>%
 gg_enrich_bar <- function (plot_df, AP, shrink_ratio=1., band_ratio=5,
@@ -444,30 +448,28 @@ gg_enrich_bar <- function (plot_df, AP, shrink_ratio=1., band_ratio=5,
                 dplyr::mutate (yval=as.character (gtools::mixedorder(abs (emean)))) %>%
                 dplyr::mutate (xmax=sign(emean)*max(abs (emean))) -> plot_df
         
-        plot_df$enriched_cell <- plot_df$compare_group
+        plot_df$enriched_cell <- as.character (plot_df$compare_group)
         enriched_index <- plot_df$enriched >0
-        plot_df$enriched_cell [enriched_index] <- plot_df$cluster [enriched_index]
+        plot_df$enriched_cell [enriched_index] <- as.character (plot_df$cluster [enriched_index])
         max_x <- (1+ extend_axis_pos)*max (plot_df$emean)
         min_x <- (1+ extend_axis_neg)*min (plot_df$emean)
 
         plot_df$neg_label <- plot_df$glabel
-        plot_df$neg_label [enriched_index] <- NA
         plot_df$glabel [!enriched_index] <- NA
+        plot_df$neg_label [enriched_index] <- NA
 
         ggplot2::ggplot (plot_df, aes (x=emean, y= yval)) +
                 ggplot2::geom_bar (aes (fill=enriched_cell), stat='identity',
                                    show.legend=F, width=0.3)+ 
-                ggplot2::geom_text (aes(label=glabel, 
+                ggplot2::geom_text (aes(label= glabel, 
                                         x=emean+xmax*label_shift_ratio
-                                        #x=xmax*label_shift_ratio
-                                        ),
-                                    family=AP$font_fam, hjust='left',
+                                        ), parse=F,
+                                    family=AP$font_fam, hjust='left', 
                                     size=AP$point_fontsize*shrink_ratio)+
                 ggplot2::geom_text (aes(label=neg_label, 
                                         x=emean+xmax*label_shift_ratio
-                                        #x=xmax*label_shift_ratio
-                                        ),
-                                    family=AP$font_fam, hjust='outward',
+                                        ), parse=F,
+                                    family=AP$font_fam, hjust='right', 
                                     size=AP$point_fontsize*shrink_ratio)+
                 ggplot2::ylab('Description')+ ggplot2::labs(fill='p value') +
                 ggplot2::xlab ('enrichment score') +
@@ -549,6 +551,8 @@ enrich_bar <- function (plot_data, organism_db, show_num=4, markers=NULL,
                         compare_group_name='others', ...){
         AP <- return_aes_param (AP)
         sim_dict <- append_default_dictionary (sim_dict, append_default_dict)
+        relevant_terms <- remove_terms (plot_data$category, AP)
+        plot_data %>% dplyr::filter (category %in% relevant_terms) -> plot_data
         if (simplification) {plot_data <- simplify_gsea (plot_data, sim_dict)} # from 'clean_terms.R'
         if (!is.null (markers)){
                 if (compare_group_col %in% colnames (markers)){

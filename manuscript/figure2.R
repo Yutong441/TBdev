@@ -50,7 +50,7 @@ set.seed (100)
 peak_plot$peak_time  %>% Mclust(G=1:20) -> d_clust
 peak_plot$cluster<- paste ('cluster', d_clust$classification, sep='')
 old_clust <- paste ('cluster', 1:7, sep='')
-new_clust <- c ('early', 'intermediate1', rep ('intermediate2', 4), 'advanced'  )
+new_clust <- c ('stage I', 'stage II', rep ('stage III', 4), 'stage IV'  )
 peak_plot$group <- factor (new_clust [match (peak_plot$cluster, old_clust) ],levels=unique (new_clust))
 write.csv (peak_plot, paste (save_dir, 'Switch_STB.csv', sep='/'))
 
@@ -68,7 +68,7 @@ p2 <- seurat_heat (plot_heat1, sel_genes_stb, group.by=c('broad_type'),
                     group_order=order(plot_heat1$MGP_PT),
                     column_legend_labels = 'cell type', column_split=NA,
                     row_legend_labels ='stage',heat_name = 'norm count',
-                    row_reorder_levels = c('early', 'intermediate1', 'intermediate2', 'advanced'),
+                    row_reorder_levels = c('stage I', 'stage II', 'stage III', 'stage IV'),
                     automatic=F, center_scale=T,
                     main_width=2.5, main_height=14,
 )
@@ -79,12 +79,11 @@ set.seed (100)
 peak_plot_EVT$peak_time %>% Mclust(G=1:20) -> d_clust
 peak_plot_EVT$cluster<- paste ('cluster', d_clust$classification, sep='')
 old_clust <- paste ('cluster', 1:7, sep='')
-new_clust <- c (rep('early',2), rep('intermediate1',2), 'advanced', 'intermediate2', 'advanced')
+new_clust <- c (rep('stage I',2), rep('stage II',2), 'stage IV', 'stage III', 'stage IV')
 peak_plot_EVT$group <- factor (new_clust [match (peak_plot_EVT$cluster, old_clust) ],levels=unique (new_clust))
 write.csv (peak_plot_EVT, paste (save_dir, 'Switch_EVT.csv', sep='/'))
 
 plot_heat2 <- show_data [, show_data$epil_branch != 'STB_branch' & show_data$broad_type != 'STB']
-devtools::load_all ('..', export_all = F)
 sel_genes_evt <- peak_gene_for_heatmap (peak_plot_EVT, min_genes=2)
 
 p3 <- seurat_heat (plot_heat2, sel_genes_evt, group.by=c('broad_type'),
@@ -92,7 +91,7 @@ p3 <- seurat_heat (plot_heat2, sel_genes_evt, group.by=c('broad_type'),
                     group_order=order(plot_heat2$MGP_PT),
                     column_legend_labels = 'cell type', column_split=NA,
                     row_legend_labels ='stage',heat_name = 'norm count',
-                    row_reorder_levels = c('early', 'intermediate1', 'intermediate2', 'advanced'),
+                    row_reorder_levels = c('stage I', 'stage II', 'stage III', 'stage IV'),
                     automatic=F, center_scale=T,
                     main_width=2.5, main_height=14,
 )
@@ -111,7 +110,6 @@ kk_evt <- compare_cluster_enrichment (peak_plot_EVT, d, org.Hs.eg.db,
                                       enrich_area='KEGG', log_FC_thres=thres)
 p5 <- display_cluster_enrichment (kk_evt, show_graph='emap', feature_vec=
                                      peak_plot_EVT$group, show_num=20) + labs (fill='')
-
 # ----------Figure 2G: pathway module score along pseudotime----------
 module_scores <- get_module_score (all_data,
                               save_path=paste (sup_save_dir, 'Data_module_scores.csv', sep='/'))
@@ -155,11 +153,8 @@ rm (TF_WG)
 save_dir1 <- paste (root, 'manuscript/figure1', sep='/')
 markers <- find_DE_genes (all_data, save_dir1, group.by='broad_type', label='all_vivo')
 
-merged4_6 <- c(as.character (gene_list$GC6), as.character (gene_list$GC4))
-merged4_6 <- merged4_6 [!grepl ('^HNRNP', merged4_6)]
-merged2_10 <- c(as.character (gene_list$GC2), as.character (gene_list$GC10))
 merged7_8 <- c(as.character (gene_list$GC7), as.character (gene_list$GC8))
-plot_gene <- list (cleavage=merged7_8, TB=gene_list$GC1, CTB=merged4_6, STB=gene_list$GC3, EVT=merged2_10)
+plot_gene <- list (ICM=merged7_8, TB=gene_list$GC1, CTB=gene_list$GC6, STB=gene_list$GC3, EVT=gene_list$GC10)
 
 plotlist <- custom_net_diff_nets (fil_vivo, plot_gene, markers, nudge_ratio=0.3, size_thres=0.2)
 plotlist2 <- lapply (plotlist, function(gx){gx+theme(aspect.ratio=0.85)})

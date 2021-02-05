@@ -10,7 +10,7 @@ remove_keys <- c('disease', 'infection', 'shigellosis', 'atherosclerosis',
                  'ataxia', 'syndrome', 'addiction', 'Toxoplasmosis',
                  'Leishmaniasis', 'diabetes', 'tuberculosis', 'myocarditis',
                  'Amoebiasis', 'Asthma', 'influenza', 'legionellosis', 'lupus',
-                 'malaria', 'arthritis')
+                 'malaria', 'arthritis', 'HIV')
 
 format_conf <- list (
         fontsize = 15,
@@ -18,7 +18,7 @@ format_conf <- list (
         pointsize = 3,
         legend_point_size = 5,
         normal_shape = 21, # circle, has to be larger than 20
-        point_edge_color = 'black',
+        point_edge_color = 'gray',
         highlight_shape = 24, # triangle
         font_fam = 'Arial',
         # for grid::gpar argument, 'sans' mans 'Arial'

@@ -62,7 +62,7 @@ def Epilgraph_on_GPLVM (adata, GPLVM_dir):
 def mean_log_likelihood (mu, var, x):
     '''This function calculates the mean log likelihood based on IID normal
     distribution:
-    1/k \Sum_k log P_{i,j,k} = 1/k \Sum_k {-0.5*\frac{ ( mu_{i,j} - x_{k,j} )^2
+    1/k \Sum_k log P_{i,j,k} = 1/k \Sum_k \frac{-0.5*\frac{ ( mu_{i,j} - x_{k,j} )^2
     }{ var_{i,j}} - \sqrt { var_{i, j} } - 0.5*\log {2\pi}}
 
     Because broadcasting during subtraction of `mu` with `x` creates a 3D
@@ -78,7 +78,7 @@ def mean_log_likelihood (mu, var, x):
     '''
     out = mu**2 + (x**2).mean (axis=0, keepdims=True) -2*mu*x.mean (axis=0,
             keepdims=True)
-    out /= -var*2 
+    out /= -var*2
     out = out - np.sqrt (var) - 0.5*np.log (2*np.pi)
     return out.mean (axis=1)
 

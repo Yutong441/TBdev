@@ -331,33 +331,30 @@ plot_DE_genes <- function (x, markers, top_gene=1, by_group='cluster',
 #' @param features genes to plot, which will be split over by facets
 #' @param group.by by which cell feature
 #' @param num_col in how many columns the facets are arranged
+#' @param ... additional arguments for `custom_tick`
 #' @importFrom magrittr %>%
 #' @importFrom ggplot2 aes aes_string
 #' @export
 seurat_violin <- function (x, features, group.by, assay='RNA',
                            slot_data='data', num_col=NULL, free_xy='fixed',
-                           AP=NULL, box_plot=T){
+                           AP=NULL, box_plot=T, ...){
         AP <- return_aes_param (AP)
-        datExpr <- as.matrix ( Seurat::GetAssayData (x [features, ], 
-                                        assay=assay, slot=slot_data)   ) 
-        #datExpr <- datExpr [rownames (datExpr) %in% features, ]
-        print ('violin plot')
-        plot_ob <- t (datExpr) %>% as.data.frame () %>%
-                tibble::add_column (feature = x@meta.data [, group.by]) %>%
+        x %>% Seurat::FetchData (vars=c(features, group.by)) %>%
+                magrittr::set_colnames (c(features, 'feature')) %>%
                 tidyr::gather ( 'gene', 'expr_val', -feature ) %>%
                 dplyr::mutate ( gene = factor(gene, levels=features) ) -> plot_data
 
-        plot_ob <- ggplot2::ggplot (plot_data, aes ( x= feature, y=expr_val, fill=feature) ) +
+        ggplot2::ggplot (plot_data, aes ( x= feature, y=expr_val, fill=feature) ) +
                 ggplot2::facet_wrap (.~gene, ncol=num_col, scales=free_xy) +
-                ggplot2::theme (axis.text.x = element_text (angle=90) ) +
                 ggplot2::labs (fill='')+ ggplot2::xlab ('')+
+                ylab (expression (paste (italic ('mRNA levels')))) +
                 theme_TB ('dotplot', feature_vec=x@meta.data[, group.by],
-                          color_fill=T, aes_param=AP)+
-                ggplot2::guides( fill= guide_legend(override.aes = list(alpha=1)))
-        if (free_xy == 'fixed') {plot_ob <- plot_ob + custom_tick (plot_data$expr_val, more_prec=1) }
+                          color_fill=T, aes_param=AP, rotation=90)+
+                ggplot2::guides( fill= ggplot2::guide_legend(override.aes = list(alpha=1)))+
+                custom_tick (min_prec=1,...) -> plot_ob
         if (box_plot){plot_ob <- plot_ob + ggplot2::geom_boxplot()
         }else{plot_ob <- plot_ob +ggplot2::geom_jitter (shape=AP$normal_shape, 
-                                size=AP$pointsize, color='white')}
+                                size=AP$pointsize, height=0, color='white')}
         return (plot_ob)
 }
 
