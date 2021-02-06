@@ -94,7 +94,8 @@ gg_DimPlot <- function (x, feature, DR='pca', dims=c(1,2), size_highlight=NULL,
 
         size_high <- get_size_high (size_highlight, ncol(x))
         dim_red %>% as.data.frame () %>% cbind (feature_names) %>%
-                tibble::add_column (size_high =size_high) -> plot_data
+                tibble::add_column (size_high =size_high) %>%
+                dplyr::filter (!is.na (!!as.symbol (x_axis) ) ) -> plot_data
 
         if (is.null (label_col)){label_col <- 'feature'}
         plot_label <- DimPlot_labels (plot_data, x_axis, y_axis, label_col,

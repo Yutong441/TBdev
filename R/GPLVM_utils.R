@@ -48,7 +48,7 @@ preprocess_df <- function (x_df, sel_col, genes){
         return (x_df )
 }
 
-gene_time_plot <- function (plot_df, point_df, AP, num_row, num_col){
+gene_time_plot <- function (plot_df, point_df, AP, num_row, num_col, fill_lab){
         ggplot2::ggplot (plot_df ) +
                 ggplot2::geom_point (aes (x=pseudotime, y=mean_, color=color_by), data=point_df, shape=20)+
                 ggplot2::geom_ribbon (aes (x=x, y=mean_, ymin=ymin, ymax=ymax, fill=branch), alpha=0.8 )+
@@ -59,7 +59,7 @@ gene_time_plot <- function (plot_df, point_df, AP, num_row, num_col){
                                 axis.text.y=ggplot2::element_blank ()) +
                 ggplot2::xlab ('pseudotime') + 
                 ggplot2::ylab (expression (italic('mRNA levels'))) +
-                ggplot2::labs (color='cell type') 
+                ggplot2::labs (color=fill_lab) 
 }
 
 #' @importFrom magrittr %>%
@@ -114,7 +114,7 @@ gene_over_pseudotime <- function (x, exp_mat, genes, color_feature, metadata=NUL
         point_df %>% dplyr::filter (!is.na (color_by)) -> point_df
 
         print ('plotting')
-        plot_ob <- gene_time_plot (plot_df, point_df, AP, num_row, num_col)
+        plot_ob <- gene_time_plot (plot_df, point_df, AP, num_row, num_col, color_feature)
         print ('plot vertical lines at peak times')
         if (!is.null(peak_data)){
                 selected_peak <- peak_data [peak_data [, gene_col] %in% genes,]
