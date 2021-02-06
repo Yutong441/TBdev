@@ -69,7 +69,7 @@ get_expre_pseudo <- function (x, genes){
         join_df <- rbind (mean_df, var_df)
         print ('getting data for ribbon plot')
         join_df %>% tidyr::gather ('gene', 'val', -x, -branch, -info_type) %>%
-                tidyr::spread (info_type, val) %>% 
+                tidyr::spread (!!as.symbol ('info_type'), !!as.symbol ('val')) %>% 
                 dplyr::mutate (ymin = mean_ - 2*sqrt (var_) ) %>%
                 dplyr::mutate (ymax = mean_ + 2*sqrt (var_) ) 
                 #dplyr::mutate (gene = factor (gene, levels=new_genes) )-> plot_df
