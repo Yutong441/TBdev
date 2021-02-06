@@ -31,10 +31,13 @@ markers$sign_diver <- sign (markers$logFC)*markers$divergence
 
 show_meta <- all_data@meta.data [!is.na (all_data$MGP_PT) & !all_data$broad_type %in% c('EPI', 'PE') ,]
 markers %>% slice_max (sign_diver, n=9) %>% dplyr::select (feature) %>% deframe() -> DE_genes1
-devtools::load_all('..', export_all=F)
-p4 <- gene_over_pseudotime (pred_all, exp_mat, DE_genes1, show_meta, color_feature = 'broad_type', num_col=3)+ggtitle ('EVT_branch')
+p4 <- gene_over_pseudotime (pred_all, exp_mat, DE_genes1, metadata=show_meta, 
+                            color_feature = 'broad_type', num_col=3)+ggtitle ('evt_branch')
+p4
+
 markers %>% slice_min (sign_diver, n=9) %>% dplyr::select (feature) %>% deframe() -> DE_genes2
-p3 <- gene_over_pseudotime (pred_all, exp_mat, DE_genes2, show_meta, color_feature = 'broad_type', num_col=3)+ggtitle ('STB_branch')
+p3 <- gene_over_pseudotime (pred_all, exp_mat, DE_genes2, metadata=show_meta, 
+                            color_feature = 'broad_type', num_col=3)+ggtitle ('STB_branch')
 
 # ----------figure S3B----------
 markers$group [markers$sign_diver <0 ] <- 'STB_branch'

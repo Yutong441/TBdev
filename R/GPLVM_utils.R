@@ -48,43 +48,7 @@ preprocess_df <- function (x_df, sel_col, genes){
         return (x_df )
 }
 
-#' Gene expression with uncertainty over pseudotime
-#' 
-#' @param x dataframe containing mean + var information estimated by BRGP
-#' @param exp_mat the expression matrix, i.e. true expression levels
-#' @param genes the genes to be plotted
-#' @importFrom ggplot2 aes aes_string
-#' @importFrom magrittr %>%
-#' @export
-gene_over_pseudotime <- function (x, exp_mat, genes, metadata, color_feature,
-                                  num_col=4, num_row=NULL, branch_assignment=NULL, 
-                                  peak_data=NULL, gene_col='feature', AP=NULL){
-        AP <- return_aes_param (AP)
-        mean_df <- preprocess_df (x, 'mean_', genes)
-        var_df  <- preprocess_df (x, 'var_' , genes)
-        join_df <- rbind (mean_df, var_df)
-        print ('getting data for ribbon plot')
-        new_genes <- as.character (genes [ genes %in% colnames (exp_mat) ])
-        join_df %>% tidyr::gather ('gene', 'val', -x, -branch, -info_type) %>%
-                tidyr::spread (info_type, val) %>% 
-                dplyr::mutate (ymin = mean_ - 2*sqrt (var_) ) %>%
-                dplyr::mutate (ymax = mean_ + 2*sqrt (var_) ) %>%
-                dplyr::mutate (gene = factor (gene, levels=new_genes) )-> plot_df
-
-        if (!is.null(branch_assignment)){
-                print ('reassigning branch names')
-                plot_df$branch <- branch_assignment [as.factor (plot_df$branch) ]
-        }
-        print ('processing raw expression matrix')
-        exp_mat %>% tibble::add_column (cell_ID = rownames (exp_mat) ) %>%
-                dplyr::select (c(new_genes, 'pseudotime', 'cell_ID')) %>%
-                tidyr::gather ('gene', 'mean_', -pseudotime, -cell_ID) %>%
-                dplyr::mutate (gene = factor (gene, levels=new_genes) ) -> point_df
-        point_df$color_by <- metadata [match (point_df$cell_ID, 
-                                              rownames (metadata)), color_feature]
-        point_df %>% dplyr::filter (!is.na (color_by)) -> point_df
-
-        print ('plotting')
+gene_time_plot <- function (plot_df, point_df, AP, num_row, num_col){
         ggplot2::ggplot (plot_df ) +
                 ggplot2::geom_point (aes (x=pseudotime, y=mean_, color=color_by), data=point_df, shape=20)+
                 ggplot2::geom_ribbon (aes (x=x, y=mean_, ymin=ymin, ymax=ymax, fill=branch), alpha=0.8 )+
@@ -95,8 +59,62 @@ gene_over_pseudotime <- function (x, exp_mat, genes, metadata, color_feature,
                                 axis.text.y=ggplot2::element_blank ()) +
                 ggplot2::xlab ('pseudotime') + 
                 ggplot2::ylab (expression (italic('mRNA levels'))) +
-                ggplot2::labs (color='cell type') -> plot_ob
+                ggplot2::labs (color='cell type') 
+}
 
+#' @importFrom magrittr %>%
+get_expre_pseudo <- function (x, genes){
+        mean_df <- preprocess_df (x, 'mean_', genes)
+        var_df  <- preprocess_df (x, 'var_' , genes)
+        join_df <- rbind (mean_df, var_df)
+        print ('getting data for ribbon plot')
+        join_df %>% tidyr::gather ('gene', 'val', -x, -branch, -info_type) %>%
+                tidyr::spread (info_type, val) %>% 
+                dplyr::mutate (ymin = mean_ - 2*sqrt (var_) ) %>%
+                dplyr::mutate (ymax = mean_ + 2*sqrt (var_) ) 
+                #dplyr::mutate (gene = factor (gene, levels=new_genes) )-> plot_df
+}
+
+#' Gene expression with uncertainty over pseudotime
+#' 
+#' @param x dataframe containing mean + var information estimated by BRGP
+#' @param exp_mat the expression matrix, i.e. true expression levels, or it can
+#' be a seurat object
+#' @param genes the genes to be plotted
+#' @importFrom ggplot2 aes aes_string
+#' @importFrom magrittr %>%
+#' @importFrom Seurat DefaultAssay<-
+#' @export
+gene_over_pseudotime <- function (x, exp_mat, genes, color_feature, metadata=NULL,
+                                  num_col=4, num_row=NULL, branch_assignment=NULL, 
+                                  peak_data=NULL, time_col='pseudotime', gene_col='feature', 
+                                  slot_data='data', assay='RNA', AP=NULL){
+        AP <- return_aes_param (AP)
+        plot_df <- get_expre_pseudo (x, genes)
+
+        if (!is.null(branch_assignment)){
+                print ('reassigning branch names')
+                plot_df$branch <- branch_assignment [as.factor (plot_df$branch) ]
+        }
+        print ('processing raw expression matrix')
+        if (class (exp_mat)=='Seurat'){
+                metadata <- exp_mat@meta.data
+                Seurat::DefaultAssay (exp_mat) <- assay 
+                exp_mat <- Seurat::FetchData (exp_mat, c(genes, time_col), 
+                                              slot=slot_data)
+        }
+        exp_mat %>% tibble::add_column (cell_ID = rownames (exp_mat) ) %>%
+                dplyr::select (dplyr::one_of (c(genes, time_col, 'cell_ID'))) %>%
+                magrittr::set_colnames (c(genes, 'pseudotime', 'cell_ID')) %>%
+                tidyr::gather ('gene', 'mean_', -pseudotime, -cell_ID) -> point_df
+                #dplyr::mutate (gene = factor (gene, levels=new_genes) ) -> point_df
+
+        point_df$color_by <- metadata [match (point_df$cell_ID, 
+                                              rownames (metadata)), color_feature]
+        point_df %>% dplyr::filter (!is.na (color_by)) -> point_df
+
+        print ('plotting')
+        plot_ob <- gene_time_plot (plot_df, point_df, AP, num_row, num_col)
         print ('plot vertical lines at peak times')
         if (!is.null(peak_data)){
                 selected_peak <- peak_data [peak_data [, gene_col] %in% genes,]
