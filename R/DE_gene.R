@@ -347,7 +347,7 @@ seurat_violin <- function (x, features, group.by, assay='RNA',
         ggplot2::ggplot (plot_data, aes ( x= feature, y=expr_val, fill=feature) ) +
                 ggplot2::facet_wrap (.~gene, ncol=num_col, scales=free_xy) +
                 ggplot2::labs (fill='')+ ggplot2::xlab ('')+
-                ylab (expression (paste (italic ('mRNA levels')))) +
+                ggplot2::ylab (expression (paste (italic ('mRNA levels')))) +
                 theme_TB ('dotplot', feature_vec=x@meta.data[, group.by],
                           color_fill=T, aes_param=AP, rotation=90)+
                 ggplot2::guides( fill= ggplot2::guide_legend(override.aes = list(alpha=1)))+

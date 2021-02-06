@@ -13,6 +13,7 @@ find_dim_name <- function (plot_build){
         dim_name <- toupper (dim_name)
         dim_name <- trimws (gsub ('[0-9]+$', '', dim_name))
         if (dim_name == 'PC'){dim_name <- 'PCA'}
+        if (dim_name == 'GP'){dim_name <- 'GPLVM'}
         return (dim_name)
 }
 
