@@ -3,18 +3,20 @@
 #' @param further_repel if TRUE, the labels would be repelled away from the
 #' data points as much as possible
 DimPlot_labels <- function (dat, x_coord, y_coord, color_by, further_repel=T){
-        if (!is.numeric (dat [, color_by])){
-                dat %>% dplyr::select (dplyr::all_of (c(x_coord, y_coord, color_by))) %>%
-                        magrittr::set_colnames (c('x_axis', 'y_axis', 'feature'))  %>%
-                        dplyr::group_by (feature) %>%
-                        dplyr::summarise (x_mean = mean(x_axis), y_mean = mean (y_axis)) -> mean_labels
-                if (!further_repel){return (mean_labels)
-                }else{
-                dat %>% dplyr::select (dplyr::all_of (c(x_coord, y_coord, color_by))) %>%
-                        magrittr::set_colnames (c('x_mean', 'y_mean', 'feature'))  %>%
-                        dplyr::mutate (feature = rep ('', nrow (dat) ) ) %>%
-                        rbind (mean_labels) 
-                }
+        if (color_by %in% colnames (dat)){
+                if (!is.numeric (dat [, color_by])){
+                        dat %>% dplyr::select (dplyr::all_of (c(x_coord, y_coord, color_by))) %>%
+                                magrittr::set_colnames (c('x_axis', 'y_axis', 'feature'))  %>%
+                                dplyr::group_by (feature) %>%
+                                dplyr::summarise (x_mean = mean(x_axis), y_mean = mean (y_axis)) -> mean_labels
+                        if (!further_repel){return (mean_labels)
+                        }else{
+                        dat %>% dplyr::select (dplyr::all_of (c(x_coord, y_coord, color_by))) %>%
+                                magrittr::set_colnames (c('x_mean', 'y_mean', 'feature'))  %>%
+                                dplyr::mutate (feature = rep ('', nrow (dat) ) ) %>%
+                                rbind (mean_labels) 
+                        }
+                }else{return (NULL)}
         }else{return (NULL)}
 }
 

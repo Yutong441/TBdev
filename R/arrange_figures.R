@@ -143,7 +143,7 @@ save_indiv_plots <- function (grob_list, save_dir, grid_layout, plot_width=9,
                 save_path <- paste (save_dir, '/panel', panel_label[i], '.pdf', sep='') 
                 grDevices::cairo_pdf (save_path, width=page_width, height=page_height)
                 grid::grid.newpage ()
-                grid::pushViewport(viewport(layout=grid.layout(1, 1) ))
+                grid::pushViewport(grid::viewport(layout=grid::grid.layout(1, 1) ))
                 # move the plot labels slightly inwards horizontally
                 # (unit(0.05, 'npc')) because individual plots do not have as
                 # much padding around them
