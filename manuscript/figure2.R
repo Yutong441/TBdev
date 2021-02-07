@@ -31,7 +31,7 @@ metadata %>% slice_min (PT3, n=nrow(metadata)-3) -> plot_met
 p1 <- dim_red_3D_traj (plot_met, 'PT1', 'PT2', 'PT3', 'broad_type', epg, 'x', 'y',
                     'z', 'branch_name', all_theta=50, all_phi=0, further_repel=T,
                     repel_force=0.5, lab_just=c(0.08, 0.02, 0.02), magnify_text=1.3, 
-                    label_traj_text=label_epg) + 
+                    label_traj_text=label_epg, hor_just=0.1, dim_vjust=4) + 
 labs (fill='cell type')
 p1
 
@@ -158,6 +158,7 @@ plot_gene <- list (ICM=merged7_8, TB=gene_list$GC1, CTB=gene_list$GC6, STB=gene_
 
 plotlist <- custom_net_diff_nets (fil_vivo, plot_gene, markers, nudge_ratio=0.3, size_thres=0.2)
 plotlist2 <- lapply (plotlist, function(gx){gx+theme(aspect.ratio=0.85)})
+plotlist2 [[2]] <- plotlist[[2]] + ggtitle ('pre-implant')
 
 # arrange figures
 grob_list <- c(list (p1+theme (aspect.ratio=0.7), 
@@ -176,6 +177,8 @@ lay_mat <- matrix(c(1, 1, 1, 1, 2, 2,
                     ),
                   nrow=6) %>% t()
 arrange_plots (grob_list, paste (save_dir, 'final_figure2.pdf', sep='/'), 
+                  lay_mat, plot_width=3, plot_height=3.5)
+save_indiv_plots (grob_list, paste (save_dir, 'figure2', sep='/'), 
                   lay_mat, plot_width=3, plot_height=3.5)
 
 # save key genes

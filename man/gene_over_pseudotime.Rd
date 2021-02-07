@@ -8,20 +8,24 @@ gene_over_pseudotime(
   x,
   exp_mat,
   genes,
-  metadata,
   color_feature,
+  metadata = NULL,
   num_col = 4,
   num_row = NULL,
   branch_assignment = NULL,
   peak_data = NULL,
+  time_col = "pseudotime",
   gene_col = "feature",
+  slot_data = "data",
+  assay = "RNA",
   AP = NULL
 )
 }
 \arguments{
 \item{x}{dataframe containing mean + var information estimated by BRGP}
 
-\item{exp_mat}{the expression matrix, i.e. true expression levels}
+\item{exp_mat}{the expression matrix, i.e. true expression levels, or it can
+be a seurat object}
 
 \item{genes}{the genes to be plotted}
 }

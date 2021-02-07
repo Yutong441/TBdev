@@ -13,6 +13,7 @@ arrow_axis(
   reverse_x = F,
   reverse_y = F,
   axis_label_sim = F,
+  nudge_dimname = 0,
   aes_param = list(pointsize = 3, font_fam = "Arial", point_fontsize = 6)
 )
 }
@@ -27,6 +28,9 @@ tip as a ratio of the length of the arrow}
 negative value is to the right}
 
 \item{axis_label_sim}{whether to use a simple label i.e. 'dim1', 'dim2'}
+
+\item{nudge_dimname}{if \code{axis_label_sim} is True, then how much further to
+the right to move the dim name label}
 
 \item{aes_param}{setting for pointsize, font_fam, point_fontsize,
 arrow_angle, arrow_length, arrow_length_unit, arrow_type, arrow_thickness,

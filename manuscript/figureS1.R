@@ -22,7 +22,7 @@ TB_data <- all_data [, !c(all_data$revised %in% CT$in_vitro_cells)]
 TB_data$dataset <- gsub ('_[0-9]+$', '', TB_data$paper)
 p1 <- plot_dim_red (TB_data, group.by= c('revised', 'date', 'dataset'),
                     DR='pca' , dims=c(1,2), return_sep=T, nudge_ratio=0.3, 
-                    plot_type='dim_red_sim')
+                    plot_type='dim_red_sim', seg_color='black')
 # ----------figure D-I----------
 save_robj <- c('Xiang_2019/Xiang_R.Robj', 'Liu_2018/Liu_R.Robj',
                'Blakeley_2015/Blakeley_R.Robj',
@@ -68,10 +68,8 @@ markers <- find_DE_genes (TB_data, save_dir, group.by='broad_type', label='pairw
 tb_ctb <- markers %>% filter (group == 'CTB' & compare_group == 'TB') 
 psea_tb_ctb <- run_GSEA_all_types (tb_ctb, org.Hs.eg.db, enrich_area='reactome',
                                    save_path=paste (save_dir, 'RSEA_TB_CTB.csv', sep='/'))
-devtools::load_all('.', export_all=F)
 p4 <- enrich_bar (psea_tb_ctb, org.Hs.eg.db, show_num=4, markers=tb_ctb,
             show_gene_labels=6, extend_axis_pos=1.2, extend_axis_neg=4, nudge_x=0.2, shrink_ratio=0.7)
-p4
 
 ctb_stb <- markers %>% filter (group == 'STB' & compare_group == 'CTB') 
 psea_ctb_stb <- run_GSEA_all_types (ctb_stb, org.Hs.eg.db, enrich_area='reactome',
@@ -99,3 +97,7 @@ lay_mat <- matrix(c(1, 1, 2, 2, 3, 3,
                   nrow=6) %>% t()
 arrange_plots (grob_list, paste (sup_save_dir, 'final_figureS1.pdf', sep='/'), 
                   lay_mat, plot_width=3, plot_height=6)
+
+save_indiv_plots (grob_list, paste (sup_save_dir, 'figureS1', sep='/'),
+                  lay_mat, plot_width=3, plot_height=7
+)

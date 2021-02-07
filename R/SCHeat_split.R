@@ -57,6 +57,7 @@ sep_param_list <- function (param_list){
 #' @param select_cells on which subset of cells averaging is performed
 #' @return a Seurat object
 #' @importFrom magrittr %>%
+#' @export
 average_by_group <- function (x, group.by, color_row, select_cells=NULL, slot_data='data',
                               assay='RNA'){
         if (is.null (select_cells)){select_cells <- 1:dim(x)[2]}

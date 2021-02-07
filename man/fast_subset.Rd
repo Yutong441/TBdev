@@ -16,5 +16,7 @@ fast_subset(
 \item{x}{a Seurat object}
 }
 \description{
-This function tries to perform subsetting in a faster way.
+This function tries to perform subsetting in a faster way by
+subsetting only the assay to be used and the VariableFeatures and the
+metadata. The dimred objects are not subsetted.
 }

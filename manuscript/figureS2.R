@@ -30,14 +30,13 @@ markers <- get_DE_from_KL (pred_all, 'EVT_branch', 'STB_branch', divergence='WD'
 markers$sign_diver <- sign (markers$logFC)*markers$divergence
 
 show_meta <- all_data@meta.data [!is.na (all_data$MGP_PT) & !all_data$broad_type %in% c('EPI', 'PE') ,]
-markers %>% slice_max (sign_diver, n=9) %>% dplyr::select (feature) %>% deframe() -> DE_genes1
+markers %>% slice_max (sign_diver, n=10) %>% dplyr::select (feature) %>% deframe() -> DE_genes1
 p4 <- gene_over_pseudotime (pred_all, exp_mat, DE_genes1, metadata=show_meta, 
-                            color_feature = 'broad_type', num_col=3)+ggtitle ('evt_branch')
-p4
+                            color_feature = 'broad_type', num_col=2)+ggtitle ('EVT_branch')
 
-markers %>% slice_min (sign_diver, n=9) %>% dplyr::select (feature) %>% deframe() -> DE_genes2
+markers %>% slice_min (sign_diver, n=10) %>% dplyr::select (feature) %>% deframe() -> DE_genes2
 p3 <- gene_over_pseudotime (pred_all, exp_mat, DE_genes2, metadata=show_meta, 
-                            color_feature = 'broad_type', num_col=3)+ggtitle ('STB_branch')
+                            color_feature = 'broad_type', num_col=2)+ggtitle ('STB_branch')
 
 # ----------figure S3B----------
 markers$group [markers$sign_diver <0 ] <- 'STB_branch'
@@ -119,15 +118,27 @@ p8 <- seurat_heat (module_data, group.by=c('epil_branch','broad_type'),
                  automatic=F, left_HA=F, slot_data='counts'
 )
 
-grob_list <- list (p1, p2, p3, p4, p5, p6, p7, p8)
-lay_mat <- matrix(c(1, 1, 1, 2, 2, 2, 
-                    3, 3, 3, 4, 4, 4,
+p34_list <- list (theme (legend.position='top', legend.box='vertical' ),
+                  labs(color='cell type'))
+grob_list <- list (p1+theme (legend.position='top'), 
+                   p2+theme (legend.position='top'), 
+                   p3+p34_list, 
+                   p4+p34_list, 
+                   p5+labs(color='cell type'), 
+                   p6+labs(color='cell type'), 
+                   p7+labs(color='cell type'), p8)
+lay_mat <- matrix(c(1, 1, 3, 3, 4, 4, 
+                    2, 2, 3, 3, 4, 4,
                     5, 5, 6, 6, 7, 7,
                     8, 8, 8, 8, 8, 8
                     ),
                   nrow=6) %>% t()
 arrange_plots (grob_list, paste (sup_save_dir, 'final_figureS2.pdf', sep='/'), 
                   lay_mat, plot_width=3, plot_height=7)
+
+save_indiv_plots (grob_list, paste (sup_save_dir, 'figureS2', sep='/'),
+                  lay_mat, plot_width=3, plot_height=7
+)
 
 # find peak genes
 save_peak_genes (peak_plot, paste (sup_save_dir, 'PT_marker/Peak_EVT_PI3K.csv', sep='/'), 'PI3K-Akt', kk, max_num=50)

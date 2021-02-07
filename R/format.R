@@ -65,7 +65,8 @@ theme_dim_red <- function (aes_param, color_fill){
               strip.text = element_text (size=aes_param$point_fontsize*3, 
                                          family=aes_param$font_fam, face='bold'),
               legend.text = element_text (size=aes_param$fontsize, family=aes_param$font_fam),
-              legend.title = element_text (size=aes_param$fontsize, family=aes_param$font_fam) ),
+              legend.title = element_text (size=aes_param$fontsize, family=aes_param$font_fam, 
+                                           face='bold') ),
               override_legend_symbol (aes_param, color_fill)[[1]]
         )
 }
@@ -102,8 +103,9 @@ theme_dotplot <- function (aes_param = list(fontsize=15,
               text=element_text (size=aes_param$fontsize, family=aes_param$font_fam),
               aspect.ratio=1,
               legend.text = element_text (size=aes_param$fontsize, family=aes_param$font_fam),
-              legend.title = element_text (size=aes_param$fontsize, family=aes_param$font_fam) ,
-
+              legend.title = element_text (size=aes_param$fontsize,
+                                           family=aes_param$font_fam,
+                                           face='bold') ,
               # facet setting
               strip.background = element_blank (),
               strip.text = element_text (size=aes_param$point_fontsize*3, 

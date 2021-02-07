@@ -50,7 +50,8 @@ show_meta %>% slice_min (PT3, n=nrow(show_meta)-3) %>%
         dim_red_3D_traj ('PT1', 'PT2', 'PT3', c('hTSC_OKAE', 'hTSC_TURCO'), epg, 'x', 'y',
         'z', 'branch_name', all_theta=50, all_phi=0, show_label=T, further_repel=T,
         repel_force=0.2, lab_just=c(0.08, 0.02, 0.02), label_col='broad_type',
-        label_traj_text=label_epg, num_col=1, AP=list (point_edge_color='white')) + 
+        label_traj_text=label_epg, num_col=1, AP=list (point_edge_color='white'), 
+        hor_just=0.1, dim_vjust=3) + 
         labs (fill='relative probability') +
         scale_color_manual (values=rep('black',3))+guides(color=F) -> p3
 
@@ -96,29 +97,18 @@ module_scores <- get_module_score (all_data, save_path=paste (sup_save_dir2,
                                         'Data_module_scores.csv', sep='/'))
 colnames (module_scores) <- gsub ('^X', '', colnames (module_scores))
 rownames (module_scores) <- gsub ('\\.', '-', rownames (module_scores) )
-meta_data <- all_data@meta.data [match (colnames (module_scores), colnames (all_data) ), ]
+meta_data <- all_data_a@meta.data [match (colnames (module_scores), colnames (all_data_a) ), ]
 module_signal <- Seurat::CreateSeuratObject ( module_scores, meta.data = meta_data )
 module_signal <- module_signal [, !module_signal$broad_type %in% c('EPI', 'PE', 'hESC', 'hESC-YAN')]
-heat_signal <- incorporate_TSC (module_signal, analyse_by='final_cluster', add_by='final_cluster')
-select_signal <- heat_signal$select == 'select'
+module_signal <- module_signal [, !module_signal$final_cluster %in% c('uCTB')]
 
-seurat_param <- list (
-        heat_name=c('norm count'),
-        column_legend_labels=c('cell type'),
-        main_width = c(7),
-        main_height= 13.5,
-        column_split = c(NA, 1),
-        column_rotation=c(90, 0),
-        show_column_names = c(T, F),
-        show_column_anna=c(T, F),
-        cluster_column=c(T, T),
-        column_title_side=c('bottom', 'top'),
-        grid_height=5,heat_grid_height=8,
-        automatic=c(F,T)
+sel_seurat <- average_by_group (module_signal, 'final_cluster', rownames (module_signal))
+p6<-seurat_heat (sel_seurat, 'final_cluster', rownames (module_signal),
+             main_width=7, main_height=13, column_split=NA,
+             column_rotation=90, show_column_names=T, cluster_column=T,
+             center_scale=T, column_legend_labels=c('cell type'), row_scale=T,
+             grid_height=5, heat_grid_height=6, automatic=F
 )
-p6 <- seurat_heat_highlight (heat_signal, select_signal, rownames (heat_signal),
-                             c('final_cluster'), average=T, return_sep=T,
-                             seurat_heat_params=seurat_param, row_scale=T)
 
 # arrange all figures
 grob_list <- list (p1 + theme (aspect.ratio=1., 
@@ -126,7 +116,7 @@ grob_list <- list (p1 + theme (aspect.ratio=1.,
                    p2[[1]] +labs (fill=''), 
                    p3+ theme(legend.position='top'), 
                    p4+ labs (fill='') + theme (axis.title.x=element_blank(), aspect.ratio=0.5), 
-                   p5, p6[[1]])
+                   p5, p6)
 lay_mat <- matrix(c(1, 1, 1, 2, 2, 2, 
                     3, 3, 4, 4, 4, 4,
                     3 ,3 ,5 ,5 ,6 ,6
@@ -135,3 +125,5 @@ lay_mat <- matrix(c(1, 1, 1, 2, 2, 2,
 arrange_plots (grob_list, paste (save_dir, 'final_figure3.pdf', sep='/'),
                lay_mat, plot_width=3.5, plot_height=8)
 
+save_indiv_plots (grob_list, paste (save_dir, 'figure3', sep='/'),
+               lay_mat, plot_width=3.5, plot_height=8)

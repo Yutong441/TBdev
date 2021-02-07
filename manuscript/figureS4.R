@@ -54,11 +54,13 @@ epg %>% arrange (branch_name) %>% mutate( index = 1:nrow (epg)) %>%
 all_data@meta.data [match (rownames (BRGP_prob), colnames (all_data)),] %>%
         dplyr::select (!one_of (colnames (BRGP_prob))) %>% cbind (BRGP_prob) %>%
         filter (!broad_type %in% c('PE', 'EPI') ) -> show_meta
+
 show_meta %>% slice_min (PT3, n=nrow(show_meta)-3) -> plot_met
+devtools::load_all ('..', export_all=F)
 p2 <- dim_red_3D_traj (plot_met, 'PT1', 'PT2', 'PT3', c(in_vivo, 'hESC'), epg, 'x', 'y',
                     'z', 'branch_name', all_theta=50, all_phi=0, further_repel=T,
-                    repel_force=0.5, lab_just=c(0.08, 0.02, 0.02), magnify_text=1.3, 
-                    label_traj_text=label_epg, AP=list (point_edge_color='white'), num_col=2) +
+                    repel_force=0.5, lab_just=c(0.08, 0.02, 0.02), hor_just=0.1, magnify_text=1.3, 
+                    label_traj_text=label_epg, AP=list (point_edge_color='white'), num_col=2, dim_vjust=1.8) +
                     scale_color_manual (values=rep('black',3))+guides(color=F)+
                     labs (fill='relative probability')
 
@@ -69,8 +71,10 @@ p3 <- plot_dim_red (invivo, group.by= c('final_cluster'), DR='pca', return_sep=T
 # ----------figure S2G: cell cycle----------
 exp_mat <- as.matrix (Seurat::GetAssayData (all_data_sub, assay='RNA', slot='data'))
 ans <- get_phase_score (exp_mat)
-p4 <- make_cycle_heat (ans, all_data, group.by='final_cluster',automatic=F, 
-                       grid_height=5, direction='horizontal')
+p4 <- make_cycle_heat (ans, all_data, group.by='final_cluster',automatic=T,
+                       grid_height=5, heat_grid_height=9,
+                       direction='horizontal', main_height=9,
+                       column_title_side='bottom')
 
 # ----------merge everything----------
 grob_list <- list (p1[[1]]+labs (fill=''), 
@@ -82,8 +86,10 @@ lay_mat <- matrix(c(1, 2,
                     4 ,4
                     ),
                   nrow=2) %>% t()
-arrange_plots (grob_list, paste (sup_save_dir, 'final_figureS4.pdf', sep='/'), lay_mat, 
+arrange_plots (grob_list, paste (sup_save_dir, 'final_figureS3.pdf', sep='/'), lay_mat, 
                   plot_width=9, plot_height=7)
+save_indiv_plots (grob_list, paste (sup_save_dir, 'figureS3', sep='/'),
+                  lay_mat, plot_width=9, plot_height=7)
 
 # table S4
 data (CT)

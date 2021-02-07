@@ -18,11 +18,6 @@ data (CT)
 in_vivo <- all_data [, all_data$date != 'in_vitro' & !(all_data$broad_type %in% CT$in_vitro_cells)]
 tb_only <- in_vivo [, !in_vivo $broad_type %in% CT$non_TB_lineage]
 
-epi <- in_vivo [, in_vivo$broad_type %in% c('ICM', 'EPI')]
-AP <- list (color_vec = c('EPI1'='red', 'EPI2'='green'))
-plot_dim_red (epi, group.by= c('assigned_cluster'), DR='pca', return_sep=T,
-              nudge_ratio=0.2, plot_type='dim_red', AP=AP)
-
 # key genes
 plot_genes <- c('GATA3', 'CDX2', 'TFAP2C', 'SDC1', 'CGB1', 'HLA-G', 'POU5F1', 'NANOG', 'SOX17')
 # heatmap
@@ -33,7 +28,7 @@ DE_genes %>% filter (!group %in% CT$non_TB_lineage) %>%
 
 p1 <- plot_dim_red (in_vivo, group.by= c('broad_type'), DR='pca', return_sep=T,
                     nudge_ratio=0.2, plot_type='dim_red_sim')
-p2 <- seurat_violin (in_vivo, features=plot_genes, group.by='broad_type')
+p2 <- seurat_violin (in_vivo, features=plot_genes, group.by='broad_type', lower_b=0)
 p3 <- seurat_heat (tb_only, color_row=show_genes, group.by = c('broad_type', 'date'), 
                        slot_data='data', heat_name='norm count', center_scale=T,
                        column_legend_labels=c('cell type', 'date'), row_scale=T)
@@ -66,13 +61,4 @@ lay_mat <- matrix(c(1, 1, 1, 2, 2, 2,
                     4, 4, 5, 5, 6, 6),
                   nrow=6) %>% t()
 arrange_plots (grob_list, paste (save_dir, 'final_figure1.pdf', sep='/'), lay_mat, plot_width=3)
-
-# save individual plots
-#all_plots <- list (ctb=p4, stb=p5, evt=p6)
-#
-#for (i in 1:length(all_plots)){
-#        cairo_pdf (paste (save_dir, '/GSEA_', names (all_plots)[i], '.pdf',sep=''), width=8, height=8)
-#        print (all_plots[[i]])
-#        dev.off ()
-#}
-
+save_indiv_plots (grob_list, paste (save_dir, 'figure1', sep='/'), lay_mat, plot_width=3)

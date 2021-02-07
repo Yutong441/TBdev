@@ -342,6 +342,7 @@ seurat_violin <- function (x, features, group.by, assay='RNA',
         x %>% Seurat::FetchData (vars=c(features, group.by)) %>%
                 magrittr::set_colnames (c(features, 'feature')) %>%
                 tidyr::gather ( 'gene', 'expr_val', -feature ) %>%
+                tidyr::drop_na () %>%
                 dplyr::mutate ( gene = factor(gene, levels=features) ) -> plot_data
 
         ggplot2::ggplot (plot_data, aes ( x= feature, y=expr_val, fill=feature) ) +

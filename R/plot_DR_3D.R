@@ -29,7 +29,8 @@ dim_red_3D <- function (plot_data, x, y, z, color_by, all_theta=0, all_phi=0,
                         num_col=NULL, axis_length=0.2, lab_just=0.05,
                         vert_just=0., hor_just=0., further_repel=F,
                         repel_force=1, fontface='bold', size_highlight=NULL, 
-                        highlight_ratio=1.5, seg_color=NA, AP=NULL){
+                        highlight_ratio=1.5, seg_color=NA, dim_name='GPLVM', dim_vjust=1,
+                        AP=NULL){
         # deal with multiple colors
         AP <- return_aes_param (AP)
         if (length (color_by) > 1 ){
@@ -41,14 +42,14 @@ dim_red_3D <- function (plot_data, x, y, z, color_by, all_theta=0, all_phi=0,
         # see `plot_DR_2D.R`
         plot_data$size_high <- get_size_high (size_highlight, nrow(plot_data))
         ggplot2::ggplot (plot_data, aes_string (x=x, y=y, z=z) ) +
-                Stat3D (aes_string (fill='feature', size='size_high', shape='size_high'), geom='point',
-                         theta=all_theta, phi=all_phi, color= AP$point_edge_color,
-                         stroke=0.8) +
+                Stat3D (aes_string (fill=color, size='size_high', shape='size_high'), 
+                        geom='point', theta=all_theta, phi=all_phi, color=
+                        AP$point_edge_color, stroke=0.8) +
                 ggplot2::labs (fill=color)+
                 highlight_shape_size (AP, highlight_ratio) -> plot_ob
 
         if (length (color_by) > 1){ plot_ob <- plot_ob + ggplot2::facet_wrap (~variable, ncol=num_col) }
-        plot_ob + theme_TB ('no_arrow', feature_vec = plot_data$feature, color_fill=T, aes_param=AP) -> plot_ob
+        plot_ob + theme_TB ('no_arrow', feature_vec = plot_data [, color], color_fill=T, aes_param=AP) -> plot_ob
 
         if (show_arrow){
                 # to add new points, it is important to add the min and max
@@ -58,22 +59,25 @@ dim_red_3D <- function (plot_data, x, y, z, color_by, all_theta=0, all_phi=0,
                 # black. The other values are 'awhite', which occur before
                 # 'black'. The purpose is that where discrete alpha scale is
                 # appled, 'awhite' would have zero alpha and 'black' 1 alpha
-                point_data$color <- c('awhite', 'black', 'awhite')
+                #point_data$color <- c('awhite', 'black', 'awhite')
+                point_data$color <- c(NA, dim_name, NA)
                 plot_ob <- plot_ob + Seg3D(theta=all_theta, phi=all_phi, common_length=axis_length, AP=AP) +
-                        Lab3D (labs = gsub ('PT','D', c(x, y, z)), theta=all_theta, phi=all_phi,
+                        Lab3D (labs = gsub ('PT','dim', c(x, y, z)), theta=all_theta, phi=all_phi,
                                common_length=axis_length+lab_just, vjust=vert_just, hjust=hor_just, AP=AP) +
-                        Stat3D (aes(x=x, y=y, z=z, alpha='feature'), theta=all_theta, data=point_data,
-                                       phi=all_phi, size=AP$pointsize, inherit.aes=F, 
-                                       geom='point', show.legend=F) +
-                        ggplot2::scale_alpha_discrete (breaks = c(NA, 'black'), range= c(0, 1))
+                        Stat3D (aes(x=x, y=y, z=z, label=color), theta=all_theta, data=point_data,
+                                       phi=all_phi, size=AP$point_fontsize, inherit.aes=F, 
+                                       geom='text', show.legend=F, vjust=dim_vjust, hjust='left', fontface='bold') 
+                        #ggplot2::scale_alpha_discrete (breaks = c(NA, 'black'), range= c(0, 1))
         }else if (show_axes){
                 plot_ob <- plot_ob + Ax3D(theta=all_theta, phi=all_phi) +
                         Lab3D(labs = gsub ('PT','D', c(x, y, z)),
                               theta=all_theta, phi=all_phi, AP=AP) 
         }
 
-        if (is.null(label_col)){label_col <- 'feature'}
-        if (is.numeric (plot_data [, label_col]) ){show_label <- F}
+        if (is.null(label_col)){label_col <- color}
+        if (label_col %in% colnames (plot_data) ){
+                if (is.numeric (plot_data [, label_col]) ){show_label <- F}
+        }
         if (show_label){
                 print ('get text labels')
                 text_scale <- get_3D_label_position (plot_data, x, y, z, label_col,
@@ -103,7 +107,7 @@ DimPlot_3D <- function (x, feature, DR='pca', dims=c(1,2,3), assay='RNA',
         feature_names <- data.frame (get_feature_names (feature, x, assay, slot_data))
         x_plot <- cbind (x_plot, feature_names)
         dim_red_3D (x_plot, col_names[dims[1]], col_names[dims[2]], 
-                    col_names[dims[3]], feature, ...)
+                    col_names[dims[3]], feature, dim_name=DR,...)
 }
 
 #' Append minimum and maximum values

@@ -88,21 +88,21 @@ arrow_to_graph <- function (Arr, aes_param, nudge_ratio){
                    fontface='italic', angle=90, family=aes_param$font_fam)
 
         # add a dot at the end of the arrows
-        layer4 <- ggplot2::geom_point (x = Arr$rx*(Arr$ox - Arr$dx*Arr$mx), 
-                             y = Arr$ry*(Arr$oy - Arr$dy*Arr$my), 
-                             size=aes_param$pointsize, shape=16)
+        #layer4 <- ggplot2::geom_point (x = Arr$rx*(Arr$ox - Arr$dx*Arr$mx), 
+        #                     y = Arr$ry*(Arr$oy - Arr$dy*Arr$my), 
+        #                     size=aes_param$pointsize, shape=16)
 
-        return (list (layer1, layer2, layer3, layer4))
+        return (list (layer1, layer2, layer3))
 }
 
-arrow_to_graph_sim <- function (Arr, aes_param, nudge_ratio, dim_elevation=0.2){
+arrow_to_graph_sim <- function (Arr, aes_param, nudge_ratio, dim_elevation=0.2,
+                                nudge_dimname=0){
         # type = 'closed' produces a solid triangle at the arrow end
         # linejoin = 'mitre' produces triangle with sharp edges
         layer1 <- ggplot2::geom_segment( aes(x = x1, y = y1, xend = x2, yend = y2), 
                     data = Arr$df, arrow = get_arrow (aes_param), 
                     size = aes_param$arrow_thickness, 
                     linejoin=aes_param$arrow_linejoin)
-
         # x axis
         layer2 <- geom_text (aes (x=xlabel, y=ylabel, label=axis_labels), data =
                    Arr$df[1,], nudge_y=0, nudge_x=Arr$rx*nudge_ratio*Arr$dx, 
@@ -116,16 +116,16 @@ arrow_to_graph_sim <- function (Arr, aes_param, nudge_ratio, dim_elevation=0.2){
                    fontface='italic', angle=90, family=aes_param$font_fam)
 
         # add a dot at the end of the arrows
-        layer4 <- ggplot2::geom_point (x = Arr$rx*(Arr$ox - Arr$dx*Arr$mx), 
-                             y = Arr$ry*(Arr$oy - Arr$dy*Arr$my), 
-                             size=aes_param$pointsize, shape=16)
+        #layer4 <- ggplot2::geom_point (x = Arr$rx*(Arr$ox - Arr$dx*Arr$mx), 
+        #                     y = Arr$ry*(Arr$oy - Arr$dy*Arr$my), 
+        #                     size=aes_param$pointsize, shape=16)
 
         dim_lab_y <- dim_elevation*(Arr$df[2,]$ylabel - Arr$df[1,]$ylabel) + Arr$df[1,]$ylabel
         layer5 <- geom_text (aes (x=xlabel, y=dim_lab_y, label=Arr$dim_name), data =
-                   Arr$df[1,], nudge_y=0, nudge_x=Arr$rx*nudge_ratio*Arr$dx, 
+                   Arr$df[1,], nudge_y=0, nudge_x=Arr$rx*(nudge_ratio+nudge_dimname)*Arr$dx, 
                    size=aes_param$point_fontsize*1.3, hjust='center', vjust='bottom',
-                   angle=0, family=aes_param$font_fam)
-        return (list (layer1, layer2, layer3, layer4, layer5))
+                   angle=0, family=aes_param$font_fam, fontface='bold')
+        return (list (layer1, layer2, layer3, layer5))
 }
 
 #' Create miniature arrow to replace axes
@@ -140,11 +140,13 @@ arrow_to_graph_sim <- function (Arr, aes_param, nudge_ratio, dim_elevation=0.2){
 #' arrow_angle, arrow_length, arrow_length_unit, arrow_type, arrow_thickness,
 #' arrow_linejoin
 #' @param axis_label_sim whether to use a simple label i.e. 'dim1', 'dim2'
+#' @param nudge_dimname if `axis_label_sim` is True, then how much further to
+#' the right to move the dim name label
 #' @param return a list of geoms for the arrow segment and axis labels
 #' @export
 arrow_axis <- function (plot_ob, length_ratio=0.05, nudge_ratio=0., move_x=0,
                         move_y=0, reverse_x=F, reverse_y=F, 
-                        axis_label_sim=F,
+                        axis_label_sim=F, nudge_dimname=0,
                         aes_param = list (pointsize=3, font_fam='Arial',
                                           point_fontsize=6) 
                         ){
@@ -167,6 +169,7 @@ arrow_axis <- function (plot_ob, length_ratio=0.05, nudge_ratio=0., move_x=0,
         if (div_ratio == 1){
                 return (arrow_to_graph (Arr, aes_param, nudge_ratio) )
         }else{
-                return (arrow_to_graph_sim (Arr, aes_param, nudge_ratio) )
+                return (arrow_to_graph_sim (Arr, aes_param, nudge_ratio,
+                                            nudge_dimname=nudge_dimname) )
         }
 }

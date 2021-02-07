@@ -25,6 +25,21 @@ expand_length <- function (x, target_n){
         return (new_x)
 }
 
+push_plot_viewport <- function (plot_ob){
+        if ( 'ggplot' %in% class (plot_ob) ){
+                #grid.draw (grid.grabExpr ( print (grob_list[[i]])))
+                # prevent text from being cutoff from the borders
+                gt <- ggplot2::ggplot_gtable(ggplot2::ggplot_build(plot_ob))
+                gt$layout$clip[gt$layout$name == "panel"] <- "off"
+                grid::grid.draw(gt)
+        }else if ('gtable' %in% class (plot_ob)){
+                grid::grid.draw(plot_ob)
+        }else if ('data.frame' %in% class (plot_ob) ) {
+                colnames (plot_ob) <- gsub ('\\.', ' ', colnames (plot_ob))
+                gridExtra::grid.table (plot_ob, rows=NULL)
+        }else{ ComplexHeatmap::draw (plot_ob, newpage=F) }
+}
+
 #' Same function as `grid.arrange`, with the functionality of integrating
 #' ComplexHeatmap and adding panel labels
 #' 
@@ -45,7 +60,8 @@ arrange_plots <- function (grob_list, save_path, grid_layout, panel_label=NULL,
                            panel_spacing=0.01, 
                            plot_width=9, plot_height=9, 
                            aes_param=list (highlight_font = list (fontface='bold', 
-                                        fontsize=40), font_fam = 'Arial') ){
+                                        fontsize=40), font_fam = 'Arial') 
+                           ){
         
         highlight_font <- get_highlight_font (aes_param$highlight_font$fontface, 
                                               aes_param$highlight_font$fontsize, 
@@ -89,21 +105,51 @@ arrange_plots <- function (grob_list, save_path, grid_layout, panel_label=NULL,
 
                 # need different functions for ggplot, table and ComplexHeatmap
                 # objects
-                if ( 'ggplot' %in% class (grob_list[[i]] ) ){
-                        #grid.draw (grid.grabExpr ( print (grob_list[[i]])))
-                        # prevent text from being cutoff from the borders
-                        gt <- ggplot2::ggplot_gtable(ggplot2::ggplot_build(grob_list[[i]]))
-                        gt$layout$clip[gt$layout$name == "panel"] <- "off"
-                        grid::grid.draw(gt)
-                }else if ('gtable' %in% class (grob_list[[i]])){
-                        grid::grid.draw(grob_list[[i]])
-                }else if ('data.frame' %in% class (grob_list[[i]] ) ) {
-                        colnames (grob_list [[i]] ) <- gsub ('\\.', ' ', colnames (grob_list [[i]]))
-                        gridExtra::grid.table (grob_list [[i]], rows=NULL)
-                }else{ ComplexHeatmap::draw (grob_list[[i]], newpage=F) }
+                push_plot_viewport (grob_list[[i]])
                 grid.text (panel_label[i], x=unit (0.01, 'npc'), y=unit (0.95, 'npc'), 
                            gp=highlight_font)
                 popViewport (2)
         }
         grDevices::dev.off ()
+}
+
+#' Save a list of plots individually
+#'
+#' @description This function and its arguments are based upon `arrange_plots`.
+#' Instead of saving all the plots in a single pdf, this function saves the
+#' plots individually in a directory. The usage is exactly the same as
+#' `arrange_plots`.
+#' @export
+save_indiv_plots <- function (grob_list, save_dir, grid_layout, plot_width=9,
+                              plot_height=9, panel_label=NULL,
+                              AP=list (highlight_font = list (fontface='bold', 
+                                        fontsize=40), font_fam = 'Arial') 
+                     ){
+        aes_param <- return_aes_param (AP)
+        plot_width <- expand_length (plot_width, ncol (grid_layout)) # a vector
+        plot_height <- expand_length (plot_height, nrow (grid_layout))
+        highlight_font <- get_highlight_font (aes_param$highlight_font$fontface, 
+                                              aes_param$highlight_font$fontsize, 
+                                              aes_param$font_fam)
+        if (!dir.exists (save_dir) ){dir.create (save_dir)}
+        if (is.null (panel_label)){ panel_label <- LETTERS [1:length (grob_list)]}
+        for (i in 1:length (grob_list)){
+                print (paste ('arranging figure', i))
+                row_pos <- unique (which (grid_layout == i, arr.ind=T) [, 'row'])
+                col_pos <- unique (which (grid_layout == i, arr.ind=T) [, 'col'])
+                page_width <- sum (plot_width [col_pos])
+                page_height <-sum (plot_height[row_pos])
+
+                save_path <- paste (save_dir, '/panel', panel_label[i], '.pdf', sep='') 
+                grDevices::cairo_pdf (save_path, width=page_width, height=page_height)
+                grid::grid.newpage ()
+                grid::pushViewport(viewport(layout=grid.layout(1, 1) ))
+                # move the plot labels slightly inwards horizontally
+                # (unit(0.05, 'npc')) because individual plots do not have as
+                # much padding around them
+                push_plot_viewport(grob_list[[i]])
+                grid::grid.text (panel_label[i], x=grid::unit (0.05, 'npc'), 
+                                 y=grid::unit (0.95, 'npc'), gp=highlight_font)
+                grDevices::dev.off ()
+        }
 }
