@@ -222,7 +222,7 @@ custom_color <- function (feature_vec, aes_param = list (color_vec=NULL,
         if (proceed == T) {new_color_vec <- aes_param$color_vec
         }else if (proceed == F){
                 # determine if the feature corresponds to dates
-                match_dates <- gsub ('D', '', feature_vec)
+                match_dates <- gsub ('^[D-E]', '', feature_vec)
                 # handle any exceptions: refer to `date_color_vec` above
                 match_index <- !(match_dates %in% names (aes_param$date_color_vec ) )
                 match_dates <- match_dates [match_index]
