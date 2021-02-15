@@ -96,7 +96,7 @@ arrow_to_graph <- function (Arr, aes_param, nudge_ratio){
 }
 
 arrow_to_graph_sim <- function (Arr, aes_param, nudge_ratio, dim_elevation=0.2,
-                                nudge_dimname=0){
+                                nudge_dimname=0, nudge_ortho=0){
         # type = 'closed' produces a solid triangle at the arrow end
         # linejoin = 'mitre' produces triangle with sharp edges
         layer1 <- ggplot2::geom_segment( aes(x = x1, y = y1, xend = x2, yend = y2), 
@@ -105,13 +105,13 @@ arrow_to_graph_sim <- function (Arr, aes_param, nudge_ratio, dim_elevation=0.2,
                     linejoin=aes_param$arrow_linejoin)
         # x axis
         layer2 <- geom_text (aes (x=xlabel, y=ylabel, label=axis_labels), data =
-                   Arr$df[1,], nudge_y=0, nudge_x=Arr$rx*nudge_ratio*Arr$dx, 
+                   Arr$df[1,], nudge_y=-nudge_ortho, nudge_x=Arr$rx*nudge_ratio*Arr$dx, 
                    size=aes_param$point_fontsize, hjust='center', vjust=1,
                    fontface='italic', angle=0, family=aes_param$font_fam)
 
         # y axis
         layer3 <- geom_text (aes (x=xlabel, y=ylabel, label=axis_labels), data =
-                   Arr$df[2,], nudge_y=Arr$ry*nudge_ratio*Arr$dy, nudge_x=0, 
+                   Arr$df[2,], nudge_y=Arr$ry*nudge_ratio*Arr$dy, nudge_x=-nudge_ortho,
                    size=aes_param$point_fontsize, vjust=0, hjust='center',
                    fontface='italic', angle=90, family=aes_param$font_fam)
 
@@ -142,11 +142,13 @@ arrow_to_graph_sim <- function (Arr, aes_param, nudge_ratio, dim_elevation=0.2,
 #' @param axis_label_sim whether to use a simple label i.e. 'dim1', 'dim2'
 #' @param nudge_dimname if `axis_label_sim` is True, then how much further to
 #' the right to move the dim name label
+#' @param nudge_ortho move the 'dim1', 'dim2' labels etc away from the
+#' respective axes orthogonally, i.e. not along the axes
 #' @param return a list of geoms for the arrow segment and axis labels
 #' @export
 arrow_axis <- function (plot_ob, length_ratio=0.05, nudge_ratio=0., move_x=0,
                         move_y=0, reverse_x=F, reverse_y=F, 
-                        axis_label_sim=F, nudge_dimname=0,
+                        axis_label_sim=F, nudge_dimname=0, nudge_ortho=0,
                         aes_param = list (pointsize=3, font_fam='Arial',
                                           point_fontsize=6) 
                         ){
@@ -170,6 +172,6 @@ arrow_axis <- function (plot_ob, length_ratio=0.05, nudge_ratio=0., move_x=0,
                 return (arrow_to_graph (Arr, aes_param, nudge_ratio) )
         }else{
                 return (arrow_to_graph_sim (Arr, aes_param, nudge_ratio,
-                                            nudge_dimname=nudge_dimname) )
+                        nudge_ortho=nudge_ortho, nudge_dimname=nudge_dimname) )
         }
 }

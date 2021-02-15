@@ -115,9 +115,13 @@ simplify_gsea <- function (xx_df, simple_terms=NULL, term_col='category'){
                 na_terms <- is.na (new_terms)
                 new_terms [na_terms] <- as.character (xx_df [na_terms, term_col])
                 names (new_terms) <- xx_df [, term_col]
+                # simplify signaling pathway in general
                 new_terms <- gsub ('signaling pathway', 'signaling', new_terms) 
+                # simplify cancer terms
                 cancer_terms <- grep ('cancer', new_terms, ignore.case=T)
-                new_terms [cancer_terms [1] ] <- 'Cancer'
+                # old version
+                #new_terms [cancer_terms [1] ] <- 'Cancer'
+                new_terms [cancer_terms ] <- 'Cancer'
                 xx_df [, term_col] <- new_terms
         }
         return (xx_df)

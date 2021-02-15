@@ -35,22 +35,20 @@ p3 <- seurat_heat (tb_only, color_row=show_genes, group.by = c('broad_type', 'da
 
 # run KEGG
 markers <- find_DE_genes (in_vivo, save_dir, group.by='broad_type', label='pairwise', method='pairwise')
+psea_tb_ctb <- run_GSEA_pairwise (markers, org.Hs.eg.db, paste (save_dir, 'PSEA_TB_CTB.csv', sep='/'),
+                   group1='CTB', group2='TB')
+rich_forest (psea_tb_ctb, markers, org.Hs.eg.db, show_num=5, show_gene_labels=6,
+             shrink_ratio=0.7, nudge_x=0.2, extend_x_pos=1.2, extend_x_neg=1.2) -> p4
 
-tb_ctb <- markers %>% filter (group == 'CTB' & compare_group == 'TB') 
-psea_tb_ctb <- run_GSEA_all_types (tb_ctb, org.Hs.eg.db, save_path=paste (save_dir, 'PSEA_TB_CTB.csv', sep='/'))
-devtools::load_all ('..', export_all=F)
-p4 <- enrich_bar (psea_tb_ctb, org.Hs.eg.db, show_num=5, markers=tb_ctb,
-            show_gene_labels=6, extend_axis_pos=1.2, extend_axis_neg=1.2, nudge_x=0.2, shrink_ratio=0.7)
+psea_ctb_stb <- run_GSEA_pairwise (markers, org.Hs.eg.db, paste (save_dir, 'PSEA_CTB_STB.csv', sep='/'),
+                   group1='STB', group2='CTB')
+rich_forest (psea_ctb_stb, markers, org.Hs.eg.db, show_num=5, show_gene_labels=6,
+             shrink_ratio=0.7, nudge_x=0.2, extend_x_pos=1.2, extend_x_neg=1.2) -> p5
 
-ctb_stb <- markers %>% filter (group == 'STB' & compare_group == 'CTB') 
-psea_ctb_stb <- run_GSEA_all_types (ctb_stb, org.Hs.eg.db, save_path=paste (save_dir, 'PSEA_CTB_STB.csv', sep='/'))
-p5 <- enrich_bar (psea_ctb_stb, org.Hs.eg.db, show_num=5, markers=ctb_stb,
-            show_gene_labels=6, extend_axis_pos=1.2, extend_axis_neg=1.2, nudge_x=0.12, shrink_ratio=0.7)
-
-ctb_evt <- markers %>% filter (group == 'EVT' & compare_group == 'CTB') 
-psea_ctb_evt <- run_GSEA_all_types (ctb_evt, org.Hs.eg.db, save_path=paste (save_dir, 'PSEA_CTB_EVT.csv', sep='/'))
-p6 <- enrich_bar (psea_ctb_evt, org.Hs.eg.db, show_num=5, markers=ctb_evt,
-            show_gene_labels=6, extend_axis_pos=1.2, extend_axis_neg=3, nudge_x=0.2, shrink_ratio=0.7)
+psea_ctb_evt <- run_GSEA_pairwise (markers, org.Hs.eg.db, paste (save_dir, 'PSEA_CTB_EVT.csv', sep='/'),
+                   group1='EVT', group2='CTB')
+rich_forest (psea_ctb_evt, markers, org.Hs.eg.db, show_num=5, show_gene_labels=6,
+             shrink_ratio=0.7, nudge_x=0.2, extend_x_pos=1.2, extend_x_neg=1.2) -> p6
 
 grob_list <- list (p1[[1]]+labs (fill=''), p2 + xlab ('') + ylab ('norm count')+
                    theme (axis.title.x=element_blank (), aspect.ratio=1) , 
@@ -62,3 +60,10 @@ lay_mat <- matrix(c(1, 1, 1, 2, 2, 2,
                   nrow=6) %>% t()
 arrange_plots (grob_list, paste (save_dir, 'final_figure1.pdf', sep='/'), lay_mat, plot_width=3)
 save_indiv_plots (grob_list, paste (save_dir, 'figure1', sep='/'), lay_mat, plot_width=3)
+
+# save csv
+write.csv (as.matrix (all_data [, all_data$date!='in_vitro'] [['RNA']]@data), 
+           paste (merge_dir, 'final_merged.csv', sep='/') )
+
+data (TF, package='TBdev')
+write.csv (TF, paste (save_dir, 'TF_list.csv', sep='/') )

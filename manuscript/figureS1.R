@@ -3,11 +3,10 @@
 # all human in vivo datasets, no in vitro cells
 
 setwd('..')
-roxygen2::roxygenise()
+#roxygen2::roxygenise()
 devtools::load_all('.', export_all=F)
 library (tidyverse)
 library (org.Hs.eg.db)
-library (GOSemSim)
 
 root_dir <- '/mnt/c/Users/Yutong/Documents/bioinformatics/reproduction/'
 root <- paste (root_dir, 'results/', sep='/')
@@ -15,14 +14,16 @@ merge_dir <- paste (root, 'XLYBPZ_Dylan_dir', sep='/')
 save_dir <- paste (root, 'manuscript/figure1', sep='/')
 sup_save_dir <- paste (root, 'manuscript/figureS1', sep='/')
 all_data <- get (load (paste (merge_dir, 'final_merged_tb.Robj', sep='/') ))
+TB_data <- all_data [, !c(all_data$revised %in% CT$in_vitro_cells)]
 
 # ----------figure A-C----------
 data (CT)
-TB_data <- all_data [, !c(all_data$revised %in% CT$in_vitro_cells)]
 TB_data$dataset <- gsub ('_[0-9]+$', '', TB_data$paper)
 p1 <- plot_dim_red (TB_data, group.by= c('revised', 'date', 'dataset'),
                     DR='pca' , dims=c(1,2), return_sep=T, nudge_ratio=0.3, 
-                    plot_type='dim_red_sim', seg_color='black')
+                    plot_type='dim_red_sim', seg_color='black',
+                    nudge_dimname=0.2, nudge_ortho=0.3)
+
 # ----------figure D-I----------
 save_robj <- c('Xiang_2019/Xiang_R.Robj', 'Liu_2018/Liu_R.Robj',
                'Blakeley_2015/Blakeley_R.Robj',
@@ -44,7 +45,8 @@ for (i in 1:length (all_datasets)){
 p2 <- list ()
 for (i in 1:length (all_datasets)){
         one_plot <- plot_dim_red (all_datasets[[i]], group.by= c('Type'),
-                                      DR='pca', nudge_ratio=0.3, return_sep=T, plot_type='dim_red_sim')
+                                  DR='pca', nudge_ratio=0.3, return_sep=T, plot_type='dim_red_sim',
+                                  nudge_dimname=0.2, nudge_ortho=0.3)
         paper <- unique (all_datasets[[i]]$paper)
         p2 [[i]] <- one_plot[[1]] + ggtitle (paper) + labs (fill='')
 }
@@ -64,25 +66,18 @@ p3 <- seurat_heat (all_data2, color_row=show_genes, group.by = c('broad_type'),
                    automatic=F)
 
 # ----------figure M and N----------
-markers <- find_DE_genes (TB_data, save_dir, group.by='broad_type', label='pairwise', method='pairwise')
-tb_ctb <- markers %>% filter (group == 'CTB' & compare_group == 'TB') 
-psea_tb_ctb <- run_GSEA_all_types (tb_ctb, org.Hs.eg.db, enrich_area='reactome',
-                                   save_path=paste (save_dir, 'RSEA_TB_CTB.csv', sep='/'))
-p4 <- enrich_bar (psea_tb_ctb, org.Hs.eg.db, show_num=4, markers=tb_ctb,
-            show_gene_labels=6, extend_axis_pos=1.2, extend_axis_neg=4, nudge_x=0.2, shrink_ratio=0.7)
+# volcano plot of TF
+data (TF)
+markers <- find_DE_genes (TB_data, save_dir, group.by='broad_type',
+                          label='pairwise', method='pairwise')
+tf_mark <- markers %>% filter (feature %in% TF)
 
-ctb_stb <- markers %>% filter (group == 'STB' & compare_group == 'CTB') 
-psea_ctb_stb <- run_GSEA_all_types (ctb_stb, org.Hs.eg.db, enrich_area='reactome',
-                                    save_path=paste (save_dir, 'RSEA_CTB_STB.csv', sep='/'))
-p5 <- enrich_bar (psea_ctb_stb, org.Hs.eg.db, show_num=4, markers=ctb_stb,
-            show_gene_labels=6, extend_axis_pos=1.2, extend_axis_neg=2.2, nudge_x=0.12, shrink_ratio=0.7)
-
-
-ctb_evt <- markers %>% filter (group == 'EVT' & compare_group == 'CTB') 
-psea_ctb_evt <- run_GSEA_all_types (ctb_evt, org.Hs.eg.db, enrich_area='reactome',
-                                    save_path=paste (save_dir, 'RSEA_CTB_EVT.csv', sep='/'))
-p6 <- enrich_bar (psea_ctb_evt, org.Hs.eg.db, show_num=4, markers=ctb_evt,
-            show_gene_labels=6, extend_axis_pos=1.6, extend_axis_neg=2., nudge_x=0.2, shrink_ratio=0.7)
+p4<- seurat_volcano (tf_mark, 'CTB', 'TB', weighting='logFC',
+                nudge_y=80, length_ratio=0.8)
+p5<- seurat_volcano (tf_mark, 'STB', 'CTB', weighting='logFC',
+                nudge_y=80, length_ratio=0.8, nudge_x=0.1)
+p6<- seurat_volcano (tf_mark, 'EVT', 'CTB', weighting='logFC',
+                nudge_y=80, length_ratio=0.8, nudge_x=0.1)
 
 # ----------integration----------
 grob_list <- list (p1[[1]]+labs (fill='original \n labels'), p1[[2]], p1[[3]], 

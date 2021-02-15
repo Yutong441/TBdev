@@ -2,7 +2,7 @@
 % Please edit documentation in R/DE_gene.R
 \name{seurat_volcano}
 \alias{seurat_volcano}
-\title{Volcano plot}
+\title{Deseq2 style Volcano plot}
 \usage{
 seurat_volcano(
   markers,
@@ -14,7 +14,10 @@ seurat_volcano(
   weighting = "logFC",
   pval = "padj",
   gene = "feature",
-  AP = NULL
+  weight_thres = 0.25,
+  show_gene_num = 30,
+  AP = NULL,
+  ...
 )
 }
 \arguments{
@@ -36,8 +39,18 @@ seurat_volcano(
 
 \item{gene}{where the gene names are stored}
 
+\item{weight_thres}{above which value in \code{weighting} are the points colored
+according to their comparison groups}
+
 \item{AP}{aesthetic parameter for controlling the plot}
+
+\item{...}{arguments for \code{enrich_arrow}, including \code{nudge_x}, \code{nudge_y} and
+\code{band_thickness}, \code{length_ratio}. For description of their roles, see
+\code{enrich_bar}}
+}
+\value{
+a ggplot object
 }
 \description{
-Volcano plot
+Deseq2 style Volcano plot
 }

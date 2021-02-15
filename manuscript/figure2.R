@@ -1,5 +1,7 @@
 #library (TBdev)
-devtools::load_all ('..', export_all = F)
+setwd ('..')
+roxygen2::roxygenise()
+devtools::load_all ('.', export_all = F)
 library (tidyverse)
 library (mclust)
 library (GOSemSim)
@@ -33,11 +35,11 @@ p1 <- dim_red_3D_traj (plot_met, 'PT1', 'PT2', 'PT3', 'broad_type', epg, 'x', 'y
                     repel_force=0.5, lab_just=c(0.08, 0.02, 0.02), magnify_text=1.3, 
                     label_traj_text=label_epg, hor_just=0.1, dim_vjust=4) + 
 labs (fill='cell type')
-p1
 
 # ----------Figure 2C: temporal clustering for STB----------
 data_dir <- paste (root_dir, 'GPLVM/hier_GP_tf1/', sep='/')
-pred_all <- read.csv (paste (data_dir, 'result/prediction_matern_500.csv', sep='/' ))
+pred_all <- data.table::fread(paste (data_dir, 'result/prediction_matern_500.csv', 
+                                     sep='/' )) %>% data.frame ()
 pred_all$x <- pred_all$x - min (all_data$ori_MGP_PT, na.rm=T)
 label_list <- list ( c('branch0', 'branch1'),  c('branch0', 'branch2') )
 PT_list_inf <- raw_to_seurat (pred_all, label_list)
@@ -135,9 +137,20 @@ peak_STB <- read.csv (paste (save_dir, 'Switch_STB.csv', sep='/'))
 peak_EVT$epil_branch <- 'EVT_branch'
 peak_STB$epil_branch <- 'STB_branch'
 peak_df <- rbind (peak_EVT, peak_STB)
-pg <- graph_abs_time (metadata, peak_df, save_dir=paste (save_dir, 'graph_abs', sep='/'))
+pg <- graph_abs_time (metadata, peak_df, save_dir=paste (save_dir, 'graph_abs', sep='/'), show_tick=T)
 
-# ----------Figure H-K: WGCNA nets----------
+# ----------figure 2H: MAPK----------
+exp_mat <- fast_read_df(paste (data_dir, 'data/STREAM_data.csv', sep='/' ))
+pseudotime <- fast_read_df(paste (data_dir, 'result/infer_pt_matern.csv', sep='/' ))
+off_set <- min (all_data$ori_MGP_PT, na.rm=T)
+exp_mat %>% as.matrix () %>% t () %>% scale () %>% data.frame () %>% 
+        add_column (pseudotime=pseudotime [,'pt_mean'] - off_set) -> exp_mat
+MAPK_sel <- c('GADD45G', 'RAP1B', 'DUSP8', 'RASA1')
+p7 <- gene_over_pseudotime (pred_all, exp_mat, MAPK_sel, metadata,
+                            color_feature = 'broad_type', num_col=2
+                            )+ggtitle ('MAPK')
+
+# ----------Figure 2J: WGCNA nets----------
 save_dir4 <- paste (root, 'manuscript/figure4', sep='/')
 color_row <- read.csv ( paste ( save_dir4,  'WGCNA/module_genes.csv' , sep='/'), row.names=1)
 gene_list <- lapply (as.list (colnames (color_row) ), function (x) {
@@ -153,35 +166,29 @@ rm (TF_WG)
 save_dir1 <- paste (root, 'manuscript/figure1', sep='/')
 markers <- find_DE_genes (all_data, save_dir1, group.by='broad_type', label='all_vivo')
 
-merged7_8 <- c(as.character (gene_list$GC7), as.character (gene_list$GC8))
-plot_gene <- list (ICM=merged7_8, TB=gene_list$GC1, CTB=gene_list$GC6, STB=gene_list$GC3, EVT=gene_list$GC10)
+#merged7_8 <- c(as.character (gene_list$GC7), as.character (gene_list$GC8))
+plot_gene <- list (TB=gene_list$GC1, CTB=gene_list$GC6, STB=gene_list$GC3, EVT=gene_list$GC10)
 
 plotlist <- custom_net_diff_nets (fil_vivo, plot_gene, markers, nudge_ratio=0.3, size_thres=0.2)
-plotlist2 <- lapply (plotlist, function(gx){gx+theme(aspect.ratio=0.85)})
-plotlist2 [[2]] <- plotlist[[2]] + ggtitle ('pre-implant')
+plotlist2 <- lapply (plotlist, function(gx){gx+theme(aspect.ratio=0.85)+coord_cartesian (clip='off')})
+p8 <- ggpubr::ggarrange (plotlist=plotlist2, nrow=1, common.legend=T, legend='right')
 
 # arrange figures
-grob_list <- c(list (p1+theme (aspect.ratio=0.7), 
+grob_list <- list (p1+theme (aspect.ratio=0.7), 
                      pg, p2, p3, p4+theme(aspect.ratio=0.85), 
                      p5+theme(aspect.ratio=0.85), 
-                     p6
-                     ), plotlist2)
-
+                     p6, p7+labs(color=''), 
+                     p8)
 lay_mat <- matrix(c(1, 1, 1, 1, 2, 2, 
                     1, 1, 1, 1, 2, 2,
                     3, 3, 4, 4, 5, 5,
                     3, 3, 4, 4, 6, 6,
                     7, 7, 7, 7, 8, 8,
-                    7, 7, 7, 7, 9, 9,
-                    10, 10, 11, 11, 12,12 
+                    7, 7, 7, 7, 8, 8,
+                    9, 9, 9, 9, 9, 9 
                     ),
                   nrow=6) %>% t()
 arrange_plots (grob_list, paste (save_dir, 'final_figure2.pdf', sep='/'), 
                   lay_mat, plot_width=3, plot_height=3.5)
 save_indiv_plots (grob_list, paste (save_dir, 'figure2', sep='/'), 
                   lay_mat, plot_width=3, plot_height=3.5)
-
-# save key genes
-#save_peak_genes (peak_plot, paste (sup_save_dir, 'PT_marker/Peak_STB_MAPK.csv', sep='/'), 'MAPK', kk, max_num=50)
-#save_peak_genes (peak_plot, paste (sup_save_dir, 'PT_marker/Peak_STB_JAK.csv', sep='/'), 'JAK-STAT', kk, max_num=50)
-#save_peak_genes (peak_plot, paste (sup_save_dir, 'PT_marker/Peak_STB_all.csv', sep='/'))

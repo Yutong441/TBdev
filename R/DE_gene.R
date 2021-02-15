@@ -355,7 +355,8 @@ seurat_violin <- function (x, features, group.by, assay='RNA',
                 custom_tick (min_prec=1,...) -> plot_ob
         if (box_plot){plot_ob <- plot_ob + ggplot2::geom_boxplot()
         }else{plot_ob <- plot_ob +ggplot2::geom_jitter (shape=AP$normal_shape, 
-                                size=AP$pointsize, height=0, color='white')}
+                                size=AP$pointsize, height=0, color=AP$point_edge_color, 
+                                stroke=AP$edge_stroke)}
         return (plot_ob)
 }
 
@@ -370,7 +371,7 @@ strong_gene_violin <- function (x, group.by, dim_num=1, DR='pca', assay='RNA',
         return (vln_plot + ggplot2::ggtitle (colnames (feature_load)[dim_num] ) )
 }
 
-#' Volcano plot
+#' Deseq2 style Volcano plot
 #'
 #' @param markers a dataframe, result generated from `find_DE_genes`
 #' @param group1 comparison group1
@@ -381,39 +382,80 @@ strong_gene_violin <- function (x, group.by, dim_num=1, DR='pca', assay='RNA',
 #' @param weighting the x axis, i.e. log fold change
 #' @param pval the p value for the y axis
 #' @param gene where the gene names are stored
+#' @param weight_thres above which value in `weighting` are the points colored
+#' according to their comparison groups
 #' @param AP aesthetic parameter for controlling the plot
+#' @param ... arguments for `enrich_arrow`, including `nudge_x`, `nudge_y` and
+#' `band_thickness`, `length_ratio`. For description of their roles, see
+#' `enrich_bar`
+#' @return a ggplot object
 #' @importFrom magrittr %>%
 #' @importFrom ggplot2 aes aes_string
 #' @export
 seurat_volcano <- function (markers, group1, group2, group1_col = 'group',
                             group2_col = 'compare_group', label_genes=NULL,
                             weighting='logFC', pval='padj', gene='feature',
-                            AP=NULL){
+                            weight_thres=0.25, show_gene_num=30, logy=T, AP=NULL, ...){
         AP <- return_aes_param (AP)
+        # select appropriate data 
         markers %>% dplyr::filter (!!as.symbol (group1_col) == group1 ) %>%
-                dplyr::filter (!!as.symbol (group2_col) == group2 ) %>%
-                dplyr::mutate (logp = - log10 (!!as.symbol (pval) )) -> plot_data
+                dplyr::filter (!!as.symbol (group2_col) == group2 ) -> sel_mark
+        if (logy){
+                sel_mark %>% dplyr::mutate (logp = - log10 (!!as.symbol (pval) )) -> plot_data
+                y_lab <- expression ('-log[10] P')
+        }else{
+                sel_mark %>% dplyr::mutate (logp = !!as.symbol (pval)) -> plot_data
+                y_lab <- pval
+        }
+
+        # color the significant points
+        plot_data$groupby <- 'unknown'
+        plot_data$groupby [plot_data [, weighting] > weight_thres] <- group1
+        plot_data$groupby [plot_data [, weighting] < -weight_thres] <- group2
+
+        # remove the Inf logp values
+        plot_data %>% dplyr::filter (logp!=Inf) %>% dplyr::pull (logp) %>% max () -> max_p
+        plot_data$logp [plot_data$logp==Inf] <- max_p
+
+        # basic volcano plot
         ggplot2::ggplot (plot_data, aes_string (x=weighting, y='logp') )+
-                ggplot2::geom_point () +
-                ggplot2::ylab ('-log10 P') -> plot_ob
+                ggplot2::geom_point (aes (fill=groupby), shape=AP$normal_shape, 
+                                     color=AP$point_edge_color, show.legend=F,
+                                     size=AP$pointsize) +
+                # construct the threshold line
+                ggplot2::geom_vline (xintercept=c(-weight_thres, weight_thres),
+                                     linetype='dashed') +
+                # add arrow sign
+                enrich_arrow (plot_data, AP, yval='logp', xval=weighting,
+                              group1='group', char_y=F, ...)+
+                ggplot2::ylab (y_lab) -> plot_ob
+
+        # add label genes
+        if (is.null (label_genes) & !is.null (show_gene_num) ){
+                sel_mark %>% dplyr::mutate (pos_neg = ifelse (!!as.symbol (weighting) > 0, 'pos', 'neg') ) %>%
+                dplyr::group_by (pos_neg) %>% 
+                dplyr::slice_max (abs (!!as.symbol (weighting)), n=show_gene_num/2) %>% 
+                dplyr::pull (!!as.symbol(gene)) -> label_genes
+        }
         if (!is.null (label_genes)){
                 plot_data %>% dplyr::filter (!!as.symbol (gene) %in% label_genes) -> text_df
                 if (!is.null (names (label_genes) )){
                         text_df$color_by <- names (label_genes) [match (text_df[, gene], label_genes)]
                         text_df$color_by <- partial_relevel (text_df$color_by, AP$cell_order)
                 }else{
-                        text_df$color_by <- data.table::fifelse (text_df [, weighting] > 0, 
-                                                                 'positive', 'negative')
+                        data.table::fifelse (text_df [, weighting] > 0, group1,
+                                             group2) -> text_df$color_by 
                 }
                 aes_arg_list <- list (label=gene, color='color_by')
                 aes_arg <- do.call (aes_string, aes_arg_list)
                 plot_ob <- plot_ob + 
-                        ggrepel::geom_text_repel( aes_arg, data=text_df, 
-                                size=AP$point_fontsize, family=AP$font_fam)
+                        ggrepel::geom_text_repel(aes_arg, data=text_df, 
+                                size=AP$point_fontsize, family=AP$font_fam, show.legend=F)
                 feature_vec <- text_df$color
         }else{feature_vec <- NULL}
-        return (plot_ob + theme_TB ('dotplot', rotation=0, AP=AP, color_fill=F,
-                                    feature_vec=feature_vec) )
+        plot_ob + theme_TB ('dotplot', rotation=0, aes_param=AP, color_fill=F,
+                            feature_vec=feature_vec)+
+        add_custom_color (feature_vec=plot_data$groupby, aes_param=AP, color_fill=T)
 }
 
 #' Gene expression in two categories

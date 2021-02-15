@@ -108,7 +108,8 @@ run_GSEA_all_types <- function (markers, organism_db, organism_name='human',
         }else{ 
                 print ('reading from precomputed GSEA. ')
                 print ('If you do not like this feature, set save_path=NULL')
-                gsea_df <- utils::read.csv (save_path, row.names=1) 
+                gsea_df <- data.table::fread(save_path) %>% data.frame () %>%
+                        tibble::column_to_rownames ('V1')
         }
         gsea_df %>%
                 dplyr::mutate (abs_change = abs (value)) %>%
@@ -141,6 +142,49 @@ all_GSEA_one_type <- function (markers, cluster_num, save_dir, label=NULL, ...){
         display_cluster_enrichment (ekk, show_graph='ridgeplot', enrich_area='KEGG', save_dir=save_dir)
         display_cluster_enrichment (ekk, show_graph='gseaplot', enrich_area='KEGG', save_dir=save_dir)
         rm (ekk)
+}
+
+#' @importFrom magrittr %>%
+run_GSEA_pairwise_one <- function (markers, organism_db, group1, one_group2,
+                                   group1_col, group2_col, ...){
+        print (paste ('analysing', one_group2))
+        markers %>% dplyr::filter (!!as.symbol (group2_col)==one_group2) %>%
+                dplyr::filter (!!as.symbol (group1_col) %in% group1) %>%
+                run_GSEA_all_types (organism_db=organism_db, cluster_col=group1_col, ...) %>%
+                tibble::add_column (compare_group=one_group2) %>%
+                tibble::rownames_to_column ('termID') 
+}
+
+#' Run pairwise GSEA 
+#' 
+#' @param markers a dataframe generated from `find_DE_genes` that contain the
+#' log fold change of gene expression. 
+#' @param organism_db a gene database
+#' @param group1 the cell types in group1. Upregulation of genes in this group
+#' will be reflected as positive enrichment.
+#' @param group2 the cell types in group2. Upregulation here= negative enrichment
+#' @param ... other arguments for `run_GSEA_all_types`. I strongly recommend
+#' checking the correct species by specifying `organism_name=...`. The default
+#' is human.
+#' @importFrom magrittr %>%
+#' @export
+run_GSEA_pairwise <- function (markers, organism_db, save_path, group1=NULL, group2=NULL,
+                               group1_col='group', group2_col='compare_group', ...){
+        if (is.null(group1)){group1 <- unique (markers [, group1_col])}
+        if (is.null(group2)){group2 <- unique (markers [, group2_col])}
+        if (file.exists (save_path)){ 
+                data.table::fread (save_path) %>% data.frame () %>% return ()
+                # `tibble::column_to_rownames` is inappropriate which would
+                # make rownames unique
+        }else{
+                group2 %>% as.list () %>% lapply (function (x){
+                        run_GSEA_pairwise_one (markers, organism_db, group1,
+                                               x, group1_col, group2_col, ...)
+                               }) -> all_list
+                do.call (rbind, all_list) -> gsea
+                utils::write.csv (gsea, save_path)
+                return (gsea)
+        }
 }
 
 get_all_paths <- function (save_dir,  cluster_num, all_path=NULL, path_data_dir='GO/pathways'){
@@ -259,36 +303,16 @@ ridge_all_types <- function (xx, x_col='value', y_col='category', sort_by=
         return (plot_xx)
 }
 
-order_genes_one_cond <- function (sel_markers, gdf){
-        sel_markers [match (gdf$gene, sel_markers$feature),] %>%
-                dplyr::select (logFC) %>% cbind (gdf) %>%
-                dplyr::arrange (dplyr::desc (abs (logFC)))
-}
-
-order_genes <- function (genes_df, markers, compare_name){
-        clusters <- unique (genes_df$celltype)
-        markers <- markers [markers$compare_group == unique (compare_name),]
-        if (mean (clusters %in% markers$group) == 1){
-                glist <- lapply (as.list(clusters), function(x){
-                        order_genes_one_cond (markers[markers$group==x,],
-                                              genes_df[genes_df$celltype==x,]
-                        )})
-                return (do.call (rbind, glist))
-        }else{
-                print ('the DE gene marker dataframe is not obtained from the same
-                       clusters as the GSEA.')
-                return (genes_df)
-        }
-}
-
 #' Summarise the raw GSEA dataframe 
 #'
 #' @param xx raw dataframe from GSEA
 #' @param show_num how many terms to show per group
 #' @return a shorter dataframe
 #' @importFrom magrittr %>%
-summarise_gsea <- function (xx, show_num, category_col = 'category',
-                            cluster_col='cluster', pval_col='p.adjust',
+summarise_gsea <- function (xx, show_num, 
+                            category_col = 'category',
+                            cluster_col='cluster', 
+                            pval_col='p.adjust',
                             enrich_col='value'){
         xx %>% dplyr::group_by (!!as.symbol (category_col), 
                                 !!as.symbol (cluster_col), compare_group) %>%
@@ -309,265 +333,40 @@ gene_vec_to_df <- function (vec){
         data.frame (gene=vec, term=term, celltype=celltype, meta=meta)
 }
 
-#' Obtain the label information for enrichment barplot
-#'
-#' @description This function joins the enrichment term with the top
-#' differentially expressed genes in a single string, that will be shown in the
-#' enrichment barplot labels. 
-#' @param xx raw dataframe from GSEA
-#' @param sum_gsea a dataframe generated from `summarise_gsea`
-#' @param markers a dataframe generated from `find_DE_genes`. If NULL, the
-#' genes will be ordered alphabetically.
-#' @return a character vector of labels
+#' @importFrom ggplot2 aes_string
 #' @importFrom magrittr %>%
-term_gene_labels <- function (xx, sum_gsea, organism_db, show_gene_labels=3,
-                              markers=NULL, category_col= 'category',
-                              cluster_col='cluster'){
-        cat_col <- sum_gsea [, category_col]
-        clust_col <- sum_gsea [, cluster_col]
-        text_df <- xx [xx [, category_col] %in% cat_col, ]
+enrich_arrow <- function (plot_df, aes_param, band_ratio=5, nudge_x=0.1, nudge_y=1,
+                          yval='yval', xval='emean', group1='cluster',
+                          group2='compare_group', char_y=T, length_ratio=1){
+        ymax <- plot_df %>% dplyr::pull (!!as.symbol (yval)) %>% as.numeric () %>% max (na.rm=T)
+        y_max <- ymax+nudge_y
+        if (char_y){y_max <- as.character (y_max)
+        }else{plot_df [, yval] <- as.numeric (plot_df [,yval])}
+        x_max <- pmin (max (plot_df [, xval] ), min (plot_df [, xval]) )
+        plot_df %>% dplyr::group_by (!!as.symbol (group1), 
+                                     !!as.symbol(group2)) %>% 
+                dplyr::summarise (max_x = abs(x_max)*length_ratio, 
+                                  min_x = -abs(x_max)*length_ratio ) -> x_max_df
 
-        term_genes <- lapply (as.list(1:nrow(sum_gsea)), function (i){ 
-                rownames (text_df [text_df [, category_col] == cat_col[i] & text_df [
-                          , cluster_col] == clust_col[i], ] ) })
-        cat_clust <- paste (cat_col, '___', clust_col, sep='')
-        names (term_genes) <- paste (cat_clust, '__', sep='')
-
-        # merge all entrez ID into a single vector, which is converted into
-        # common gene names. This is much faster.
-        genes_vec <- gsea_entrez_to_name (do.call (c, term_genes), organism_db)
-        names (genes_vec) <- gsub ('__[0-9]+$', '', names (genes_vec) )
-        genes_df <- gene_vec_to_df (genes_vec)
-
-        if (!is.null (markers) ){
-                compare_name <- unique (xx$compare_group)
-                genes_df <- order_genes (genes_df, markers, compare_name)
-        }
-        term_genes <- lapply (as.list (cat_clust), function (x) {paste (line_break_every(
-                                genes_df[genes_df$meta==x, 'gene'][1:show_gene_labels]), 
-                                collapse=', ')}) %>% unlist()
-        # remove the NA terms that would appear if the number of enriched genes
-        # is smaller than `show_gene_labels`
-        term_genes <- gsub (', NA', '', term_genes)
-        # prevent extra commas from appearing after each line break
-        term_genes <- gsub ('\n,', '\n', term_genes)
-        # prevent empty spaces
-        term_genes <- gsub (',( \n)+$', '', term_genes)
-
-        return (paste (cat_col, '\n(', term_genes, ')', sep=''))
-}
-
-line_break_every <- function (vec, separator='\n', every_n=2){
-        vec <- as.character (vec)
-        n_interval <- floor(length(vec)/every_n)
-        total_n <- n_interval*(every_n+1) + length(vec)%%every_n
-        final_vec <- rep (separator, total_n)
-        final_ind <- rep (T, total_n)
-        final_ind [seq (every_n+1, total_n, by=every_n+1)] <- F
-
-        final_vec [final_ind] <- vec
-        return (final_vec)
-}
-
-strsplit_add_sep <- function (string, sep){
-        vec <- str_split (string, sep)[[1]]
-        if (length(vec)>1){vec <- paste (vec, sep,sep='')}
-        vec[length(vec)] <- gsub (sep, '', vec[length(vec)])
-        return (vec)
-}
-
-#' @importFrom magrittr %>%
-wrap_one_long_sentence <- function (sentence, index_sepa, break_sepa, thres){
-        # break up a sentence into lines that already exist
-        str_x <- strsplit (sentence, break_sepa)[[1]]
-        sapply (str_x, function (i){
-                # if the sentence is long enough
-                if (length (strsplit(i,'')[[1]]) > thres){
-                        # for each line, search for points that 
-                        # allow for breaking, e.g. commas
-                        str_i <- strsplit_add_sep (i, index_sepa)
-                        sapply (1:length(str_i), function (k) {
-                                all_len <- length (strsplit (str_i[k], '')[[1]])
-                                # need to break if the next word is too long
-                                if (k + 1 <= length (str_i)) {
-                                        all_len2 <- length (strsplit (str_i[k+1], '')[[1]])
-                                }else{all_len2 <- all_len}
-                                if (all_len > thres | all_len2 > thres){
-                                        paste (str_i[k], break_sepa, sep='')
-                                }else{str_i[k]}
-                        # because `strsplit_add_sep` above, there is no need to
-                        # collapse with a separator
-                        }) %>% paste (collapse='') %>% return ()
-                # if the sentence is short, there is no need for breaking
-                }else{return (i)}
-        }) %>% paste (collapse=break_sepa) %>% return ()
-}
-
-#' Line break after very long words
-#'
-#' @param vec a character vector, e.g. `c('HLA-G','TBX3','CGA')`
-#' @param index_sepa where may a line break be inserted
-#' @param break_sepa the separator for line break, i.e. '\n' for most
-#' applications except `<br>` for markdown syntax.
-#' @param thres how many letters maximum in each line
-#' @description I could have used `stringr::str_wrap` but that function does
-#' not consider if the input string already has breaks
-wrap_long_sentence <- function (vec, index_sepa=',', break_sepa='\n', thres=8){
-        sapply (vec, function(x){
-                wrap_one_long_sentence (x, index_sepa, break_sepa, thres)
-        })
-}
-
-line_break <- function (vec, separator='\n', every_n=2, thres=8){
-        vec <- paste (line_break_every(vec, separator, every_n), collapse=',')
-        vec <- wrap_long_sentence (vec, break_sepa=separator, thres=thres)
-        # remove duplicated line breaks, i.e. don't want any empty lines
-        vec <- gsub ('\n\n','\n', vec)
-        # remove duplicated commas
-        vec <- gsub (',,',',', vec)
-
-        # remove NA fields
-        vec <- gsub (', NA', '', vec)
-        # prevent extra commas from appearing after each line break
-        vec <- gsub ('\n,', '\n', vec)
-        # prevent empty spaces
-        vec<- gsub (',( \n)+$', '', vec)
-        return (vec)
-}
-
-deparse_labels <- function (f1, f2){
-        deparse (bquote (atop (bold (.(f1)), .(f2))))
-}
-
-#' @importFrom ggplot2 aes
-#' @importFrom magrittr %>%
-gg_enrich_bar <- function (plot_df, AP, shrink_ratio=1., band_ratio=5,
-                           extend_axis_neg=1., extend_axis_pos=1., nudge_x=0.1,
-                           label_shift_ratio=0.05){
-        plot_df %>% dplyr::group_by (cluster, enriched) %>% 
-                dplyr::mutate (yval=as.character (gtools::mixedorder(abs (emean)))) %>%
-                dplyr::mutate (xmax=sign(emean)*max(abs (emean))) -> plot_df
-        
-        plot_df$enriched_cell <- as.character (plot_df$compare_group)
-        enriched_index <- plot_df$enriched >0
-        plot_df$enriched_cell [enriched_index] <- as.character (plot_df$cluster [enriched_index])
-        max_x <- (1+ extend_axis_pos)*max (plot_df$emean)
-        min_x <- (1+ extend_axis_neg)*min (plot_df$emean)
-
-        plot_df$neg_label <- plot_df$glabel
-        plot_df$glabel [!enriched_index] <- NA
-        plot_df$neg_label [enriched_index] <- NA
-
-        ggplot2::ggplot (plot_df, aes (x=emean, y= yval)) +
-                ggplot2::geom_bar (aes (fill=enriched_cell), stat='identity',
-                                   show.legend=F, width=0.3)+ 
-                ggplot2::geom_text (aes(label= glabel, 
-                                        x=emean+xmax*label_shift_ratio
-                                        ), parse=F,
-                                    family=AP$font_fam, hjust='left', 
-                                    size=AP$point_fontsize*shrink_ratio)+
-                ggplot2::geom_text (aes(label=neg_label, 
-                                        x=emean+xmax*label_shift_ratio
-                                        ), parse=F,
-                                    family=AP$font_fam, hjust='right', 
-                                    size=AP$point_fontsize*shrink_ratio)+
-                ggplot2::ylab('Description')+ ggplot2::labs(fill='p value') +
-                ggplot2::xlab ('enrichment score') +
-                ggplot2::facet_wrap (~cluster, scales='free_y')+
-                theme_TB ('dotplot', feature_vec=plot_df$enriched_cell, rotation=0,
-                          color_fill=T, AP=AP)+
-                ggplot2::geom_vline (xintercept=0, linetype='dashed', 
-                                     size=AP$pointsize/3, color='black') +
-                ggplot2::theme (axis.text.y=ggplot2::element_blank (), 
-                                strip.text=ggplot2::element_blank ()) +
-                ggplot2::ylab ('')+ ggplot2::xlim (c(min_x, max_x))+
-                enrich_arrow (plot_df, AP, band_ratio, nudge_x)+
-                add_custom_color (feature_vec=c(as.character (plot_df$cluster),
-                                                as.character (plot_df$compare_group)),
-                color_fill=F, aes_param=AP)
-}
-
-#' @importFrom ggplot2 aes
-#' @importFrom magrittr %>%
-enrich_arrow <- function (plot_df, aes_param, band_ratio=5, nudge_x=0.1){
-        ymax <- plot_df$yval %>% as.numeric () %>% max () 
-        y_max <- as.character (ymax+1)
-        x_max_df <- plot_df %>% dplyr::group_by (cluster, compare_group) %>% 
-                dplyr::summarise (max_x = max (emean), min_x = -max(emean) )
-
-        layer1 <- ggplot2::geom_segment( aes(x=0, xend=max_x, y=y_max, yend=y_max, 
-                                             color=cluster), data=x_max_df,
+        layer1 <- ggplot2::geom_segment( aes_string(x=0, xend='max_x', 
+                                                    y=y_max, yend=y_max, 
+                                             color=group1), data=x_max_df,
                     arrow = get_arrow (aes_param), size = band_ratio*aes_param$arrow_thickness, 
                     linejoin=aes_param$arrow_linejoin, show.legend=F)
 
-        layer2 <- ggplot2::geom_segment( aes (x=0, xend=min_x, y=y_max, 
-                                yend=y_max, color=compare_group), data=x_max_df,
+        layer2 <- ggplot2::geom_segment( aes_string (x=0, xend='min_x', y=y_max, 
+                                yend=y_max, color=group2), data=x_max_df,
                     arrow = get_arrow (aes_param), size = band_ratio*aes_param$arrow_thickness, 
                     linejoin=aes_param$arrow_linejoin, show.legend=F)
 
-        layer3 <- ggplot2::geom_text (aes (x=max_x, y=y_max, label=cluster, 
-                                           color=cluster), data=x_max_df,
+        layer3 <- ggplot2::geom_text (aes_string (x='max_x', y=y_max, label=group1, 
+                                           color=group1), data=x_max_df,
                 vjust='bottom', hjust='left', family=aes_param$font_fam,
                 size=aes_param$point_fontsize, nudge_x=nudge_x, show.legend=F)
-        layer4 <- ggplot2::geom_text (aes (x=min_x, y=y_max, label=compare_group, 
-                                           color=compare_group), data=x_max_df,
+        layer4 <- ggplot2::geom_text (aes_string (x='min_x', y=y_max, label=group2, 
+                                           color=group2), data=x_max_df,
                 vjust='bottom', hjust='right', family=aes_param$font_fam,
                 size=aes_param$point_fontsize, nudge_x=-nudge_x, show.legend=F)
         return (list(layer1, layer2, layer3, layer4))
 }
 
-#' Barplot for GSEA results
-#' 
-#' @param plot_data a dataframe generated from `run_GSEA_all_types`
-#' @param organism_db a gene database
-#' @param show_num how many terms to show
-#' @param markers a dataframe generated from `find_DE_genes` that contain the
-#' log fold change of gene expression. This information is used to order the
-#' appearance of genes in the plot labels.
-#' @param AP aesthetic parameters for plotting
-#' @param show_gene_labels how many genes to show after each term
-#' @param simplification whether to simplify the GO/KEGG/Reactome terms
-#' @param sim_dict a data frame with 2 columns: 'ori' for the original terms,
-#' 'sub' for the strings that will replace the original terms. The default is a
-#' a limited data frame built into this package.
-#' @param append_default_dict append default dictionary to simplify the terms
-#' @param compare_group_col which column in `markers` contain the
-#' comparison/reference group information.
-#' @param compare_group_name name of the comparison group if such a column does
-#' not exist.
-#' @param ... other parameters to pass onto `gg_enrich_bar`. They include:
-#' @param shrink_ratio by how much the fontsize of the labels should decrease
-#' @param band_ratio how much thicker the arrow should be compared to the
-#' `arrow_thickness` field in `AP`.
-#' @param label_shift_ratio by what percentage along the x axis to shift the
-#' term labels
-#' @param nudge_x by how much the labels for the arrow to shift away from the
-#' arrow head.
-#' @export
-enrich_bar <- function (plot_data, organism_db, show_num=4, markers=NULL,
-                        AP=NULL, show_gene_labels=3, simplification=T, 
-                        sim_dict=NULL, append_default_dict=T,
-                        compare_group_col='compare_group',
-                        compare_group_name='others', ...){
-        AP <- return_aes_param (AP)
-        sim_dict <- append_default_dictionary (sim_dict, append_default_dict)
-        relevant_terms <- remove_terms (plot_data$category, AP)
-        plot_data %>% dplyr::filter (category %in% relevant_terms) -> plot_data
-        if (simplification) {plot_data <- simplify_gsea (plot_data, sim_dict)} # from 'clean_terms.R'
-        if (!is.null (markers)){
-                if (compare_group_col %in% colnames (markers)){
-                        compare_group_name <- unique(markers$compare_group)
-                        if (length (compare_group_name) > 1){
-                                print ('Currently the function does not support 
-                                       multiple comparion groups')
-                                compare_group_name <- compare_group_name [1]
-                        }
-                        markers$compare_group <- markers [, compare_group_col]
-                }else{markers$compare_group <- compare_group_name}
-        }
-        plot_data$compare_group <- compare_group_name
-        plot_df <- summarise_gsea (plot_data, show_num)
-        plot_df$glabel <- term_gene_labels (plot_data, plot_df, organism_db,
-                                            show_gene_labels, markers)
-        return (gg_enrich_bar (plot_df, AP, ...))
-}

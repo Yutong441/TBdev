@@ -90,8 +90,9 @@ add_level_to_factor <- function (list_vec){
 #' # change the fontsize and font family
 #' return_aes_param (list (fontsize=12, font_fam='Arial') )
 #' @export
-return_aes_param <- function (aes_param){
-        data (format_conf, package='TBdev')
+return_aes_param <- function (aes_param, load_format_conf=NULL){
+        if (is.null (load_format_conf)) {data (format_conf, package='TBdev')
+        }else{format_conf <- load_format_conf}
         if (is.null (aes_param)){
                 aes_param <- format_conf
         }else{
@@ -136,4 +137,11 @@ fast_subset <- function (x, sel_columns=NULL, sel_rows=NULL, assay='RNA',
         VariableFeatures (x_new) <- var_fea[var_fea %in% rownames (exp_mat)]
         rm (var_fea, exp_mat)
         return (x_new)
+}
+
+#' @importFrom magrittr %>%
+#' @export
+fast_read_df <- function (save_path){
+        data.table::fread (save_path) %>% data.frame () %>%
+                tibble::column_to_rownames ('V1')
 }

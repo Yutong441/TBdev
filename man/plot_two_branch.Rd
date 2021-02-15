@@ -19,7 +19,9 @@ plot_two_branch(
   vert_trans = 0,
   branch_names = c(NA, NA, NA),
   plot_branch_names = T,
+  shorten_ratio = 0.9,
   thickness = 0.01,
+  show_tick = T,
   ...
 )
 }

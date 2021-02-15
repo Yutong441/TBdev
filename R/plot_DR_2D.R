@@ -106,7 +106,7 @@ gg_DimPlot <- function (x, feature, DR='pca', dims=c(1,2), size_highlight=NULL,
         # plotting
         ggplot2::ggplot (plot_data, aes_string (x=x_axis, y=y_axis ) ) +
                 ggplot2::geom_point (aes_string (fill = 'feature', size='size_high', shape='size_high'), 
-                            alpha=1, color=AP$point_edge_color, stroke=0.8) +
+                            color=AP$point_edge_color, stroke=AP$edge_stroke) +
                 highlight_shape_size (AP, highlight_ratio)+
                 ggplot2::labs (fill= feature) -> plot_ob
 

@@ -14,6 +14,7 @@ arrow_axis(
   reverse_y = F,
   axis_label_sim = F,
   nudge_dimname = 0,
+  nudge_ortho = 0,
   aes_param = list(pointsize = 3, font_fam = "Arial", point_fontsize = 6)
 )
 }
@@ -31,6 +32,9 @@ negative value is to the right}
 
 \item{nudge_dimname}{if \code{axis_label_sim} is True, then how much further to
 the right to move the dim name label}
+
+\item{nudge_ortho}{move the 'dim1', 'dim2' labels etc away from the
+respective axes orthogonally, i.e. not along the axes}
 
 \item{aes_param}{setting for pointsize, font_fam, point_fontsize,
 arrow_angle, arrow_length, arrow_length_unit, arrow_type, arrow_thickness,

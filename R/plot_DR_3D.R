@@ -44,7 +44,7 @@ dim_red_3D <- function (plot_data, x, y, z, color_by, all_theta=0, all_phi=0,
         ggplot2::ggplot (plot_data, aes_string (x=x, y=y, z=z) ) +
                 Stat3D (aes_string (fill=color, size='size_high', shape='size_high'), 
                         geom='point', theta=all_theta, phi=all_phi, color=
-                        AP$point_edge_color, stroke=0.8) +
+                        AP$point_edge_color, stroke=AP$edge_stroke) +
                 ggplot2::labs (fill=color)+
                 highlight_shape_size (AP, highlight_ratio) -> plot_ob
 

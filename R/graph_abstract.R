@@ -177,8 +177,8 @@ plot_two_branch <- function (dat, branch_col = 'epil_branch',
                              select_cells2 = NULL, AP=NULL,
                              time_axis=T, axis_label='time',
                              vert_trans=0, branch_names=c(NA,NA,NA), 
-                             plot_branch_names=T,
-                             thickness=0.01,...){
+                             plot_branch_names=T, shorten_ratio=0.9,
+                             thickness=0.01, show_tick=T,...){
         AP <- return_aes_param (AP)
         r1 <- range (dat [dat [, branch_col] %in% branch1, time_col])
         r2 <- range (dat [dat [, branch_col] %in% branch2, time_col])
@@ -210,13 +210,15 @@ plot_two_branch <- function (dat, branch_col = 'epil_branch',
                                  AP=AP, elevation=vert_trans,
                                  branch_name=branch_names[2], thickness=thickness,
                                  plot_branch_names=plot_branch_names,...),
-                theme_TB ('no_arrow', feature_vec=dat[, color_col], color_fill=T, AP=AP) 
+                theme_TB ('no_arrow', feature_vec=dat[, color_col], color_fill=T, aes_param=AP) 
         )
         if (time_axis){
-                ticks_df <- data.frame (x = 0:floor(max_b*0.9) )
+                if (show_tick) {ticks_df <- data.frame (x = 0:floor(max_b*shorten_ratio) )
+                }else{ticks_df <- NULL}
                 axis_layer <- get_time_axis (min_b, max_b, axis_label, AP, 
-                                             ticks_df=ticks_df, shorten_ratio=0.9, 
-                                             tick_height=max(dat[, time_col])*5e-4)
+                                             ticks_df=ticks_df, shorten_ratio=shorten_ratio, 
+                                             tick_height=max(dat[, time_col])*5e-4
+                                             )
                 plot_layers <- c(plot_layers, axis_layer) 
         }
         if (length (branch_names) >=3 & plot_branch_names){

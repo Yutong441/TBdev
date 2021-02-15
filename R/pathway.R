@@ -5,6 +5,7 @@
 #' @param pathway a dataframe with `pathway` column being the comon pathway
 #' names, and the `kegg_id` column being the KEGG ID for the pathways
 #' @param path_name the common name of a pathway
+#' @export
 get_path_genes <- function (pathway, path_name, species='human') {
         species_id <- get_kegg (species)
         pathway$kegg_id <- gsub ('^hsa', species_id, pathway$kegg_id)
@@ -196,7 +197,8 @@ get_module_score <- function (x, save_path, all_path=NULL, pgenes=NULL,
         }
         if ( file.exists (save_path) ){
                 print ('loading saved module scores')
-                module_scores <- utils::read.csv (save_path, row.names=1)
+                module_scores <- data.table::fread(save_path) %>% data.frame() %>%
+                        tibble::column_to_rownames ('V1')
         }else{
                 if (is.null (pgenes)){
                         pgenes <- list ()
@@ -301,7 +303,7 @@ get_all_path_view <- function (genes, markers, cell_type, organism_db,save_dir,
                                organism_name='human', ...){
         if (is.null (pathway_db)){data(KeggID, package='TBdev'); pathway_db <- KeggID}
         for (i in 1:nrow (pathway_db)){
-                get_pathway_view (genes, markers, cell_type, org.Hs.eg.db,
+                get_pathway_view (genes, markers, cell_type, organism_db,
                                   pathway_db$pathway[i], save_dir, ...)
         }
         junk <- dir (path = paste(save_dir, cell_type, sep='/'), pattern='hsa*.png')

@@ -4,7 +4,7 @@
 \alias{return_aes_param}
 \title{Obtain aesthetic settings}
 \usage{
-return_aes_param(aes_param)
+return_aes_param(aes_param, load_format_conf = NULL)
 }
 \arguments{
 \item{aes_param}{a named list of aesthetic settings}

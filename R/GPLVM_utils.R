@@ -23,7 +23,7 @@ pseudo_real_time <- function (dat, real_time, pseudotime, color_by, AP=NULL, ...
         ) 
         dat %>% ggplot2::ggplot (aes_string (x=real_time, y=pseudotime, fill=color_by) ) + 
                 ggplot2::geom_point (shape=AP$normal_shape, color=AP$point_edge_color, 
-                                     size=AP$pointsize)+
+                                     size=AP$pointsize, stroke=AP$edge_stroke)+
                 ggplot2::annotation_custom (anno_grob, ymin=ylevel, ymax=ylevel) +
                 theme_TB ('dotplot', feature_vec=dat [, color_by], color_fill=T, rotation=90, AP=AP)+
                 custom_tick (min_prec=1, num_out=3, ...) +
@@ -48,10 +48,10 @@ preprocess_df <- function (x_df, sel_col, genes){
         return (x_df )
 }
 
-gene_time_plot <- function (plot_df, point_df, AP, num_row, num_col, fill_lab){
+#' @importFrom ggplot2 aes aes_string
+gene_time_plot <- function (plot_df, point_df, AP, num_row, num_col, fill_lab, plot_ribbon=F){
         ggplot2::ggplot (plot_df ) +
                 ggplot2::geom_point (aes (x=pseudotime, y=mean_, color=color_by), data=point_df, shape=20)+
-                ggplot2::geom_ribbon (aes (x=x, y=mean_, ymin=ymin, ymax=ymax, fill=branch), alpha=0.8 )+
                 ggplot2::facet_wrap (~gene, scales='free', ncol=num_col, nrow=num_row) +
                 theme_TB ('dotplot', feature_vec=point_df$color_by, AP=AP, rotation=0) +
                 theme_TB ('dotplot', feature_vec = plot_df$branch, AP=AP, color_fill=T, rotation=0) +
@@ -59,7 +59,11 @@ gene_time_plot <- function (plot_df, point_df, AP, num_row, num_col, fill_lab){
                                 axis.text.y=ggplot2::element_blank ()) +
                 ggplot2::xlab ('pseudotime') + 
                 ggplot2::ylab (expression (italic('mRNA levels'))) +
-                ggplot2::labs (color=fill_lab) 
+                ggplot2::labs (color=fill_lab)  -> plot_ob
+        if (plot_ribbon){plot_ob <- plot_ob +
+                ggplot2::geom_ribbon (aes (x=x, y=mean_, ymin=ymin, ymax=ymax, fill=branch), alpha=0.8 )
+        }
+        return (plot_ob)
 }
 
 #' @importFrom magrittr %>%
@@ -88,7 +92,7 @@ get_expre_pseudo <- function (x, genes){
 gene_over_pseudotime <- function (x, exp_mat, genes, color_feature, metadata=NULL,
                                   num_col=4, num_row=NULL, branch_assignment=NULL, 
                                   peak_data=NULL, time_col='pseudotime', gene_col='feature', 
-                                  slot_data='data', assay='RNA', AP=NULL){
+                                  slot_data='data', assay='RNA', plot_ribbon=F, AP=NULL){
         AP <- return_aes_param (AP)
         plot_df <- get_expre_pseudo (x, genes)
 
@@ -114,7 +118,8 @@ gene_over_pseudotime <- function (x, exp_mat, genes, color_feature, metadata=NUL
         point_df %>% dplyr::filter (!is.na (color_by)) -> point_df
 
         print ('plotting')
-        plot_ob <- gene_time_plot (plot_df, point_df, AP, num_row, num_col, color_feature)
+        plot_ob <- gene_time_plot (plot_df, point_df, AP, num_row, num_col, color_feature, 
+                                   plot_ribbon=plot_ribbon)
         print ('plot vertical lines at peak times')
         if (!is.null(peak_data)){
                 selected_peak <- peak_data [peak_data [, gene_col] %in% genes,]

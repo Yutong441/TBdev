@@ -20,8 +20,8 @@ arrange_plots(
 )
 }
 \arguments{
-\item{grob_list}{a list of plots, must be grob objections. Use \code{is.grob()}
-to check. The exception is data frame.}
+\item{grob_list}{a list of plots. They can be ggplots, ComplexHeatmap,
+data.frame, character, image array}
 
 \item{save_path}{where the plots are saved}
 

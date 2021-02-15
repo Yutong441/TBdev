@@ -25,7 +25,7 @@ expand_length <- function (x, target_n){
         return (new_x)
 }
 
-push_plot_viewport <- function (plot_ob){
+push_plot_viewport <- function (plot_ob, text_args=NULL){
         if ( 'ggplot' %in% class (plot_ob) ){
                 #grid.draw (grid.grabExpr ( print (grob_list[[i]])))
                 # prevent text from being cutoff from the borders
@@ -37,14 +37,18 @@ push_plot_viewport <- function (plot_ob){
         }else if ('data.frame' %in% class (plot_ob) ) {
                 colnames (plot_ob) <- gsub ('\\.', ' ', colnames (plot_ob))
                 gridExtra::grid.table (plot_ob, rows=NULL)
+        }else if ('character' %in% class (plot_ob) & !is.null (text_args)){
+                custom_text_str (plot_ob, text_args)
+        }else if ('array' %in% class (plot_ob)){
+                grid::grid.raster (plot_ob)
         }else{ ComplexHeatmap::draw (plot_ob, newpage=F) }
 }
 
 #' Same function as `grid.arrange`, with the functionality of integrating
 #' ComplexHeatmap and adding panel labels
 #' 
-#' @param grob_list a list of plots, must be grob objections. Use `is.grob()`
-#' to check. The exception is data frame.
+#' @param grob_list a list of plots. They can be ggplots, ComplexHeatmap,
+#' data.frame, character, image array
 #' @param save_path where the plots are saved
 #' @param grid_layout, same as the argument in `grid.arrange`
 #' @param margin_width the width of the margin in inches. The default is 0.79in
