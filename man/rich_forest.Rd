@@ -69,9 +69,7 @@ information.}
 
 \item{AP}{aesthetic parameters for plotting}
 
-\item{...}{other parameters to pass onto \code{gg_silva} and \code{sagittae}.
-(I was a bit influenced by Aeneid book 4 about Dido's love for Aeneas
-when writing the code).}
+\item{...}{other parameters to pass onto \code{gg_silva} and \code{sagittae}.}
 
 \item{separate}{tree. You may change it by specifying \code{group}=...`}
 }

@@ -16,6 +16,7 @@ seurat_volcano(
   gene = "feature",
   weight_thres = 0.25,
   show_gene_num = 30,
+  logy = T,
   AP = NULL,
   ...
 )

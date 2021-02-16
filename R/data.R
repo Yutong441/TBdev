@@ -81,3 +81,39 @@
 #'         \item{in_vitro_cells}{the in vitro cell types}
 #' }
 "CT"
+
+#' Immunofluorescence quantification data
+#'
+#' @format a dataframe with the following columns for each cell (along the
+#' rows) at its maximum intensity projection:
+#' \describe{
+#'        \item{condition}{the signaling pathway tested}
+#'        \item{major_axis_length.struct}{The major axis length of an entire
+#'        cell, assuming cell is an ellipse}
+#'        \item{minor_axis_length.struct}{The minor axis length of an entire
+#'        cell, assuming cell is an ellipse}
+#'        \item{perimeter.struct}{the perimeter of an entire cell}
+#'        \item{area.struct}{the area of an entire cell}
+#'        \item{major_axis_length}{The major axis length of a nucleus
+#'        nucleus, assuming a nucleus is an ellipse}
+#'        \item{minor_axis_length}{The major minor axis length of a nucleus
+#'        nucleus, assuming a nucleus is an ellipse}
+#'        \item{perimeter}{the perimeter of a nucleus}
+#'        \item{area}{the area of a nucleus}
+#'        \item{series}{The series number in the original .lif file used for
+#'        blinding}
+#'        \item{HLAG}{The fluorescence level of HLA-G in a cell}
+#'        \item{CGB}{The fluorescence level of CGB in a cell}
+#'        \item{TFAP2C}{The fluorescence level of TFAP2C in the nucleus of a cell}
+#'        \item{HLAG_positive}{whether the cell is HLA-G positive}
+#'        \item{CGB_positive}{whether the cell is CGB positive}
+#'        \item{TFAP2C_positive}{whether the cell is TFAP2C positive}
+#'        \item{nuc_circ}{The nuclear circularity}
+#'}
+#' NB: 
+#' 1. due to the large size of the file, it is not included in the github
+#' package. Please download it following the README.md file instruction.
+#' 2. All units of measurements of cell morphology are in pixel number.
+#' 3. All units of measurements of fluorescence are scaled from 0 to 255 per
+#' volume.
+#' "all_cleaned"

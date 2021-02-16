@@ -228,7 +228,7 @@ plot_dim_red <- function (input_data, group.by, DR='pca', select_cells=NULL,
 plot_gene_PC <- function (x, group.by=NULL, show_markers=NULL, dims=c(1,2),
                           directory=NULL, label='all', DR='pca',
                           color_markers=NULL, DE_rank='logFC',
-                          cluster_col='group', feature_col='feature', AP=NULL){
+                          cluster_col='cluster', feature_col='feature', AP=NULL){
         AP <- return_aes_param (AP)
         plot_PC <- paste ('PC', dims, sep='')
         plot_gene <- x@reductions[[DR]]@feature.loadings 
@@ -239,7 +239,7 @@ plot_gene_PC <- function (x, group.by=NULL, show_markers=NULL, dims=c(1,2),
                 markers <- find_DE_genes (x, directory, group.by=group.by, label=label)
                 markers %>% dplyr::arrange (desc (!!as.symbol (DE_rank))) -> markers
                 markers <- markers [match (rownames (plot_gene), markers [, feature_col]), ]
-        }else{markers <- data.frame (cluster=rep (0, nrow(plot_gene) ))}
+        }else{markers <- data.frame (cluster=rep ('all', nrow(plot_gene) ))}
 
         print ('select markers')
         if (is.null (show_markers)){marker_list <- rownames (plot_gene)
