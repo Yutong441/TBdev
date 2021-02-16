@@ -327,33 +327,49 @@ plot_DE_genes <- function (x, markers, top_gene=1, by_group='cluster',
 
 #' Similar to Seurat VlnPlot, with more graphic controls
 #'
+#' @description This function was called 'seurat_violin' originally because of
+#' re-implementation of violin plot in seurat. Its functionality has now
+#' expanded to include scatter plots and boxplots.
 #' @param x a Seurat object
 #' @param features genes to plot, which will be split over by facets
 #' @param group.by by which cell feature
 #' @param num_col in how many columns the facets are arranged
+#' @param plot_type can be 'box', 'violin' or 'scatter'. 
+#' @param color_by only effective when plot_type is 'scatter'
 #' @param ... additional arguments for `custom_tick`
 #' @importFrom magrittr %>%
 #' @importFrom ggplot2 aes aes_string
 #' @export
 seurat_violin <- function (x, features, group.by, assay='RNA',
                            slot_data='data', num_col=NULL, free_xy='fixed',
-                           AP=NULL, box_plot=T, ...){
+                           AP=NULL, plot_type='box', color.by=NULL, ...){
         AP <- return_aes_param (AP)
-        x %>% Seurat::FetchData (vars=c(features, group.by)) %>%
-                magrittr::set_colnames (c(features, 'feature')) %>%
-                tidyr::gather ( 'gene', 'expr_val', -feature ) %>%
+        if (is.null (color.by)){color.by <- group.by}
+        if (plot_type != 'scatter'){color.by <- group.by; rota <- 90
+        }else{rota <- 0}
+
+        x %>% Seurat::FetchData (vars=c(features, group.by, color.by)) %>%
+                magrittr::set_colnames (c(features, 'feature', 'colorby')) %>%
+                tidyr::gather ( 'gene', 'expr_val', -feature, -colorby) %>%
                 tidyr::drop_na () %>%
                 dplyr::mutate ( gene = factor(gene, levels=features) ) -> plot_data
 
-        ggplot2::ggplot (plot_data, aes ( x= feature, y=expr_val, fill=feature) ) +
+        if ('pseudotime' %in% c(features, group.by, color.by)){plot_data %>% 
+                dplyr::filter (!colorby %in% c('PE', 'EPI', 'EPI1', 'EPI2') ) -> plot_data }
+
+        ggplot2::ggplot (plot_data, aes ( x= feature, y=expr_val, fill=colorby) ) +
                 ggplot2::facet_wrap (.~gene, ncol=num_col, scales=free_xy) +
                 ggplot2::labs (fill='')+ ggplot2::xlab ('')+
                 ggplot2::ylab (expression (paste (italic ('mRNA levels')))) +
-                theme_TB ('dotplot', feature_vec=x@meta.data[, group.by],
-                          color_fill=T, aes_param=AP, rotation=90)+
+                theme_TB ('dotplot', feature_vec=x@meta.data[, color.by],
+                          color_fill=T, aes_param=AP, rotation=rota)+
                 ggplot2::guides( fill= ggplot2::guide_legend(override.aes = list(alpha=1)))+
                 custom_tick (min_prec=1,...) -> plot_ob
-        if (box_plot){plot_ob <- plot_ob + ggplot2::geom_boxplot()
+
+        if (plot_type=='box'){plot_ob <- plot_ob + ggplot2::geom_boxplot()
+        }else if (plot_type=='scatter'){plot_ob <- plot_ob + 
+                ggplot2::geom_point (shape=AP$normal_shape, size=AP$pointsize, 
+                                     color=AP$point_edge_color, stroke=AP$edge_stroke)
         }else{plot_ob <- plot_ob +ggplot2::geom_jitter (shape=AP$normal_shape, 
                                 size=AP$pointsize, height=0, color=AP$point_edge_color, 
                                 stroke=AP$edge_stroke)}

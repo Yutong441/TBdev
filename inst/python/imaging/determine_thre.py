@@ -44,6 +44,6 @@ def filter_img (root, series_num, threshold, gene='HLAG', struct='cyto',
 # for HLA-G
 filter_img (root, '17', [6,7,8], gene='HLAG', clip_thres=50)
 # for CGB
-filter_img (root, '40', [6,7,8], gene='CGB', clip_thres=50)
+filter_img (root, '34', [6,7,8], gene='CGB', clip_thres=50)
 # for TFAP2C
 filter_img (root, '34', [6,7,8], gene='TFAP2C', clip_thres=50)

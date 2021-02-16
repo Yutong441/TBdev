@@ -114,6 +114,5 @@
 #' 1. due to the large size of the file, it is not included in the github
 #' package. Please download it following the README.md file instruction.
 #' 2. All units of measurements of cell morphology are in pixel number.
-#' 3. All units of measurements of fluorescence are scaled from 0 to 255 per
-#' volume.
 #' "all_cleaned"
+#' 3. All units of measurements of fluorescence are in the range from 0 to 255 
