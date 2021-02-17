@@ -25,6 +25,8 @@ Imports:
         dplyr,
         stringr,
         magrittr,
+        ggpubr,
+        rstatix,
         data.table,
         graphics,
         ggplot2,

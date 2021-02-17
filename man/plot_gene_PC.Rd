@@ -14,7 +14,7 @@ plot_gene_PC(
   DR = "pca",
   color_markers = NULL,
   DE_rank = "logFC",
-  cluster_col = "group",
+  cluster_col = "cluster",
   feature_col = "feature",
   AP = NULL
 )

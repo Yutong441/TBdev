@@ -99,9 +99,6 @@ lay_mat <- matrix(c(1,2,
                     ),
                   nrow=2) %>% t()
 arrange_plots (grob_list, paste (sup_save_dir, 'final_figureS3.pdf', sep='/'), lay_mat, 
-                  plot_width=9, plot_height=7/3)
+                  plot_width=9, plot_height=2.54, margin_width=1)
 save_indiv_plots (grob_list, paste (sup_save_dir, 'figureS3', sep='/'),
-                  lay_mat, plot_width=9, plot_height=7/3)
-
-gsea_conf <- read.csv (paste (sup_save_dir, 'PSEA_pairwise.csv', sep='/'))
-gsea_conf %>% filter (group=='hTSC_TURCO')
+                  lay_mat, plot_width=9, plot_height=2.54)

@@ -58,6 +58,8 @@ preprocess <- function (DAPI, bright, tree){
                         'child_ID', 'orientation', 'series.struct'))) 
 }
 
+# ----------Plotting----------
+
 #' @importFrom magrittr %>%
 #' @export
 quantile_plot <- function (dataf, label, y_log=F){
@@ -78,24 +80,6 @@ quantile_plot <- function (dataf, label, y_log=F){
         if (y_log){
                 return (plot_ob + ggplot2::scale_y_log10 ())
         }else{return (plot_ob)}
-}
-
-#' Plot distribution of features in amnioid
-#' 
-#' @export
-amnioid_hist <- function (plot_df, xaxis, bin_group=20, convert_radian=F){
-        plot_df %>% dplyr::group_by (ID.struct) %>% 
-                dplyr::summarise (mean_val = mean (!!as.symbol (xaxis))) -> plot_data
-        if (convert_radian){plot_data$mean_val <- plot_data$mean_val/pi*180}
-        plot_data$mean_val %>% sort () %>% diff () %>% mean() -> bw
-        bw <- bw*bin_group
-        ggplot2::ggplot (plot_data) +
-                ggplot2::geom_histogram (ggplot2::aes (x=mean_val), binwidth=bw, 
-                                         fill='gray', color='black')+
-                ggplot2::geom_density (ggplot2::aes (x=mean_val, y=bw*..count..), 
-                                       color='red')+
-                TBdev::theme_TB('dotplot', rotation=0)+
-                ggplot2::xlab (xaxis)
 }
 
 #' @importFrom magrittr %>%
@@ -154,11 +138,81 @@ boxplot_gene <- function (x_df, one_path, AP=NULL, genes=c('CGB', 'HLAG'),
                 ggplot2::facet_wrap (~gene) +
                 TBdev::theme_TB ('dotplot', rotation=0, aes_param=AP)+
                 ggplot2::ggtitle (one_path) -> plot_ob
-        if (logy){
-                plot_ob <- plot_ob + ggplot2::scale_y_log10()
-        }
+        if (logy){plot_ob <- plot_ob + ggplot2::scale_y_log10() }
         return (plot_ob)
 }
+
+remove_na <- function (x){x[is.na (x)] <- 0; return (x)}
+
+get_cond_ord <- function (){
+        c('OKAE', 'base', 'CHIR', 'EGF', 'FGF', 'FK', 'PD03')
+}
+
+#' Boxplot or Violin plot the count of cells expressing a certain marker
+#'
+#' @param x_df a dataframe
+#' @param gene which gene to plot
+#' @param group.by the experimental conditions
+#' @param rep.by the replication for each condition
+#' @param box_plot whether to use boxplot or violin plot
+#' @param express_thres the fluorescence value by which a cell is called
+#' positive for a gene
+#' @param perc whether to show the percentage of positive cells or the number
+#' of positive cells
+#' @param add_pval which comparison groups in `group.by` to compare with
+#' `control_group`. If it is 'all', all pairs will be compared
+#' @importFrom magrittr %>%
+#' @export
+frequency_plot <- function (x_df, gene, group.by='condition', rep.by='series',
+                            box_plot=T, express_thres=7, perc=T, add_pval=NULL,
+                            control_group='base', AP=NULL){
+        AP <- return_aes_param (AP)
+        x_df %>% dplyr::group_by (!!as.symbol(group.by), !!as.symbol (rep.by)) %>%
+                dplyr::mutate (gene_pos = ifelse (!!as.symbol (gene) > express_thres, 
+                                                  'positive', 'negative')) %>%
+                dplyr::count (gene_pos) %>% dplyr::rename (num=n) %>%
+                tidyr::spread (gene_pos, num) %>%
+                dplyr::mutate_if (is.numeric, remove_na ) %>% data.frame () -> x_proc
+
+        # order the conditions along the x axis
+        x_proc [, group.by] <- partial_relevel (x_proc [, group.by], get_cond_ord () )
+        if (perc){
+                # for percentage of positive cells
+                x_proc %>% dplyr::mutate (freq = 100*positive/(positive + negative) ) -> x_proc
+                y_lab <- paste (gene, '+ cells (%)', sep='')
+        }else{
+                # for the absolute number of positive cells
+                x_proc %>% dplyr::mutate (freq = positive) -> x_proc
+                y_lab <- paste (gene, '+ cells', sep='')
+        }
+        ggplot2::ggplot (x_proc, ggplot2::aes_string (x=group.by, y='freq') ) -> plot_ob
+
+        if (box_plot){plot_ob <- plot_ob +ggplot2::geom_boxplot (ggplot2::aes_string (fill=group.by)) 
+        }else{plot_ob <- plot_ob +ggplot2::geom_violin (ggplot2::aes_string (fill=group.by)) }
+
+        # Ironically for R, appending adjusted p value is complicated
+        if (!is.null (add_pval)){
+                # only keep interested comparisons
+                if (add_pval != 'all'){
+                        x_proc %>% dplyr::filter (!!as.symbol (group.by) %in% c(add_pval, 
+                                                control_group)) -> x_fil
+                }else{x_fil <- x_proc}
+                x_fil [, group.by] <- partial_relevel (x_fil [, group.by], get_cond_ord () )
+                x_fil %>% ggpubr::compare_means (as.formula (paste ( 'freq ~', group.by)), 
+                                       data=., ref.group=control_group) -> pstat
+                # calculate the position for the p value labels
+                rstatix::get_y_position (data=x_fil, formula=as.formula (paste ( 'freq ~', group.by)), 
+                                         ref.group=control_group) -> y_pos
+
+                pstat$y.position <- y_pos$y.position
+                plot_ob <- plot_ob + ggpubr::stat_pvalue_manual(pstat,
+                label='p.adj', size=AP$point_fontsize) 
+        }
+        plot_ob+theme_TB ('dotplot', color_fill=T, rotation=0, aes_param=AP)+
+                ggplot2::guides (fill=ggplot2::guide_legend ())+ ggplot2::ylab (y_lab)
+}
+
+# ----------Statistics----------
 
 wilcox_one_group <- function (xx, comp, ref, expr_col, group_col){
         group1 <- xx [xx[, group_col] == comp, expr_col]

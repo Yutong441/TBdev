@@ -55,4 +55,3 @@ def display_img (workspace):
     skimage.io.imshow (original.pixel_data)
     skimage.io.imshow (segmented.pixel_data, alpha=0.3)
     plt.show ()
-

@@ -62,11 +62,6 @@ def get_fluoro (org_ob, fluoro, tree_arr, label):
     return tree_arr
 
 def get_fluoro_fast (org_ob, fluoro, tree_arr, label):
-    # rescale to 0 and 255 (may not be necessary as the original lif files are
-    # already in this scale)
-    #if fluoro.max() - fluoro.min() !=0: 
-    #    fluoro = (fluoro- fluoro.min())/(fluoro.max() - fluoro.min() )*255
-
     # subtract away the background
     fluoro = (fluoro - fluoro.mean ()).clip (0, np.infty)
     org_flat = org_ob.lab_mask.reshape (-1)

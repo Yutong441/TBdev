@@ -15,7 +15,7 @@
 #' @export
 pseudo_real_time <- function (dat, real_time, pseudotime, color_by, AP=NULL, ...){
         AP <- return_aes_param (AP)
-        gsub ('^D', '', dat[, real_time]) %>% as.numeric () -> numer_date
+        gsub ('^[D-E]', '', dat[, real_time]) %>% as.numeric () -> numer_date
         time_cor <- stats::cor (numer_date, dat [, pseudotime])
         ylevel <- max (dat [, pseudotime])
         anno_grob <-  grid::textGrob (paste ('\u03c1 =', format (round (time_cor, 2), nsmall=2) ),

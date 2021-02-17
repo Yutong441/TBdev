@@ -1,14 +1,17 @@
-import os
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import skimage.io
-from skimage import measure
-import tifffile as tif
 import cp_pipeline as cpp
 
-# run pipeline
 def segment_3d (img_3d):
+    '''
+    Segment the maximum intensity projection of DAPI channel.
+    Args:
+        `img_3d`: a numpy array in the form of (C, H, W), which stands for
+        channel, height and width respectively. This can be an image of the
+        DAPI channel
+    Returns:
+        a list containing 
+        1. an array of shape (H, W) as the nuclei segmentation mask
+        1. an array of shape (H, W) as the inferred cell boundary segmentation mask
+    '''
     # obtain maximal intensity projection
     max_img = {'DNA': img_3d.max (0)}
     pipeline_filename = "segment_cyto.cppipe"
@@ -19,13 +22,21 @@ def segment_3d (img_3d):
     return seg_nuc.get_labels()[0][0], seg_cyto.get_labels()[0][0]
 
 if __name__ == '__main__':
+    import os
+    import numpy as np
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import skimage.io
+    from skimage import measure
+    import tifffile as tif
     import argparse
+    import re
+
     parser = argparse.ArgumentParser()
     parser.add_argument('f', type=str, help='DAPI image folder')
     args = parser.parse_args()
 
     all_files = os.listdir(args.f)
-    import re
     regex = re.compile ('series[0-9]+_DAPI.tiff')
     regex2 = re.compile ('_DAPI.tiff')
     for one_file in all_files:

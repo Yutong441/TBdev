@@ -12,8 +12,10 @@ sup_save_dir <- paste (root, 'manuscript/figureS2', sep='/')
 all_data <- get (load (paste (merge_dir, 'final_merged_tb.Robj', sep='/') ))
 
 # ----------figure S2A----------
+all_data$realtime <- gsub ('^D', 'E', all_data$date)
+all_data$realtime <- partial_relevel (all_data$realtime)
 show_meta <- all_data@meta.data [!(is.na(all_data$MGP_PT) | all_data$broad_type %in% c('PE', 'EPI')), ]
-p1 <- pseudo_real_time (show_meta, 'date', 'MGP_PT', 'broad_type', lower_b=0) 
+p1 <- pseudo_real_time (show_meta, 'realtime', 'MGP_PT', 'broad_type', lower_b=0) 
 
 # ----------figure S2C-D: 2-WD ----------
 data_dir <- paste (root_dir, 'GPLVM/hier_GP_tf1/', sep='/')
@@ -116,9 +118,9 @@ p8 <- seurat_heat (vivo_scale, group.by=c('broad_type', 'date'),
                  column_reorder_levels = list (format_conf$branch_order, format_conf$cell_order),
                  column_legend_labels= c('cell type', 'date'), 
                  row_legend_labels='WGCNA clusters',
-                 cluster_rows=T, heat_name='norm count', center_scale=T,
+                 cluster_rows=T, heat_name='module score', center_scale=T,
                  column_rotation=90,
-                 main_width=16, main_height=14,
+                 main_width=16, main_height=11,
                  automatic=F, left_HA=F, slot_data='counts'
 )
 
@@ -143,7 +145,7 @@ plotlist <- custom_net_diff_nets (fil_vivo, plot_gene, markers, nudge_ratio=0.1,
 p9 <- plotlist[[1]]
 
 # combine all the plots
-p34_list <- list (theme (legend.position='top', legend.box='vertical' ),
+p34_list <- list (theme (legend.position='right', legend.box='vertical'),
                   labs(color='cell type'))
 grob_list <- list (p1+theme (legend.position='top'), 
                    p2+theme (legend.position='top'), 
@@ -157,7 +159,7 @@ lay_mat <- matrix(c(1, 1, 3, 3, 4, 4,
                     ),
                   nrow=6) %>% t()
 arrange_plots (grob_list, paste (sup_save_dir, 'final_figureS2.pdf', sep='/'), 
-                  lay_mat, plot_width=3, plot_height=7)
+                  lay_mat, plot_width=3, plot_height=6.3, margin_width=1)
 
 save_indiv_plots (grob_list, paste (sup_save_dir, 'figureS2', sep='/'),
                   lay_mat, plot_width=3, plot_height=7

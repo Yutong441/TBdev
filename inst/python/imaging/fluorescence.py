@@ -35,12 +35,10 @@ if __name__ == '__main__':
             org = Organ (seg_org[:,:,np.newaxis], log_f)
             org.get_centers ()
             org.get_index ()
-            #org.show_centers (disp=False)
 
             img = Organ (seg_img[:,:,np.newaxis], log_f)
             img.get_centers ()
             img.get_index ()
-            #img.show_centers (disp=False)
 
             stats1 = stat_object (img.lab_mask)
             stats2 = stat_object (org.lab_mask)
@@ -84,28 +82,3 @@ if __name__ == '__main__':
             stats2['series'] = one_file
             stats2.to_csv (args.f+'/'+regex3.sub ('cyto_seg.csv', one_file))
     log_f.close ()
-
-#root='/mnt/c/Users/Yutong/Documents/bioinformatics/reproduction/results/imaging/data/all/'
-#seg_org = skimage.io.imread (root+'/'+'series1_cyto_seg.tiff')
-#seg_img = skimage.io.imread (root+'/'+'series1_nuc_seg.tiff')
-#
-#log_f = open (root+'/'+'series_log.txt', 'w')
-#log_f.write ('image dimension= {}, {} \n'.format(*seg_img.shape))
-#org = Organ (seg_org[:,:,np.newaxis], log_f)
-#org.get_centers ()
-#org.show_centers (disp=True)
-#
-#img = Organ (seg_img[:,:,np.newaxis], log_f)
-#img.get_centers ()
-#img.show_centers (disp=True)
-#
-#stats1 = stat_object (img.lab_mask)
-#stats2 = stat_object (org.lab_mask)
-#
-#tree = tp.find_parent_fast (img, org)
-#tree_df = pd.DataFrame (tree, columns=['child', 'parent'])
-#
-#img_fl = skimage.io.imread (root+'/'+'series0_HLAG.tiff')
-#img_fl = img_fl.max (2, keepdims=True)
-#tree_df = tp.get_fluoro_fast (img, img_fl, tree_df, 'TFAP2C')
-#tree_df.columns

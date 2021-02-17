@@ -102,3 +102,39 @@ conda create -n scrna python=3.6
 conda install -c bioconda STREAM
 conda deactivate scrna
 ```
+
+## Image quantification
+In this paper, segmentation of nuclei and inference of cytoplasm in
+immunofluorescence images are carried out using the python package
+cellprofiler, which can be installed using pip:
+
+```bash
+python3.8 -m venv cellprofiler
+source cellprofiler/bin/activate
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+export PATH=$PATH:/home/ubuntu/.local/bin
+
+python3.8 -m pip install wheel
+
+python3.8 -m  pip install \
+  -f https://extras.wxpython.org/wxPython4/extras/linux/gtk3/ubuntu-18.04  \
+  wxPython==4.1.0
+
+python3.8 -m pip install cellprofiler
+python3.8 -m pip install pandas
+```
+
+The morphological features of the nuclei and cell outlines are computed via
+skimage. The statistics are done in R. You can run the entire process by:
+
+```bash
+cd inst/python/imaging
+./quantify.sh signaling_screen.lif all DAPI HLAG CGB TFAP2C
+# Please change the path for data_dir and env_dir variable accordingly in the
+# script inst/python/imaging/quantify.sh
+```
+
+The first argument is the original .lif file containing the immunofluorescence
+images. The second argument 'all' is a descriptor for this file. This is
+followed by the order of the fluorescence channels in the .lif file. In this
+case, the .lif file contains the channels for DAPI, HLA-G, CGB and TFAP2C.

@@ -13,7 +13,8 @@ seurat_violin(
   num_col = NULL,
   free_xy = "fixed",
   AP = NULL,
-  box_plot = T,
+  plot_type = "box",
+  color.by = NULL,
   ...
 )
 }
@@ -26,8 +27,14 @@ seurat_violin(
 
 \item{num_col}{in how many columns the facets are arranged}
 
+\item{plot_type}{can be 'box', 'violin' or 'scatter'.}
+
 \item{...}{additional arguments for \code{custom_tick}}
+
+\item{color_by}{only effective when plot_type is 'scatter'}
 }
 \description{
-Similar to Seurat VlnPlot, with more graphic controls
+This function was called 'seurat_violin' originally because of
+re-implementation of violin plot in seurat. Its functionality has now
+expanded to include scatter plots and boxplots.
 }

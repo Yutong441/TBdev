@@ -20,11 +20,31 @@ dev.off()
 pval_all <- compare_average (all_data , 'condition', ref='base')
 write.csv (pval_all, paste (save_dir, 'pval_to_base.csv', sep='/'))
 
-# compare cell number
-all_data %>% filter (CGB_pos == 'TRUE' & HLAG_pos=='TRUE') %>% 
+# compare absolute cell number
+devtools::load_all ('..', export_all=F)
+cairo_pdf (paste (save_dir, 'Box_HLAG_num.pdf', sep='/'), width=7, height=7)
+frequency_plot (all_data, 'HLAG', box_plot=T, add_pval='PD03', perc=F)
+dev.off()
+
+cairo_pdf (paste (save_dir, 'Box_CGB_num.pdf', sep='/'), width=7, height=7)
+frequency_plot (all_data, 'CGB', box_plot=T, add_pval=c('EGF', 'FK', 'PD03'), perc=F)
+dev.off()
+
+all_data %>% filter (HLAG_pos=='TRUE') %>% 
         group_by (series, condition) %>%
         count (HLAG_pos) %>% ggplot (aes (x=condition, y=n, fill=condition) ) +
         geom_boxplot () + ylab ('cell number')+
+        theme_TB ('dotplot', color_fill=T, rotation=0)+
+        guides (fill=guide_legend ())
+
+# relative cell number
+all_data %>% group_by (series, condition) %>%
+        count (CGB_pos) %>% mutate (CGB_pos = ifelse (CGB_pos, 'pos', 'neg')) %>%
+        spread (CGB_pos, n) %>% 
+        mutate (pos = remove_na (pos) ) %>%
+        mutate (freq = pos/(pos+neg)) %>%
+        ggplot (aes (x=condition, y=freq, fill=condition) ) +
+        geom_boxplot () + ylab ('cell frequency')+
         theme_TB ('dotplot', color_fill=T, rotation=0)+
         guides (fill=guide_legend ())
 
