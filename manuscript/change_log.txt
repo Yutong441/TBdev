@@ -1,9 +1,0 @@
-# 8 Feb
-figure S1: completely change F, G and H
-figure 2: added H
-          very slightly changed I
-figure S2: merged E,F,G into E
-           changed H to F, with incorporation of EPI/PE
-           added G
-figure S3: removed D
-           added D and E

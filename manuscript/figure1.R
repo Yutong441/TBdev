@@ -27,7 +27,7 @@ DE_genes %>% filter (!group %in% CT$non_TB_lineage) %>%
         dplyr::select (group, feature) %>% deframe () -> show_genes
 
 p1 <- plot_dim_red (in_vivo, group.by= c('broad_type'), DR='pca', return_sep=T,
-                    nudge_ratio=0.2, plot_type='dim_red_sim')
+                    nudge_ratio=0.2, plot_type='dim_red_sim', nudge_ortho=0.7)
 p2 <- seurat_violin (in_vivo, features=plot_genes, group.by='broad_type', lower_b=0)
 p3 <- seurat_heat (tb_only, color_row=show_genes, group.by = c('broad_type', 'date'), 
                        slot_data='data', heat_name='norm count', center_scale=T,

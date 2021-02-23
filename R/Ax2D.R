@@ -105,13 +105,14 @@ arrow_to_graph_sim <- function (Arr, aes_param, nudge_ratio, dim_elevation=0.2,
                     linejoin=aes_param$arrow_linejoin)
         # x axis
         layer2 <- geom_text (aes (x=xlabel, y=ylabel, label=axis_labels), data =
-                   Arr$df[1,], nudge_y=-nudge_ortho, nudge_x=Arr$rx*nudge_ratio*Arr$dx, 
+                   Arr$df[1,], nudge_y=-Arr$rx*nudge_ortho, nudge_x=Arr$rx*nudge_ratio*Arr$dx, 
                    size=aes_param$point_fontsize, hjust='center', vjust=1,
                    fontface='italic', angle=0, family=aes_param$font_fam)
 
         # y axis
         layer3 <- geom_text (aes (x=xlabel, y=ylabel, label=axis_labels), data =
-                   Arr$df[2,], nudge_y=Arr$ry*nudge_ratio*Arr$dy, nudge_x=-nudge_ortho,
+                   Arr$df[2,], nudge_y=Arr$ry*nudge_ratio*Arr$dy, 
+                   nudge_x=-Arr$ry*nudge_ortho,
                    size=aes_param$point_fontsize, vjust=0, hjust='center',
                    fontface='italic', angle=90, family=aes_param$font_fam)
 

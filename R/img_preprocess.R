@@ -165,7 +165,7 @@ get_cond_ord <- function (){
 #' @export
 frequency_plot <- function (x_df, gene, group.by='condition', rep.by='series',
                             box_plot=T, express_thres=7, perc=T, add_pval=NULL,
-                            control_group='base', AP=NULL){
+                            control_group='base', AP=NULL, sum_table=F){
         AP <- return_aes_param (AP)
         x_df %>% dplyr::group_by (!!as.symbol(group.by), !!as.symbol (rep.by)) %>%
                 dplyr::mutate (gene_pos = ifelse (!!as.symbol (gene) > express_thres, 
@@ -185,6 +185,11 @@ frequency_plot <- function (x_df, gene, group.by='condition', rep.by='series',
                 x_proc %>% dplyr::mutate (freq = positive) -> x_proc
                 y_lab <- paste (gene, '+ cells', sep='')
         }
+        if (sum_table){
+                x_proc %>% dplyr::group_by (condition) %>% 
+                        dplyr::summarise_if (is.numeric, mean) %>% data.frame () %>% print ()
+        }
+
         ggplot2::ggplot (x_proc, ggplot2::aes_string (x=group.by, y='freq') ) -> plot_ob
 
         if (box_plot){plot_ob <- plot_ob +ggplot2::geom_boxplot (ggplot2::aes_string (fill=group.by)) 

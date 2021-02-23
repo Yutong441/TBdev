@@ -23,30 +23,14 @@ write.csv (pval_all, paste (save_dir, 'pval_to_base.csv', sep='/'))
 # compare absolute cell number
 devtools::load_all ('..', export_all=F)
 cairo_pdf (paste (save_dir, 'Box_HLAG_num.pdf', sep='/'), width=7, height=7)
-frequency_plot (all_data, 'HLAG', box_plot=T, add_pval='PD03', perc=F)
+frequency_plot (all_data, 'HLAG', box_plot=T, add_pval='PD03', perc=T, sum_table=T)
 dev.off()
 
 cairo_pdf (paste (save_dir, 'Box_CGB_num.pdf', sep='/'), width=7, height=7)
-frequency_plot (all_data, 'CGB', box_plot=T, add_pval=c('EGF', 'FK', 'PD03'), perc=F)
+frequency_plot (all_data, 'CGB', box_plot=T, add_pval=c('EGF', 'FK', 'PD03'), perc=T, sum_table=T)
 dev.off()
 
-all_data %>% filter (HLAG_pos=='TRUE') %>% 
-        group_by (series, condition) %>%
-        count (HLAG_pos) %>% ggplot (aes (x=condition, y=n, fill=condition) ) +
-        geom_boxplot () + ylab ('cell number')+
-        theme_TB ('dotplot', color_fill=T, rotation=0)+
-        guides (fill=guide_legend ())
-
-# relative cell number
-all_data %>% group_by (series, condition) %>%
-        count (CGB_pos) %>% mutate (CGB_pos = ifelse (CGB_pos, 'pos', 'neg')) %>%
-        spread (CGB_pos, n) %>% 
-        mutate (pos = remove_na (pos) ) %>%
-        mutate (freq = pos/(pos+neg)) %>%
-        ggplot (aes (x=condition, y=freq, fill=condition) ) +
-        geom_boxplot () + ylab ('cell frequency')+
-        theme_TB ('dotplot', color_fill=T, rotation=0)+
-        guides (fill=guide_legend ())
+# cell number table
 
 # ----------All pathway comparisons----------
 data (format_conf)

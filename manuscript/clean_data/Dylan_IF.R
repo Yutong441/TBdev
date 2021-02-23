@@ -11,10 +11,14 @@ all_data$nuc_circ <- 4*pi*all_data$area/all_data$perimeter^2
 features <- c('cell_volume', 'major_axis_length', 'minor_axis_length',
               'structure_volume', 'nuc_circ')
 quantile_plot (all_data, features, y_log=T) 
+dim (all_data)
+# [1] 31934    32
 
 # check the QC after filtering
 all_data2 <- all_data [all_data$nuc_circ > 0.3,]
 quantile_plot (all_data2, features, y_log=T) 
+dim (all_data2)
+# [1] 31836    32
 
 # append the condition labels
 # I have been single blinded throughout the quantifications until this stage
