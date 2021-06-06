@@ -1,9 +1,11 @@
 import numpy as np
 import time
-import sys, os
+import sys, os, re
+import pandas as pd
 from shutil import copyfile
 import tensorflow as tf
 import gpflow
+from periodicity import Periodic
 
 def MapTo01(y):
     return (y.copy() - y.min(0)) / (y.max(0) - y.min(0))
@@ -38,7 +40,8 @@ class GrandPrixModel(object):
     def __init__(self, data, n_latent_dims=1, n_inducing_points=10,
             kernel={'name':'RBF', 'ls':1.0, 'var':1.0}, mData=None,
             latent_prior_mean=None, latent_prior_var=1., latent_mean=None,
-            latent_var=0.1, inducing_inputs=None, dtype='float64'):
+            latent_var=0.1, inducing_inputs=None, dtype='float64',
+            periodic=False):
         self.Y = None
         self.Q = n_latent_dims
         self.M = n_inducing_points
@@ -53,7 +56,7 @@ class GrandPrixModel(object):
         self.set_Y(data)
         self.N, self.D = self.Y.shape
 
-        self.set_kern(kernel)
+        self.set_kern(kernel, periodic=periodic)
 
         self.set_X_prior_mean(latent_prior_mean)
         self.set_X_prior_var(latent_prior_var)
@@ -173,7 +176,7 @@ class GrandPrixModel(object):
     def set_Y(self, data):
         self.Y = data
 
-    def set_kern(self, kernel):
+    def set_kern(self, kernel, periodic=False):
         if kernel is not None:
             if 'name' in kernel:
                 kernelName = kernel['name']
@@ -181,6 +184,8 @@ class GrandPrixModel(object):
                 ls = kernel['ls']
             if 'var' in kernel:
                 var = kernel['var']
+            if 'period' in kernel:
+                period = kernel['period']
 
         if kernelName == 'RBF':
             k = gpflow.ekernels.RBF(self.Q, lengthscales=ls, variance=var, ARD=True)
@@ -188,9 +193,10 @@ class GrandPrixModel(object):
             k = gpflow.kernels.Matern32(self.Q, lengthscales=ls, variance=var)
             # k =  k + gpflow.kernels.White(input_dim, variance=0.01)
         elif kernelName == 'Periodic':
-            k = gpflow.kernels.Periodic(self.Q)
-            k.lengthscales = ls
-            k.period = 1.
+            k = gpflow.kernels.PeriodicKernel(self.Q, period=period,
+                    lengthscales=ls, variance=var)
+        if periodic:
+            k = Periodic (base=k)
 
         self.kern = k
 
@@ -260,22 +266,31 @@ def fit_model(
         dtype='float64',
         disp = True,
         maxitr = 1000,
-        return_pred = False):
+        return_pred = False,
+        pred_value=None,
+        pred_noise=True,
+        periodic=False):
     sys.argv.append(dtype)
 
     # zero the mean, set the standard deviation to 1
     m = GrandPrixModel(data, n_latent_dims, n_inducing_points,
             kernel, mData, latent_prior_mean, latent_prior_var, latent_mean,
-            latent_var, inducing_inputs, dtype)
+            latent_var, inducing_inputs, dtype, periodic=periodic)
     m.set_jitter_level(jitter)
     m.set_trainable(fix_parameters)
     m.build()
 
     m.fit(maxiter=maxitr, display=disp)
+    print (print_kernel_summary (m.m))
     if return_pred:
-        posterior = m.get_latent_dims()
-        pt_pred_out, var_pred_out = m.m.predict_y (posterior[0])
-        return posterior, (pt_pred_out, var_pred_out)
+        if pred_value is None:
+            posterior = m.get_latent_dims()
+        else: posterior = [pred_value]
+        if pred_noise:
+            pt_pred_out, var_pred_out = m.m.predict_y (posterior[0])
+        else:
+            pt_pred_out, var_pred_out = m.m.predict_f (posterior[0])
+        return m.get_latent_dims(), (pt_pred_out, var_pred_out)
     else:
         return posterior, m
 

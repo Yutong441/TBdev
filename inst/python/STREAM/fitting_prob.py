@@ -18,6 +18,11 @@ def get_mat_likelihood (x, mu, var, return_mean=True):
     return np.exp (py_mean_log_likelihood (mu, var, x, return_mean=return_mean))
 
 def fitting_likelihood (ori_data, new_X, new_meta, group_by, pt_mean, pt_var):
+    '''
+    `ori_data`: cell x gene
+    `new_X`: cell x gene
+    `new_meta`: cell x meta labels
+    '''
     ori_mean = ori_data.values.mean(1, keepdims=True)
     ori_std  = ori_data.values.std(1, keepdims=True)
 
@@ -29,6 +34,6 @@ def fitting_likelihood (ori_data, new_X, new_meta, group_by, pt_mean, pt_var):
     all_types = np.unique (all_data.obs[group_by])
     all_prob = {}
     for one_type in all_types:
-        all_prob[one_type] = get_likelihood (all_data, one_type, 'assigned_cluster',
+        all_prob[one_type] = get_likelihood (all_data, one_type, group_by,
                 pt_mean.values, pt_var.values)
     return pd.DataFrame (all_prob)

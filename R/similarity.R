@@ -86,6 +86,7 @@ cell_violin <- function (all_cor, metadata, feature, column_scale=T,
         plot_corr$cell_type <- partial_relevel (plot_corr$cell_type, AP$cell_order)
         plot_corr %>% dplyr::select (!all_cells) %>%
                 tidyr::gather ('cell_type2', 'expr_val', -cell_type) -> plot_data
+        plot_data$cell_type2 <- partial_relevel (plot_data$cell_type2, AP$cell_order)
         ggplot2::ggplot (plot_data, ggplot2::aes (x=cell_type, y=expr_val, fill=cell_type) ) +
                 ggplot2::facet_wrap (~cell_type2, ncol=num_col) +
                 ggplot2::ylab ('scaled mean correlation')+

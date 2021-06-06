@@ -47,7 +47,7 @@ term_gene_labels <- function (xx, sum_gsea, organism_db, show_gene_labels=3,
         # merge all entrez ID into a single vector, which is converted into
         # common gene names. This is much faster.
         genes_vec <- gsea_entrez_to_name (do.call (c, term_genes), organism_db)
-        names (genes_vec) <- gsub ('__[0-9]+$', '', names (genes_vec) )
+        names (genes_vec) <- gsub ('__[0-9]*$', '', names (genes_vec) )
         genes_df <- gene_vec_to_df (genes_vec)
 
         if (!is.null (markers) ){

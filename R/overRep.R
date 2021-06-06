@@ -99,7 +99,9 @@ gg_bar <- function (xx, showCategory, organism_db=NULL, AP=NULL,
 #' DE genes may be used
 #' @param GO_data result from go_data
 #' @param organism_db which organism database, for example, org.Hs.eg.db
-#' @param organism_name which organism for KEGG and Reactome
+#' @param organism_name which organism for KEGG and Reactome, e.g. 'human'. If
+#' `enrich_area` is TF or MIRNA, the organism name should be for the gprofiler
+#' database, e.g.  'hsapiens', 'mmusculus'
 #' @param logFC_term which column in `markers` contains the information for
 #' ranking gene expression
 #' @param logFC_thres threshold of `logFC_term` beyond which a gene is selected
@@ -107,8 +109,15 @@ gg_bar <- function (xx, showCategory, organism_db=NULL, AP=NULL,
 #' @param enrich_area either KEGG or GO or reactome
 #' @export
 compare_cluster_enrichment <- function (markers, GO_data, organism_db, organism_name='human', 
-                                        logFC_term = 'logFC', pval_term='padj',
+                                        logFC_term = 'logFC', pval_term='padj', gene_name='feature',
                                         log_FC_thres=0.25, pval_thres=0.05, enrich_area='KEGG'){
+        if (enrich_area %in% c('TF', 'MIRNA')){
+                return (compare_TF (markers, enrich_area=enrich_area,
+                                    logFC_term=logFC_term, gene_name=gene_name,
+                                    log_FC_thres=log_FC_thres,
+                                    pval_thres=pval_thres,
+                                    organism_name=organism_name))
+        }
         if (class (markers) == 'data.frame'){
                 markers %>% dplyr::filter ( !!as.symbol (logFC_term) > log_FC_thres ) -> markers
                 if (pval_term %in% colnames (markers)){
@@ -116,7 +125,7 @@ compare_cluster_enrichment <- function (markers, GO_data, organism_db, organism_
                 }
                 cell_type <- unique (markers$group)
                 markers$entrez <- AnnotationDbi::mapIds(organism_db, as.character (
-                                                markers$feature), 'ENTREZID', 'SYMBOL')
+                                                markers [, gene_name]), 'ENTREZID', 'SYMBOL')
                 gene_list <- lapply ( as.list (cell_type), function (x){
                                              markers$entrez [markers$group == x]} )
                 names (gene_list) <- cell_type
@@ -157,6 +166,52 @@ compare_reactome <- function (gene_list, cutoff=0.05){
         return (ra_obj)
 }
 
+# ----------TF motif enrichment----------
+
+compare_TF_one_group <- function (one_list, gene_universe, enrich_area='TF',
+                                  organism='hsapiens'){
+        gprofiler2::gost (sel_genes,
+                          organism=organism,
+                          custom_bg = as.character (gene_universe),
+                          sources=enrich_area,
+                          correction_method='fdr') 
+}
+
+#' @importFrom magrittr %>%
+compare_TF_wrap <- function (cluster_label, markers, organism_name='hsapiens', 
+                             logFC_term = 'logFC', pval_term='padj', gene_name='feature',
+                             log_FC_thres=0.25, pval_thres=0.05, enrich_area='KEGG'){
+        sel_markers <- markers [markers$group == cluster_label, ]
+        sel_genes <- sel_markers [sel_markers [, logFC_term] > log_FC_thres, gene_name]
+        all_genes <- sel_markers [, gene_name]
+        compare_TF_one_group (sel_genes, all_genes, enrich_area=enrich_area,
+                              organism=organism_name) -> one_gost
+        if (!is.null (one_gost[['result']])){
+                one_gost[['result']] %>%
+                        dplyr::mutate (Cluster = cluster_label) %>%
+                        dplyr::filter (p_value < pval_thres) 
+        }else{return (NULL)}
+}
+
+#' @importFrom magrittr %>%
+compare_TF <- function (markers, ...){
+        compare_fun <- function (clust) {compare_TF_wrap (cluster_label=clust, 
+                                                          markers=markers,...)}
+        rbind_list <- function (inp_list){do.call(rbind, inp_list)}
+        markers$group %>% unique () %>% as.list () %>% lapply (
+                compare_fun) %>% rbind_list() %>%
+        dplyr::rename (p.adjust=p_value) %>% 
+        dplyr::rename (Description=term_name) %>% 
+        dplyr::rename (Count=intersection_size) %>%
+        dplyr::rename (ID=term_id) %>%
+        dplyr::mutate (Description=gsub ('; motif.*$', '', Description)) %>%
+        dplyr::mutate (Description=trimws (gsub ('^Factor:', '', Description))) %>%
+        tidyr::unite ('GeneRatio', c('Count', 'term_size'), sep='/' ) %>%
+        dplyr::group_by (Description, Cluster) %>%
+        dplyr::slice_min (p.adjust) %>% 
+        dplyr::ungroup() %>% data.frame ()
+}
+
 #' Visualise results from over-representation test
 #'
 #' @param xx result from `compareCluster` or just a dataframe
@@ -189,6 +244,9 @@ display_cluster_enrichment <- function (xx, show_graph='emap',
         sim_dict <- append_default_dictionary (sim_dict, append_default_dict)
         if (!is.null (subset_cluster)){
                 xx <- subset_terms (xx, subset_cluster)
+        }
+        if (class (xx) == 'data.frame'){
+                xx <- methods::new ('compareClusterResult', compareClusterResult=xx)
         }
         if (clean_results){ 
                 ori_terms <- nrow (xx@compareClusterResult)

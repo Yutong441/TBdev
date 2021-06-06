@@ -90,8 +90,8 @@ theme_dotplot <- function (aes_param = list(fontsize=15,
               # hjust = 0.95, make sure the labels are assigned to the bottom
               # of the x axis
               axis.text.x = element_text(angle=rotation, family=aes_param$font_fam,
-                                         hjust=0.95, size=aes_param$fontsize),
-              axis.text.y = element_text(family=aes_param$font_fam, size=aes_param$fontsize),
+                                         hjust=0.95, size=aes_param$fontsize, color='black'),
+              axis.text.y = element_text(family=aes_param$font_fam, size=aes_param$fontsize, color='black'),
               axis.title.x = element_text(family=aes_param$font_fam, size=aes_param$fontsize),
               axis.title.y = element_text(family=aes_param$font_fam, size=aes_param$fontsize),
               axis.ticks.x = element_blank(),
@@ -222,7 +222,7 @@ custom_color <- function (feature_vec, aes_param = list (color_vec=NULL,
         if (proceed == T) {new_color_vec <- aes_param$color_vec
         }else if (proceed == F){
                 # determine if the feature corresponds to dates
-                match_dates <- gsub ('^[D-E]', '', feature_vec)
+                match_dates <- gsub ('^([D-E]|CS)', '', feature_vec)
                 # handle any exceptions: refer to `date_color_vec` above
                 match_index <- !(match_dates %in% names (aes_param$date_color_vec ) )
                 match_dates <- match_dates [match_index]

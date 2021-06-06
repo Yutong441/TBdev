@@ -64,7 +64,7 @@ preprocess <- function (DAPI, bright, tree){
 #' @export
 quantile_plot <- function (dataf, label, y_log=F){
         quan <- seq (0, 1, length.out=100)
-        sel_df <- dataf [, label]
+        sel_df <- dataf [, label, drop=F]
         all_quant <- lapply (as.list(1:ncol(sel_df)), function (i){
                                      quantile (sel_df[,i], quan, na.rm=T)})
         all_quant <- do.call (cbind, all_quant)
@@ -164,7 +164,7 @@ get_cond_ord <- function (){
 #' @importFrom magrittr %>%
 #' @export
 frequency_plot <- function (x_df, gene, group.by='condition', rep.by='series',
-                            box_plot=T, express_thres=7, perc=T, add_pval=NULL,
+                            plot_type='box', express_thres=15, perc=T, add_pval=NULL,
                             control_group='base', AP=NULL, sum_table=F){
         AP <- return_aes_param (AP)
         x_df %>% dplyr::group_by (!!as.symbol(group.by), !!as.symbol (rep.by)) %>%
@@ -189,11 +189,24 @@ frequency_plot <- function (x_df, gene, group.by='condition', rep.by='series',
                 x_proc %>% dplyr::group_by (condition) %>% 
                         dplyr::summarise_if (is.numeric, mean) %>% data.frame () %>% print ()
         }
+        if (plot_type=='error'){
+                x_proc %>% group_by (!!as.symbol (group.by)) %>%
+                        dplyr::mutate (y_mean = mean (freq)) %>%
+                        dplyr::mutate (y_min = y_mean - sd (freq)) %>%
+                        dplyr::mutate (y_max = y_mean + sd (freq)) %>%
+                        data.frame () -> x_proc
+        }
 
         ggplot2::ggplot (x_proc, ggplot2::aes_string (x=group.by, y='freq') ) -> plot_ob
 
-        if (box_plot){plot_ob <- plot_ob +ggplot2::geom_boxplot (ggplot2::aes_string (fill=group.by)) 
-        }else{plot_ob <- plot_ob +ggplot2::geom_violin (ggplot2::aes_string (fill=group.by)) }
+        if (plot_type=='box'){plot_ob <- plot_ob +ggplot2::geom_boxplot (ggplot2::aes_string (fill=group.by)) 
+        }else if (plot_type=='error'){
+                plot_ob <- plot_ob + ggplot2::geom_errorbar (aes_string (
+                        color=group.by, ymin='y_min', ymax='y_max'))+
+                ggplot2::geom_errorbar (aes_string (color=group.by, ymin='y_mean', ymax='y_mean'))+
+                ggplot2::geom_jitter (aes_string (color=group.by), size=AP$pointsize/2) 
+        }else{plot_ob <- plot_ob +ggplot2::geom_point (ggplot2::aes_string (fill=group.by), 
+                                                       shape=21, size=AP$pointsize*2, color='white') }
 
         # Ironically for R, appending adjusted p value is complicated
         if (!is.null (add_pval)){
@@ -213,8 +226,45 @@ frequency_plot <- function (x_df, gene, group.by='condition', rep.by='series',
                 plot_ob <- plot_ob + ggpubr::stat_pvalue_manual(pstat,
                 label='p.adj', size=AP$point_fontsize) 
         }
-        plot_ob+theme_TB ('dotplot', color_fill=T, rotation=0, aes_param=AP)+
-                ggplot2::guides (fill=ggplot2::guide_legend ())+ ggplot2::ylab (y_lab)
+        plot_ob+theme_TB ('dotplot', color_fill=T, rotation=90, aes_param=AP)+
+                #ggplot2::guides (fill=ggplot2::guide_legend ())+ 
+                ggplot2::ylab (y_lab)+ggplot2::theme (legend.position='none')
+}
+
+fluoro_plot <- function (x_df, gene, group.by='condition',
+                         control_group='base', color.by=NULL, color_thres=15,
+                         AP=NULL){
+        AP <- return_aes_param (AP)
+        AP$color_vec <- c(AP$color_vec, 'unknown_gray'='#bebebe')
+        x_df [, group.by] <- partial_relevel (x_df [, group.by], get_cond_ord () )
+        x_df %>% group_by (!!as.symbol (group.by)) %>%
+                dplyr::summarise(y_mean = mean (!!as.symbol (gene)), 
+                                 y_sd = mean (!!as.symbol (gene))) %>%
+                dplyr::mutate (y_min = y_mean - y_sd, y_max= y_mean + y_sd) %>%
+                data.frame () -> x_sum
+
+        if (is.null (color.by) & !is.null (color_thres)){
+                cell_type <- c(EVT='HLAG', STB='CGB', CTB='TFAP2C')
+                tissue_color <- names (cell_type) [cell_type==gene]
+                color.by <- 'Type'
+                x_df %>% dplyr::mutate (Type = ifelse (!!as.symbol (gene)> color_thres, 
+                                                       tissue_color, 'unknown')) -> x_df
+        }
+
+        x_df %>% ggpubr::compare_means (as.formula (paste (gene, '~', group.by)), 
+                               data=., ref.group=control_group) -> pstat
+        pstat$y.position <- max (x_df [, gene])
+
+        ggplot2::ggplot (x_df, aes_string (x=group.by))+
+                ggplot2::geom_jitter (aes_string (y=gene, color=color.by), 
+                                      size=AP$pointsize/4, height=0) +
+                ggplot2::geom_errorbar (aes_string (
+                        ymin='y_min', ymax='y_max'), data=x_sum)+
+                ggplot2::geom_errorbar (aes_string (ymin='y_mean', ymax='y_mean'), data=x_sum)+
+                ggpubr::stat_pvalue_manual(pstat, label='p.adj', x='group2',
+                                           size=AP$point_fontsize*0.5) +
+                theme_TB ('dotplot', feature_vec=x_df [, color.by], aes_param=AP)+
+                ggplot2::theme (legend.position='none')
 }
 
 # ----------Statistics----------
@@ -247,4 +297,172 @@ compare_average <- function (x_df, group.by, genes=c('HLAG', 'CGB', 'TFAP2C'), r
         all_dfs <- do.call (rbind, all_dfs)
         all_dfs$p.adjust <- p.adjust (all_dfs$pval)
         return (all_dfs)
+}
+
+# ----------clonogenicity----------
+
+#' Count the number of colonies
+#'
+#' @description This function first applies the following filter: remove DBSCAN
+#' outliers, area > 400, number of cells per colony outside the range of 6~300
+#' Secondly, it counts the number of colonies that meet such criteria.
+#' @param dat a dataframe containing the following columns
+#' `series`: area ID in a culture well
+#' `Date`: image batch
+#' `cluster`: the cluster ID assigned to each `series`
+#' `condition`: each siRNA condition
+#' @return a dataframe with the following columns:
+#' `series`, `Date`, `condition`
+#' `n`: number of colonies
+#' `rel_n`: colony number relative to the mean in the control condition
+#' @importFrom magrittr %>%
+#' @export
+colony_count <- function (dat, control_condition='GFP', cell_lab=NULL){
+        dat %>% tidyr::unite ('series', c('series', 'Date'), sep='__') %>%
+        dplyr::filter (cluster != -1) %>% 
+        dplyr::filter (area < 400) %>%
+        dplyr::count (condition, series, cluster) %>%
+        dplyr::filter (n>=6 & n < 300) %>% 
+        dplyr::rename (num_cell= n) %>%
+        dplyr::group_by (condition, series) %>%
+        dplyr::summarise (num_colony= dplyr::n(), mean_colony=mean (num_cell) ) %>%
+        data.frame () %>%
+        tidyr::separate (series, c('series', 'Date'), sep='__') -> proc_dat
+        if (!is.null (control_condition)){
+                all_dates <- unique (proc_dat$Date)# all siRNA batches
+                proc_dat$rel_num_colony <- proc_dat$num_colony
+                proc_dat %>% dplyr::filter (condition == control_condition) %>%
+                        dplyr::group_by (Date) %>%
+                        dplyr::summarise (mean_con_n = sum(num_colony)) %>%
+                        data.frame() -> control_dat 
+                print (control_dat)
+                for (i in all_dates){
+                        one_cond <- proc_dat$Date == i
+                        mean_control_n <- control_dat [control_dat$Date==i, 'mean_con_n']
+                        proc_dat$rel_num_colony [one_cond] <- proc_dat$rel_num_colony [one_cond]/mean_control_n
+                }
+        }
+        if (is.null (cell_lab)) {data (siRNA_cell, package='TBdev'); cell_lab <- siRNA_cell}
+        proc_dat$celltype <- cell_lab$celltype [match (proc_dat$condition, toupper (cell_lab$TF))]
+        return (proc_dat)
+}
+
+#' Boxplot of the colony features in each siRNA condition
+#'
+#' @param dat a dataframe from `colony_count`
+#' @param y_val y axis of the boxplot
+#' @param control_condition which is the control group in the `condition`
+#' column
+#' @param plot_pval which pvalue format to plot, can be 'p.adj' for the BH
+#' adjusted p value score, 'p.signif' for the symbol for 'p.adj' or 'p' for
+#' unadjusted p value
+#' @export
+plot_colony_count <- function (dat, y_val='rel_num_colony', shape_by='Date',
+                               control_condition='GFP', plot_pval='p.signif',
+                               plot_type='box', paired_test=F, display_shape=T,
+                               new_level=NULL, AP=NULL){
+        AP <- return_aes_param (AP)
+        AP$color_vec <- c('control'='#32CD32', AP$color_vec)
+        dat %>% dplyr::select(celltype, condition) %>%
+                dplyr::filter (!duplicated (condition)) %>%
+                tibble::deframe () -> cond_cell
+        ord_cond <- partial_relevel (names (cond_cell))
+        cond_cell <- cond_cell [order(ord_cond)]
+        dat$condition <- factor (dat$condition, levels=as.character (cond_cell))
+        if (!is.null (new_level)){dat$condition <- partial_relevel (dat$condition, new_level)}
+
+        dat %>% dplyr::filter (condition==control_condition) %>% 
+                dplyr::summarise (mean_n = median(!!as.symbol (y_val))) %>% 
+                tibble::deframe () -> mean_lev
+
+        if (!paired_test){
+                ggpubr::compare_means (as.formula (paste (y_val, '~condition', sep='')), 
+                                       data=dat, ref.group=control_condition,
+                                       p.adjust.method='BH') -> stat_test
+        }else{
+                pairwise_p (dat, control_condition=control_condition,
+                            y_val=y_val, group.by=shape_by) -> stat_test
+        }
+        if (shape_by %in% colnames (dat)){
+                dat %>% data.frame () -> dat
+                dat [, shape_by] <- as.character (dat [, shape_by])
+        }
+        max_y <- max (dat [, y_val])
+        if (plot_type=='error'){
+                dat %>% group_by (condition) %>%
+                        dplyr::mutate (y_mean = mean (!!as.symbol (y_val))) %>%
+                        dplyr::mutate (y_min = y_mean - sd (!!as.symbol (y_val))) %>%
+                        dplyr::mutate (y_max = y_mean + sd (!!as.symbol (y_val))) %>%
+                        data.frame () -> dat
+        }
+        ggplot2::ggplot (dat, aes_string (x='condition', y=y_val))+
+                ggplot2::geom_hline (yintercept=mean_lev, color='red', linetype='dashed') +
+                ggpubr::stat_pvalue_manual (stat_test, y.position=max_y,
+                                            label=plot_pval, xmin='group2',
+                                            xmax='group2', tip.length=0,
+                                            label.size=AP$point_fontsize,
+                                            angle=30)+
+                TBdev::theme_TB ('dotplot', rotation=45, feature_vec=dat$celltype, aes_param=AP)+
+                ggplot2::theme (aspect.ratio=0.6) -> plot_dat
+                
+        if (plot_type=='box'){plot_dat+
+                ggplot2::geom_boxplot (aes (color=celltype), show.legend=F) %>% return ()
+        }else if (plot_type=='error') {
+                plot_dat+ ggplot2::geom_errorbar (aes (
+                        color=celltype, ymin=y_min, ymax=y_max))+
+                ggplot2::geom_errorbar (aes (color=celltype, ymin=y_mean, ymax=y_mean))+
+                ggplot2::geom_jitter (aes_string (color='celltype'), 
+                                      size=AP$pointsize/2) %>% return ()
+        }else{
+                if (display_shape){
+                        return (plot_dat+ggplot2::geom_point (aes_string (color='celltype', 
+                                        shape=shape_by), size=AP$pointsize*2))
+                }else{
+                        return (plot_dat+ggplot2::geom_point (aes_string (color='celltype', 
+                                        ), size=AP$pointsize*2))
+                }
+}}
+
+pairwise_p <- function (dat, control_condition='GFP', y_val='total_num', group.by='Date'){
+        dat %>% data.frame () -> dat
+        dat %>% dplyr::pull (condition) %>% unique () %>% as.list () %>%
+        lapply (function (xx){
+                dat %>% dplyr::filter (condition %in% control_condition) -> control 
+                dat %>% dplyr::filter (condition %in% xx) -> experiment
+                control <- control [match (experiment[, group.by], control[, group.by]), ]
+                stats::t.test (control [, y_val], experiment [, y_val], paired=T) -> test_stat
+                data.frame('.y.'=y_val, group1=control_condition, group2=xx, p=test_stat$p.value)}) %>% 
+        do.call(what=rbind) -> stat_dat
+        stat_dat$p.adj <- stats::p.adjust (stat_dat$p, method='BH')
+        stat_dat$p.signif <- stats::symnum(as.numeric (stat_dat$p.adj),
+                cutpoints = c(0, 0.001, 0.01, 0.05, 0.1, 1), na='',
+                symbols = c("***", "**", "*", ".", "ns"))
+        return (stat_dat)
+}
+
+#' @export
+reproducibility_mat <- function (dat, count_col='total_num'){
+        all_levels <- unique (dat$Date)
+        N <- length(all_levels)
+        comp_mat <- matrix (0, N, N)
+        for (i in 1:N){
+                for (j in 1:N){
+                        if (i != j){
+                                i_dat <- dat [dat$Date==all_levels[i],]
+                                j_dat <- dat [dat$Date==all_levels[j],]
+                                if (nrow (i_dat) < nrow (j_dat)){
+                                        j_dat <- j_dat [match (i_dat$condition, j_dat$condition), ]
+                                }else{
+                                        i_dat <- i_dat [match (j_dat$condition, i_dat$condition), ]
+                                }
+                                comp_mat [i, j] <- stats::cor (i_dat [, count_col], 
+                                                               j_dat [, count_col])
+                        }else{
+                                comp_mat [i, j] <- 1
+                        }
+                }
+        }
+        colnames (comp_mat) <- all_levels
+        rownames (comp_mat) <- all_levels
+        return (comp_mat)
 }

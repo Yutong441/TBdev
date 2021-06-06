@@ -1,33 +1,58 @@
 devtools::load_all('..', export_all=F)
 library (tidyverse)
+library (Seurat)
 
 root_dir <- '/mnt/c/Users/Yutong/Documents/bioinformatics/reproduction/'
 root <- paste (root_dir, 'results/', sep='/')
 merge_dir <- paste (root, 'XLYBPZ_Dylan_dir', sep='/')
 save_dir <- paste (root, 'manuscript/figure3', sep='/')
 sup_save_dir <- paste (root, 'manuscript/figureS3', sep='/')
-all_data_a <- get (load (paste (merge_dir, 'final_merged_tb.Robj', sep='/') ))
-all_data <- all_data_a [, all_data_a$assigned_cluster != 'uCTB']
+all_data <- readRDS (file=paste (merge_dir, 'merged_blastoid.rds', sep='/'))
+
+# ----------aesthetics----------
+data (format_conf)
+new_order <- c(format_conf$cell_order, 'hESC', 'nESC', 'bEPI-YANA', 'hTSC-OKAE','bTSC', 'bTB-YANA')
+blastoid_color <- c('nESC'='#71d300', 'bTB-YANA'='#ff1900', 'bTSC'='#ff8500', 'bEPI-YANA'='#00ff9d')
+new_color <- list (color_vec=c(format_conf$color_vec, blastoid_color), cell_order=new_order)
+new_color$color_vec <- new_color$color_vec [order (partial_relevel (names (
+                                        new_color$color_vec), new_color$cell_order))]
 
 # ----------figure 3A ----------
-in_vitro <- all_data [, all_data$date == 'in_vitro' ]
-data (lineage_markers)
-plot_genes <- lineage_markers [names (lineage_markers)  == 'TB']
-plot_genes <- c('POU5F1', 'SOX2', 'NANOG', 'KRT7', 'KRT18', 'TFAP2C',
-                'TFAP2A','GATA3','GATA2', 'ELF5', 'CDX2', 'TEAD4', 'HLA-A',
-                'HLA-B','TP63')
+in_vitro_cells <- c('hESC', 'hESC-YAN', 'nESC', 'bEPI-YANA', 'hTSC-OKAE', 'bTSC', 'bTB-YANA')
+in_vitro <- all_data [, all_data$broad_type %in% in_vitro_cells ]
+plot_genes <- c('POU5F1', 'SOX2', 'NANOG', 
+                'TDGF1', 'PRDM14', 'GDF3', 'KRT7', 'GATA3','GATA2', 'TFAP2C', 'CDX2', 'TEAD4', 
+                'ENPEP', 'TACSTD2','SIGLEC6', 'ISL1', 'GABRP', 'VTCN1',
+                'HLA-A', 'HLA-B', 'HLA-C'
+)
 
 p1 <- seurat_violin (in_vitro, features=plot_genes, group.by='final_cluster',
-                     num_col=5, box_plot=F, free_xy='free_y', lower_b=0)
+                     num_col=3, free_xy='free_y', lower_b=0, plot_type='box', AP=new_color)
 
 # ----------figure 3B ----------
-TSC_cells <- all_data$revised %in% c('hTSC_OKAE', 'hTSC_TURCO') 
 data (CT)
-highlight <- all_data$assigned_cluster %in% CT$in_vitro_cells
-p2 <- plot_dim_red (all_data, group.by= c('broad_type'), DR='pca' , return_sep=T,
-                    size_highlight=highlight, highlight_ratio=2, dims=c(1,2),
-                    nudge_ratio=0.2, plot_type='dim_red_sim', seg_color='black', 
-                    AP=list (point_edge_color='gray'))
+# do not show the blastoid cells which will obscure Turco and Okae cells
+pca_data <- all_data [, !all_data$broad_type %in% c('nESC', 'bPE-YANA', 'hTSC-TURCO')]
+dim_red_dat <- pca_data [, !pca_data$broad_type %in% c('bTSC', 'bTB-YANA')]
+p2 <- plot_dim_red (dim_red_dat, group.by= c('broad_type'), DR='pca', return_sep=T, 
+                    size_highlight=dim_red_dat$broad_type=='hTSC-OKAE', 
+                    highlight_ratio=2, dims=c(1,2), nudge_ratio=0.15,
+                    plot_type='dim_red_sim', seg_color='black', 
+                    AP=c(list (point_edge_color='gray'), new_color))
+
+dim_red_dat <- pca_data [, !pca_data$broad_type %in% c('hTSC-OKAE', 'bTB-YANA')]
+p2_2 <- plot_dim_red (dim_red_dat, group.by= c('broad_type'), DR='pca', return_sep=T, 
+                    size_highlight=dim_red_dat$broad_type=='bTSC', 
+                    highlight_ratio=2, dims=c(1,2), nudge_ratio=0.15,
+                    plot_type='dim_red_sim', seg_color='black', 
+                    AP=c(list (point_edge_color='gray'), new_color))
+
+dim_red_dat <- pca_data [, !pca_data$broad_type %in% c('hTSC-OKAE', 'bTSC')]
+p2_3 <- plot_dim_red (dim_red_dat, group.by= c('broad_type'), DR='pca', return_sep=T, 
+                    size_highlight=dim_red_dat$broad_type=='bTB-YANA', 
+                    highlight_ratio=2, dims=c(1,2), nudge_ratio=0.15,
+                    plot_type='dim_red_sim', seg_color='black', 
+                    AP=c(list (point_edge_color='gray'), new_color))
 
 # ----------figure 3C----------
 sup_save_dir2 <- paste (root, 'manuscript/figureS2', sep='/')
@@ -45,85 +70,58 @@ epg %>% arrange (branch_name) %>% mutate( index = 1:nrow (epg)) %>%
         as.data.frame () %>% dplyr::select (x, y, z, branch_name) %>% 
         magrittr::set_colnames (c('x', 'y', 'z', 'feature')) -> label_epg
 
+fit_chance <- read.csv (paste (root_dir, 'results/Yu_2021/fit_chance.csv', sep='/'))
+fit_chance2 <- read.csv (paste (root_dir, 'results/Yanagida_2021/fit_chance.csv', sep='/'))
+
+fit_chance2 %>% select (!X) %>% cbind (fit_chance) %>% 
+        column_to_rownames (var='X') -> fit_chance
+
+rownames (show_meta) <- gsub ('\\.[0-9]+$', '', rownames (show_meta))
+show_meta <- cbind (show_meta [, !colnames (show_meta) %in% colnames (fit_chance)], 
+                    fit_chance [match (rownames (show_meta), rownames (fit_chance)),])
+
 show_meta %>% slice_min (PT3, n=nrow(show_meta)-3) %>% 
-        normalize_prob(c('hTSC_OKAE', 'hTSC_TURCO')) %>%
-        dim_red_3D_traj ('PT1', 'PT2', 'PT3', c('hTSC_OKAE', 'hTSC_TURCO'), epg, 'x', 'y',
+        normalize_prob(c('hTSC.OKAE', 'bTB.YANA', 'bTSC')) %>%
+        rename('hTSC-OKAE'='hTSC.OKAE') %>% rename ('bTB-YANA'='bTB.YANA') %>%
+        dim_red_3D_traj ('PT1', 'PT2', 'PT3', c('hTSC-OKAE', 'bTSC', 'bTB-YANA'), epg, 'x', 'y',
         'z', 'branch_name', all_theta=50, all_phi=0, show_label=T, further_repel=T,
         repel_force=0.2, lab_just=c(0.08, 0.02, 0.02), label_col='broad_type',
-        label_traj_text=label_epg, num_col=1, AP=list (point_edge_color='white'), 
+        label_traj_text=label_epg, num_col=1, AP=c(list (point_edge_color='white'), new_color), 
         hor_just=0.1, dim_vjust=3) + 
         labs (fill='relative probability') +
         scale_color_manual (values=rep('black',3))+guides(color=F) -> p3
 
 # ----------figure 3D: cell-cell correlation ----------
-select_cells2 <- all_data$revised %in% CT$in_vitro_cells
-select_cells1 <- !(all_data$revised %in% CT$in_vitro_cells)
-all_cor <- compute_all_cor (all_data, method= 'correlation', assay='RNA',
-                            select_cells2=select_cells2,
-                            select_cells1=select_cells1)
+in_vitro_cells <- c('hESC', 'nESC', 'bEPI-YANA', 'hTSC-OKAE', 'bTSC', 'bTB-YANA')
+select_cells2 <- all_data$broad_type %in% in_vitro_cells
+select_cells1 <- all_data$date != 'in_vitro'
+#all_cor <- compute_all_cor (all_data, method= 'correlation', assay='RNA',
+#                            select_cells2=select_cells2,
+#                            select_cells1=select_cells1)
+#saveRDS(all_cor, paste (root_dir, 'results/Yu_2021/cell_cor.rds', sep='/'))
+all_cor <- readRDS (paste (root_dir, 'results/Yu_2021/cell_cor.rds', sep='/'))
 p4 <- cell_violin (all_cor, all_data@meta.data, c('final_cluster', 'final_cluster'), 
-                   box_plot=T, num_col=2, legend_col=1)
+                   box_plot=T, num_col=2, legend_col=1, column_scale=T, AP=new_color)
 
-# ----------figure 3E: TF activities----------
-save_dir4 <- paste (root, 'manuscript/figure4', sep='/')
-color_row <- read.csv ( paste ( save_dir4, 
-                        'WGCNA/module_genes.csv' , sep='/'), row.names=1)
-gene_list <- lapply (as.list (colnames (color_row) ), function (x) {
-                             unique (color_row [, x]) })
-ori_names <- colnames (color_row)
-names (gene_list) <- colors2labels (colnames (color_row), prefix='GC')
-
-module_score <- get_module_score (all_data, append_meta=T, paste (save_dir4, 
-                'WGCNA/Data_module_score.csv', sep='/'), pgenes=gene_list)
-vitro_mod <- module_score [, module_score$date=='in_vitro']
-sel_genes <- rownames (module_score)
-names (sel_genes) <- c('pre-implant', 'non-specific', 'STB', 'non-specific', 'EPI', 'CTB', 'ICM', 'ICM',
-                       'non-specific', 'EVT', 'cleavage')
-row_levels <- partial_relevel (names (sel_genes)) %>% levels()
-p5 <- seurat_heat (vitro_mod, group.by=c('broad_type'),
-                 row_scale=T, color_row= sel_genes,
-                 row_legend_labels='WGCNA clusters',
-                 column_legend_labels='cell type',
-                 cluster_rows=T, heat_name='norm count', center_scale=T,
-                 automatic=F, left_HA=F, slot_data='counts',
-                 column_title_fontface='plain',
-                 column_title_side='bottom',
-                 main_width=6, main_height=14, column_rotation=90
-)
-
-# ----------figure 3F: pathway module----------
-sup_save_dir2 <- paste (root, 'manuscript/figureS2', sep='/')
-module_scores <- get_module_score (all_data, save_path=paste (sup_save_dir2, 
-                                        'Data_module_scores.csv', sep='/'))
-colnames (module_scores) <- gsub ('^X', '', colnames (module_scores))
-rownames (module_scores) <- gsub ('\\.', '-', rownames (module_scores) )
-meta_data <- all_data_a@meta.data [match (colnames (module_scores), colnames (all_data_a) ), ]
-module_signal <- Seurat::CreateSeuratObject ( module_scores, meta.data = meta_data )
-module_signal <- module_signal [, !module_signal$broad_type %in% c('EPI', 'PE', 'hESC', 'hESC-YAN')]
-module_signal <- module_signal [, !module_signal$final_cluster %in% c('uCTB')]
-
-sel_seurat <- average_by_group (module_signal, 'final_cluster', rownames (module_signal))
-p6<-seurat_heat (sel_seurat, 'final_cluster', rownames (module_signal),
-             main_width=7, main_height=13, column_split=NA,
-             column_rotation=90, show_column_names=T, cluster_column=T,
-             center_scale=T, column_legend_labels=c('cell type'), row_scale=T,
-             grid_height=5, heat_grid_height=6, automatic=F
-)
-
-# arrange all figures
+# ----------arrange all figures----------
 grob_list <- list (p1 + theme (aspect.ratio=1., 
                         axis.title.x=element_blank(), legend.position='top') + labs (fill =''), 
                    p2[[1]] +labs (fill=''), 
+                   p2_2[[1]] +labs (fill=''), 
+                   p2_3[[1]] +labs (fill=''), 
+                   ggplot() + theme_minimal (),
                    p3+ theme(legend.position='top'), 
-                   p4+ labs (fill='') + theme (axis.title.x=element_blank(), aspect.ratio=0.5), 
-                   p5, p6)
-lay_mat <- matrix(c(1, 1, 1, 2, 2, 2, 
-                    3, 3, 4, 4, 4, 4,
-                    3 ,3 ,5 ,5 ,6 ,6
+                   p4+ labs (fill='') + theme (axis.title.x=element_blank(), aspect.ratio=0.8)
+)
+lay_mat <- matrix(c(
+                    1, 1, 1, 2, 2, 2, 
+                    1, 1, 1, 3, 3, 3, 
+                    4, 4, 4, 5, 5, 5,
+                    6, 6, 7, 7, 7, 7,
+                    6 ,6 ,7 ,7 ,7 ,7
                     ),
                   nrow=6) %>% t()
 arrange_plots (grob_list, paste (save_dir, 'final_figure3.pdf', sep='/'),
-               lay_mat, plot_width=3.5, plot_height=8)
-
-save_indiv_plots (grob_list, paste (save_dir, 'figure3', sep='/'),
-               lay_mat, plot_width=3.5, plot_height=8)
+               lay_mat, plot_width=3.2, plot_height=8)
+save_indiv_plots (grob_list, paste (save_dir, 'figure3', sep='/'), lay_mat,
+                  plot_width=3.2, plot_height=8)

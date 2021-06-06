@@ -9,10 +9,14 @@
 #' @param quantile_val filter away genes whose expressions are below a certain
 #' percentile
 #' @export
-filter_genes <- function (x, quantile_val, assay='RNA', slot_data='data'){
+filter_genes <- function (x, quantile_val, assay='RNA', slot_data='data',
+                          method='quantile'){
         exp_mat <- as.matrix (Seurat::GetAssayData (x, assay=assay, slot=slot_data) )
         mean_gene <- rowMeans (exp_mat)
-        filter_thres <- stats::quantile (mean_gene, quantile_val)
+        if (method == 'quantile'){
+                filter_thres <- stats::quantile (mean_gene, quantile_val)
+        }else if (method == 'abs_value'){filter_thres <- quantile_val
+        }
         filter_genes <- mean_gene > filter_thres
         print (paste ('filtering away', sum (!filter_genes), 'genes'))
         return (x [filter_genes, ])
@@ -348,6 +352,7 @@ seurat_violin <- function (x, features, group.by, assay='RNA',
         if (plot_type != 'scatter'){color.by <- group.by; rota <- 90
         }else{rota <- 0}
 
+        x@meta.data[, group.by] <- partial_relevel (x@meta.data[, group.by], AP$cell_order)
         x %>% Seurat::FetchData (vars=c(features, group.by, color.by)) %>%
                 magrittr::set_colnames (c(features, 'feature', 'colorby')) %>%
                 tidyr::gather ( 'gene', 'expr_val', -feature, -colorby) %>%
@@ -361,7 +366,7 @@ seurat_violin <- function (x, features, group.by, assay='RNA',
                 ggplot2::facet_wrap (.~gene, ncol=num_col, scales=free_xy) +
                 ggplot2::labs (fill='')+ ggplot2::xlab ('')+
                 ggplot2::ylab (expression (paste (italic ('mRNA levels')))) +
-                theme_TB ('dotplot', feature_vec=x@meta.data[, color.by],
+                theme_TB ('dotplot', feature_vec=plot_data$colorby,
                           color_fill=T, aes_param=AP, rotation=rota)+
                 ggplot2::guides( fill= ggplot2::guide_legend(override.aes = list(alpha=1)))+
                 custom_tick (min_prec=1,...) -> plot_ob
@@ -447,8 +452,15 @@ seurat_volcano <- function (markers, group1, group2, group1_col = 'group',
                 ggplot2::ylab (y_lab) -> plot_ob
 
         # add label genes
+        if (!is.null (label_genes)){
+                # remove those genes that are not significant
+                sel_mark %>% dplyr::filter (abs (!!as.symbol (weighting)) > weight_thres) %>%
+                        pull (!!as.symbol (gene)) -> sig_lab
+                label_genes <- label_genes [label_genes %in% sig_lab]
+        }
         if (is.null (label_genes) & !is.null (show_gene_num) ){
-                sel_mark %>% dplyr::mutate (pos_neg = ifelse (!!as.symbol (weighting) > 0, 'pos', 'neg') ) %>%
+                sel_mark %>% dplyr::mutate (pos_neg = ifelse (!!as.symbol (
+                                            weighting) > 0, 'pos', 'neg') ) %>%
                 dplyr::group_by (pos_neg) %>% 
                 dplyr::slice_max (abs (!!as.symbol (weighting)), n=show_gene_num/2) %>% 
                 dplyr::pull (!!as.symbol(gene)) -> label_genes
@@ -471,7 +483,8 @@ seurat_volcano <- function (markers, group1, group2, group1_col = 'group',
         }else{feature_vec <- NULL}
         plot_ob + theme_TB ('dotplot', rotation=0, aes_param=AP, color_fill=F,
                             feature_vec=feature_vec)+
-        add_custom_color (feature_vec=plot_data$groupby, aes_param=AP, color_fill=T)
+        add_custom_color (feature_vec=plot_data$groupby, aes_param=AP, color_fill=T)+
+        ggplot2::coord_cartesian (clip='off')
 }
 
 #' Gene expression in two categories

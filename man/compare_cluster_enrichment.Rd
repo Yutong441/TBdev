@@ -11,6 +11,7 @@ compare_cluster_enrichment(
   organism_name = "human",
   logFC_term = "logFC",
   pval_term = "padj",
+  gene_name = "feature",
   log_FC_thres = 0.25,
   pval_thres = 0.05,
   enrich_area = "KEGG"
@@ -24,7 +25,9 @@ DE genes may be used}
 
 \item{organism_db}{which organism database, for example, org.Hs.eg.db}
 
-\item{organism_name}{which organism for KEGG and Reactome}
+\item{organism_name}{which organism for KEGG and Reactome, e.g. 'human'. If
+\code{enrich_area} is TF or MIRNA, the organism name should be for the gprofiler
+database, e.g.  'hsapiens', 'mmusculus'}
 
 \item{logFC_term}{which column in \code{markers} contains the information for
 ranking gene expression}

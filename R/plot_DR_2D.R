@@ -8,7 +8,8 @@ DimPlot_labels <- function (dat, x_coord, y_coord, color_by, further_repel=T){
                         dat %>% dplyr::select (dplyr::all_of (c(x_coord, y_coord, color_by))) %>%
                                 magrittr::set_colnames (c('x_axis', 'y_axis', 'feature'))  %>%
                                 dplyr::group_by (feature) %>%
-                                dplyr::summarise (x_mean = mean(x_axis), y_mean = mean (y_axis)) -> mean_labels
+                                dplyr::summarise (x_mean = mean(x_axis), 
+                                                  y_mean = mean (y_axis)) -> mean_labels
                         if (!further_repel){return (mean_labels)
                         }else{
                         dat %>% dplyr::select (dplyr::all_of (c(x_coord, y_coord, color_by))) %>%
@@ -105,7 +106,8 @@ gg_DimPlot <- function (x, feature, DR='pca', dims=c(1,2), size_highlight=NULL,
 
         # plotting
         ggplot2::ggplot (plot_data, aes_string (x=x_axis, y=y_axis ) ) +
-                ggplot2::geom_point (aes_string (fill = 'feature', size='size_high', shape='size_high'), 
+                ggplot2::geom_point (aes_string (fill = 'feature', 
+                                                 size='size_high', shape='size_high'), 
                             color=AP$point_edge_color, stroke=AP$edge_stroke) +
                 highlight_shape_size (AP, highlight_ratio)+
                 ggplot2::labs (fill= feature) -> plot_ob

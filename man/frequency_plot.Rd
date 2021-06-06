@@ -9,9 +9,13 @@ frequency_plot(
   gene,
   group.by = "condition",
   rep.by = "series",
-  box_plot = T,
-  express_thres = 7,
-  perc = T
+  plot_type = "box",
+  express_thres = 15,
+  perc = T,
+  add_pval = NULL,
+  control_group = "base",
+  AP = NULL,
+  sum_table = F
 )
 }
 \arguments{
@@ -23,13 +27,16 @@ frequency_plot(
 
 \item{rep.by}{the replication for each condition}
 
-\item{box_plot}{whether to use boxplot or violin plot}
-
 \item{express_thres}{the fluorescence value by which a cell is called
 positive for a gene}
 
 \item{perc}{whether to show the percentage of positive cells or the number
 of positive cells}
+
+\item{add_pval}{which comparison groups in \code{group.by} to compare with
+\code{control_group}. If it is 'all', all pairs will be compared}
+
+\item{box_plot}{whether to use boxplot or violin plot}
 }
 \description{
 Boxplot or Violin plot the count of cells expressing a certain marker

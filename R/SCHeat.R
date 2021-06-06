@@ -14,6 +14,7 @@ get_rainbow_col <- function (named_vector, AP, default=T, provided_color=NULL,
                         names (col_color) [is.na (names (col_color))] <- 'NA'
                 }else{
                         col_color <- custom_color (named_vector, AP,regexp=regexp)
+                        print (col_color)
                 }
         }
         return (col_color)
@@ -301,6 +302,7 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
                          heat_name='norm count', break_points=NULL,
                          row_legend_labels='DE genes',
                          column_legend_labels=NULL, 
+                         column_legend_order=NULL,
                          left_HA=T, top_HA=T,
                          row_titles=character(0),
                          group_order=NULL, 
@@ -501,7 +503,10 @@ seurat_heat <- function (x, group.by=NULL, color_row=NULL,
                                                   function (x){make_multi_anno_legend (anna_param, 
                                                 HA_df, color_map_list, column_legend_labels, x) } )
                 }else{column_legends <- list (NULL) }
-                legend_list<- append (list(row_legend, heat_legend), column_legends [show_column_bars])
+                if (is.null(column_legend_order)){
+                        column_legend_order <- 1:length (show_column_bars)
+                }
+                legend_list<- append (list(row_legend, heat_legend), column_legends [show_column_bars] [column_legend_order])
                 legend_list<- legend_list [sapply (legend_list, function(x){!is.null(x)})]
                 pd <- ComplexHeatmap::packLegend (list=legend_list,
                                                   max_height=main_height,

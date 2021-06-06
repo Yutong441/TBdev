@@ -13,19 +13,20 @@
 #' @importFrom ggplot2 aes_string
 #' @importFrom magrittr %>%
 #' @export
-pseudo_real_time <- function (dat, real_time, pseudotime, color_by, AP=NULL, ...){
+pseudo_real_time <- function (dat, real_time, pseudotime, color_by, AP=NULL, rotation=90,...){
         AP <- return_aes_param (AP)
         gsub ('^[D-E]', '', dat[, real_time]) %>% as.numeric () -> numer_date
         time_cor <- stats::cor (numer_date, dat [, pseudotime])
         ylevel <- max (dat [, pseudotime])
-        anno_grob <-  grid::textGrob (paste ('\u03c1 =', format (round (time_cor, 2), nsmall=2) ),
+        anno_grob <-  grid::textGrob (paste ('R2 =', format (round (time_cor, 2), nsmall=2) ),
                                       gp = grid::gpar (fontsize=AP$fontsize, fontfamily=AP$font_fam)
         ) 
         dat %>% ggplot2::ggplot (aes_string (x=real_time, y=pseudotime, fill=color_by) ) + 
                 ggplot2::geom_point (shape=AP$normal_shape, color=AP$point_edge_color, 
                                      size=AP$pointsize, stroke=AP$edge_stroke)+
                 ggplot2::annotation_custom (anno_grob, ymin=ylevel, ymax=ylevel) +
-                theme_TB ('dotplot', feature_vec=dat [, color_by], color_fill=T, rotation=90, AP=AP)+
+                theme_TB ('dotplot', feature_vec=dat [, color_by], color_fill=T, 
+                          rotation=rotation, aes_param=AP)+
                 custom_tick (min_prec=1, num_out=3, ...) +
                 ggplot2::labs (fill='') + ggplot2::ylab ('pseudotime') 
 }
@@ -49,12 +50,13 @@ preprocess_df <- function (x_df, sel_col, genes){
 }
 
 #' @importFrom ggplot2 aes aes_string
-gene_time_plot <- function (plot_df, point_df, AP, num_row, num_col, fill_lab, plot_ribbon=F){
+gene_time_plot <- function (plot_df, point_df, AP, num_row, num_col, fill_lab,
+                            plot_ribbon=F, plot_line=F){
         ggplot2::ggplot (plot_df ) +
                 ggplot2::geom_point (aes (x=pseudotime, y=mean_, color=color_by), data=point_df, shape=20)+
                 ggplot2::facet_wrap (~gene, scales='free', ncol=num_col, nrow=num_row) +
-                theme_TB ('dotplot', feature_vec=point_df$color_by, AP=AP, rotation=0) +
-                theme_TB ('dotplot', feature_vec = plot_df$branch, AP=AP, color_fill=T, rotation=0) +
+                theme_TB ('dotplot', feature_vec=point_df$color_by, aes_param=AP, rotation=0) +
+                theme_TB ('dotplot', feature_vec = plot_df$branch, aes_param=AP, color_fill=T, rotation=0) +
                 ggplot2::theme (axis.text.x=ggplot2::element_blank (),
                                 axis.text.y=ggplot2::element_blank ()) +
                 ggplot2::xlab ('pseudotime') + 
@@ -62,6 +64,10 @@ gene_time_plot <- function (plot_df, point_df, AP, num_row, num_col, fill_lab, p
                 ggplot2::labs (color=fill_lab)  -> plot_ob
         if (plot_ribbon){plot_ob <- plot_ob +
                 ggplot2::geom_ribbon (aes (x=x, y=mean_, ymin=ymin, ymax=ymax, fill=branch), alpha=0.8 )
+        }
+        if (plot_line){plot_ob <- plot_ob +
+                ggplot2::geom_line (aes (x=x, y=mean_, color=branch),
+                                    linetype='solid', size=2, alpha=0.8 )
         }
         return (plot_ob)
 }
@@ -92,7 +98,8 @@ get_expre_pseudo <- function (x, genes){
 gene_over_pseudotime <- function (x, exp_mat, genes, color_feature, metadata=NULL,
                                   num_col=4, num_row=NULL, branch_assignment=NULL, 
                                   peak_data=NULL, time_col='pseudotime', gene_col='feature', 
-                                  slot_data='data', assay='RNA', plot_ribbon=F, AP=NULL){
+                                  slot_data='data', assay='RNA', plot_ribbon=F,
+                                  plot_line=F, AP=NULL){
         AP <- return_aes_param (AP)
         plot_df <- get_expre_pseudo (x, genes)
 
@@ -106,6 +113,12 @@ gene_over_pseudotime <- function (x, exp_mat, genes, color_feature, metadata=NUL
                 Seurat::DefaultAssay (exp_mat) <- assay 
                 exp_mat <- Seurat::FetchData (exp_mat, c(genes, time_col), 
                                               slot=slot_data)
+        }else{
+                all_IDs <- rownames (exp_mat)
+                sel_index <- rownames (exp_mat) %in% rownames (metadata)
+                exp_mat <- data.frame (exp_mat) [sel_index, genes, drop=F]
+                exp_mat [, time_col] <- metadata [, time_col]
+                rownames (exp_mat) <- all_IDs [sel_index]
         }
         exp_mat %>% tibble::add_column (cell_ID = rownames (exp_mat) ) %>%
                 dplyr::select (dplyr::one_of (c(genes, time_col, 'cell_ID'))) %>%
@@ -119,7 +132,7 @@ gene_over_pseudotime <- function (x, exp_mat, genes, color_feature, metadata=NUL
 
         print ('plotting')
         plot_ob <- gene_time_plot (plot_df, point_df, AP, num_row, num_col, color_feature, 
-                                   plot_ribbon=plot_ribbon)
+                                   plot_ribbon=plot_ribbon, plot_line=plot_line)
         print ('plot vertical lines at peak times')
         if (!is.null(peak_data)){
                 selected_peak <- peak_data [peak_data [, gene_col] %in% genes,]
@@ -338,7 +351,8 @@ time_cluster_plot <- function (peak_plot, metadata, show_text_prop=0.95,
                                color_by='cluster', color_bar='broad_type',
                                time_col='MGP_PT', exclude_perc=0.02, vjust=0.,
                                thickness_ratio=0.05, repel_force=1,
-                               repel_point=NULL, AP=NULL){
+                               repel_point=NULL, ribbon_alpha=1, AP=NULL,
+                               overlap=T){
         AP <- return_aes_param (AP)
         PT_type <- data.frame (PT=metadata [, time_col], Type=metadata [, color_bar]) 
         min_val <- quantile(peak_plot$peak_time, exclude_perc)
@@ -370,12 +384,38 @@ time_cluster_plot <- function (peak_plot, metadata, show_text_prop=0.95,
                                           size=AP$point_fontsize, fontface='bold') + 
                 theme_TB ('dotplot', feature_vec = as.character (peak_plot [, color_by]), 
                           color_fill=F, rotation=0, AP=AP)+
-                ggplot2::geom_ribbon (aes_string (x='PT', fill='Type', ymax=min_y, ymin=min_y-thickness),
-                            size=AP$pointsize, data=PT_type, inherit.aes=F) +
                 add_custom_color (feature_vec = PT_type$Type, aes_param=AP, color_fill=T)+
                 custom_tick (peak_plot$val) +
                 ggplot2::theme (aspect.ratio=0.5) + ggplot2::labs (fill =color_bar) + 
                 ggplot2::ylab ('maximum gradient') + ggplot2::xlab ('pseudotime') +
-                ggplot2::xlim ( c(min_val, max_val) )
+                ggplot2::xlim ( c(min_val, max_val) )-> plot_ob
+        if (overlap){
+                plot_ob <- plot_ob +
+                ggplot2::geom_ribbon (aes_string (x='PT', fill='Type', ymax=min_y, ymin=min_y-thickness),
+                            size=AP$pointsize, data=PT_type, inherit.aes=F, alpha=ribbon_alpha) 
+        }else{
+                plot_ob <- plot_ob +
+                ggplot2::geom_point (aes_string (x='PT', fill='Type', y=min_y), shape=AP$normal_shape,
+                            size=1.5*AP$pointsize, data=PT_type, inherit.aes=F, alpha=ribbon_alpha) 
+        }
+        return (plot_ob)
 }
 
+#' Sample size across the timeline of the dataset
+#'
+#' @param dat a dataframe e.g. from the metadata of a Seurat object
+#' @param x_col which column contains the timeline (x axis)
+#' @param y_col which column contains the dataset (y axis)
+#' @importFrom magrittr %>%
+#' @importFrom ggplot2 aes aes_string
+#' @export
+data_timeline <- function (dat, x_col, y_col, AP=NULL){
+        AP <- return_aes_param (AP)
+        dat %>% dplyr::count (!!as.symbol (x_col), !!as.symbol (y_col)) -> plot_dat
+        ggplot2::ggplot (plot_dat, aes_string (y=y_col, x=x_col)) +
+                geom_tile (aes (fill=n) )+
+                geom_text (aes (label=n), color='white', size=AP$point_fontsize, 
+                           family=AP$font_fam)+
+                theme_TB ('dotplot', feature_vec=plot_dat$n, color_fill=T, rotation=0)+
+                ggplot2::labs (fill='cell number')
+}

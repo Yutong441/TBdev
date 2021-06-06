@@ -113,7 +113,7 @@ order_net_leftright <- function (igraph_net, ascend_order){
 custom_net <- function (igraph_net, AP=NULL, limits=NA, ranges=c(0,15),
                         manual_xy=NULL, order_leftright='pseudotime',
                         ascend_order=T, coloring=NULL, nudge_ratio=0., 
-                        hide_node_thres=NULL, plot_title=NULL){
+                        hide_node_thres=NULL, plot_title=NULL, size_legend=F){
         AP <- return_aes_param (AP)
         if (is.null(coloring)){coloring <- V(igraph_net)$pseudotime}
         if (is.na (limits[1])){limits <- range (V(igraph_net)$size) }
@@ -127,21 +127,31 @@ custom_net <- function (igraph_net, AP=NULL, limits=NA, ranges=c(0,15),
         manual_xy <- com_list[[2]]
 
         ggraph::ggraph (igraph_net, 'manual', x=manual_xy[,1], y=manual_xy[,2]) -> gnet
-        gnet +  ggraph::geom_edge_link (ggplot2::aes(edge_width=width), edge_color='gray') +
-                ggraph::geom_node_point (ggplot2::aes (size=size, fill=pseudotime), 
-                                         shape=21)+
-                ggraph::geom_node_text (ggplot2::aes(label=name), 
+        gnet +  ggraph::geom_edge_link (ggplot2::aes(edge_width=width), edge_color='gray')-> g_ob
+        if (!is.null (V(igraph_net)$pseudotime)){
+                g_ob <- g_ob + ggraph::geom_node_point (ggplot2::aes(size=size, 
+                                                fill=pseudotime), shape=21) 
+        }else{
+                g_ob <- g_ob +ggraph::geom_node_point (ggplot2::aes (size=size), 
+                                                      shape=21, fill='#921FE6')  
+        }
+        g_ob + ggraph::geom_node_text (ggplot2::aes(label=name), 
                                         repel=F, size=AP$point_fontsize,
                                         nudge_x = gnet$data$x*nudge_ratio,
                                         nudge_y = gnet$data$y*nudge_ratio
                                         ) +
-                ggplot2::scale_size (range=ranges, limits=limits)+
-                ggplot2::labs (size='norm count')+
-                ggplot2::guides(size=F) -> g_ob
+                ggplot2::scale_radius (range=ranges, limits=limits)+
+                ggplot2::labs (size='Colony decrease')-> g_ob
 
         if (!is.null(plot_title)){g_ob <- g_ob + ggplot2::ggtitle (plot_title) }
-        g_ob + TBdev::theme_TB ('no_arrow', feature_vec=coloring,
-                                 color_fill=T, more_prec=3, aes_param=AP)
+        if (!is.null (V(igraph_net)$pseudotime)){
+                g_ob + TBdev::theme_TB ('no_arrow', feature_vec=coloring,
+                                         color_fill=T, more_prec=3, aes_param=AP) -> g_ob
+        }else{
+                g_ob + TBdev::theme_TB ('no_arrow', color_fill=F, more_prec=3,
+                                        aes_param=AP) -> g_ob
+        }
+        g_ob + ggplot2::guides(size=size_legend) 
 }
 
 #' @export
@@ -254,14 +264,15 @@ custom_net_from_seurat <- function(x, genes, markers, celltype, thres=0.6,
 #' @param ... argments to pass to `custom_net`
 #' @importFrom igraph V
 #' @export
-custom_net_diff_nets <- function (x, gene_list, markers, size_thres=0., ...){
+custom_net_diff_nets <- function (x, gene_list, markers, size_thres=0.,
+                                  thres=0.6,...){
         all_genes <- do.call(c,gene_list)
         limits <- range (x[all_genes,][['RNA']]@data)
 
         # plot net
         graph_list <- lapply (as.list(1:length(gene_list)), function(i){
                custom_net_from_seurat (x, gene_list[[i]], markers, names
-                                       (gene_list)[i], size_thres=size_thres)
+                                       (gene_list)[i], size_thres=size_thres, thres=thres)
                               })
 
         pt_limits <- do.call (c, lapply (graph_list, function(gx){V(gx)$pseudotime}) )

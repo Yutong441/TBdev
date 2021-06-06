@@ -2,10 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import skimage.io
 
-root='/mnt/c/Users/Yutong/Documents/bioinformatics/reproduction/results/imaging/data/all/'
+root='/mnt/c/Users/Yutong/Documents/bioinformatics/reproduction/results/imaging/data/adam2/'
 seg_org = skimage.io.imread (root+'/'+'series41_cyto_seg.tiff')
-cgb = skimage.io.imread (root+'/'+'series39_CGB.tiff')
-hlag = skimage.io.imread (root+'/'+'series41_HLAG.tiff')
+cgb = skimage.io.imread (root+'/'+'series1_CGB.tiff')
+hlag = skimage.io.imread (root+'/'+'series1_HLAG.tiff')
 
 cgb = cgb.max (0)
 hlag = hlag.max(0)

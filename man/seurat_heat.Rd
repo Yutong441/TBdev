@@ -43,6 +43,7 @@ seurat_heat(
   break_points = NULL,
   row_legend_labels = "DE genes",
   column_legend_labels = NULL,
+  column_legend_order = NULL,
   left_HA = T,
   top_HA = T,
   row_titles = character(0),

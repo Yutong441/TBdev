@@ -19,6 +19,7 @@ gene_over_pseudotime(
   slot_data = "data",
   assay = "RNA",
   plot_ribbon = F,
+  plot_line = F,
   AP = NULL
 )
 }

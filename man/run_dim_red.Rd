@@ -16,7 +16,9 @@ run_dim_red(
   pca_features = NULL,
   run_diff_map = FALSE,
   run_umap = TRUE,
-  cluster = TRUE
+  cluster = TRUE,
+  cluster_res = 0.5,
+  neighbor_dim = 10
 )
 }
 \arguments{

@@ -4,7 +4,13 @@
 \alias{filter_genes}
 \title{filter out genes with low expressions}
 \usage{
-filter_genes(x, quantile_val, assay = "RNA", slot_data = "data")
+filter_genes(
+  x,
+  quantile_val,
+  assay = "RNA",
+  slot_data = "data",
+  method = "quantile"
+)
 }
 \arguments{
 \item{x}{a Seurat object}

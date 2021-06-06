@@ -215,7 +215,7 @@ dim_red_3D_traj <- function (plot_data, px, py, pz, pcolor, traj_data, tx, ty,
                              tz, tcolor, traj_color='black', all_theta=0,
                              all_phi=0, AP=NULL, repel_force=1,
                              further_repel=T, magnify_text=1,
-                             label_traj_text=NULL, seg_color=NA,...){
+                             label_traj_text=NULL, seg_color=NA, traj_width=2,...){
         # because gg3D scales everything to [0, 1]
         # To add new data on top of existing graph, it is necessary to add the
         # maximum and minimum of the existing graph to enable rescaling
@@ -249,7 +249,7 @@ dim_red_3D_traj <- function (plot_data, px, py, pz, pcolor, traj_data, tx, ty,
                     further_repel=further_repel, fontface='plain',...) +
                 Stat3D (aes_string (group= 'branch', color= 'branch', x=tx, y=ty, z=tz),
                          inherit.aes=F, geom='path', theta=all_theta, phi=all_phi,
-                         data=tra_scaled, size=2, linetype='dashed')+ 
+                         data=tra_scaled, size=traj_width, linetype='dashed')+ 
                 text_3D_repel (text_scale, AP, all_theta, all_phi, 'feature',
                                repel_force=repel_force, color_text=T,
                                magnify_text=magnify_text, vjust=-0.9,

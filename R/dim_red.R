@@ -8,14 +8,22 @@
 #' @param reduction run diffusion map on the reduced dimension of which
 #' method
 #' @param dims run diffusion map on which reduced dimensions
-RunDiffusion <- function (x, reduction='pca', dims=1:10){
+RunDiffusion <- function (x, reduction='pca', dims=1:10, select_cells=NULL){
         diff_input <- x@reductions[[reduction]]@cell.embeddings [, dims]
         # this function from destiny is 4.23% faster than that in the scater
         # package
-        dff_out <- destiny::DiffusionMap (as.matrix (diff_input))
-
-        # handle missing values
-        diff_embed <- dff_out@eigenvectors
+        if (is.null (select_cells)){
+                dff_out <- destiny::DiffusionMap (as.matrix (diff_input))
+                diff_embed <- dff_out@eigenvectors
+        }else{
+                diff_sel <- diff_input [select_cells, ]
+                diff_out_sel <- destiny::DiffusionMap (as.matrix (diff_sel))
+                diff_not_sel <- destiny::dm_predict (diff_out_sel, as.matrix (
+                                                   diff_input [!select_cells, ]))
+                rownames (diff_not_sel) <- rownames (diff_input)[!select_cells]
+                diff_embed <- rbind (as.matrix (diff_out_sel@eigenvectors), 
+                                     as.matrix (diff_not_sel))
+        }
         diff_embed <- diff_embed [match (colnames (x), rownames(diff_embed)), ]
         rownames (diff_embed) <- colnames (x)
         diff_map_seurat <- Seurat::CreateDimReducObject (embeddings= diff_embed, key =
@@ -64,7 +72,7 @@ run_dim_red <- function (x, assay=NULL,
                          normalize=FALSE, 
                          var_scale=FALSE, pca_features=NULL, 
                          run_diff_map=FALSE, run_umap=TRUE, 
-                         cluster=TRUE){
+                         cluster=TRUE, cluster_res=0.5, neighbor_dim=10){
 
         if (normalize){x <- Seurat::NormalizeData(object = x, normalization.method =
                          "LogNormalize", scale.factor = 10000)
@@ -93,11 +101,12 @@ run_dim_red <- function (x, assay=NULL,
                                 select_genes=pca_features)
         n_umap <- pmin (dim (x)[2]-1, 30 )
         if (run_umap) {x <- Seurat::RunUMAP (x, assay=assay, dims=1:n_umap, n.neighbors=n_umap)}
-        if (run_diff_map) {x <- RunDiffusion (x, reduction='pca', dims=1:10)}
+        if (run_diff_map) {x <- RunDiffusion (x, reduction='pca', dims=1:10, 
+                                              select_cells=select_cells)}
 
         if (cluster){
-                x <- Seurat::FindNeighbors(x, dims = 1:10)
-                x <- Seurat::FindClusters(x, resolution = 0.5)
+                x <- Seurat::FindNeighbors(x, dims = 1:neighbor_dim)
+                x <- Seurat::FindClusters(x, resolution = cluster_res)
         }
         return (x)
 }

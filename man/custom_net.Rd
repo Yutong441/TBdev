@@ -15,7 +15,8 @@ custom_net(
   coloring = NULL,
   nudge_ratio = 0,
   hide_node_thres = NULL,
-  plot_title = NULL
+  plot_title = NULL,
+  size_legend = F
 )
 }
 \arguments{

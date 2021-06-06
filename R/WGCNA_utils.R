@@ -318,6 +318,11 @@ hub_score <- function (x, weight_power, save_dir, ...){
                         'WGCNA/module_net_genes.csv', sep='/'))
         color_net %>% tibble::deframe () -> color_net
 
+        if (length(color_net) > nrow (ADJ)){
+                print ('removing genes not in the adjacent matrix')
+                color_net <- color_net [match (rownames (ADJ), names (color_net))]
+        }
+
         intra_net <- WGCNA::intramodularConnectivity(ADJ, color_net)
         intra_net %>% tibble::add_column (cluster=color_net) %>% 
                 tibble::add_column (gene=rownames (intra_net))
@@ -330,16 +335,17 @@ hub_score <- function (x, weight_power, save_dir, ...){
 #' @importFrom magrittr %>%
 #' @export
 save_hub_score <- function (markers, hub_df, clusters, cell_types, save_dir,
-                            other_celltypes=NULL){
+                            other_celltypes=NULL, sel_columns=NULL){
         all_df <- list()
         if (length (cell_types)==1){cell_types <- rep (cell_types, length (clusters))}
         for (i in 1:length(clusters)){
                 sel_hub <- hub_df %>% dplyr::filter (cluster == clusters[i])
-                markers %>% dplyr::filter (group %in% c(cell_types[i])) 
+                markers %>% dplyr::filter (group %in% c(cell_types[i])) -> sel_mark 
                 sel_mark <- sel_mark [match (sel_hub$gene, sel_mark$feature), ]
                 all_df [[i]] <- cbind (sel_hub, sel_mark)
         }
-        final_dir <- paste (save_dir, 'WGCNA', paste ('TF_', cell_types[1], '.csv', sep=''), sep='/')
-        do.call (rbind, all_df) %>% dplyr::arrange (dplyr::desc (kWithin) ) %>% 
-                utils::write.csv (final_dir)
+        final_dir <- paste (save_dir, paste ('TF_', cell_types[1], '.csv', sep=''), sep='/')
+        do.call (rbind, all_df) %>% dplyr::arrange (dplyr::desc (kWithin) ) -> save_csv
+        if (!is.null (sel_columns)){ save_csv %>% dplyr::select (dplyr::all_of (sel_columns)) -> save_csv }
+        utils::write.csv (save_csv, final_dir, quote=F, row.names=F)
 }

@@ -61,15 +61,17 @@ merge_seurat <- function (list_obj, assays, slot_data='data'){
         if (length (assays) == 1){ assays <- rep (assays, length (list_obj)) }
         list_data <- list ()
         meta_list <- list ()
+        common_genes <- do.call (intersect, lapply (list_obj, rownames))
         for (i in 1:length(list_obj)){
                 list_obj [[i]] %>%
                         GetAssayData (slot=slot_data, assay = assays[i]) -> list_data [[i]]
                 # make sure all objects have the same order of rows before `cbind`
-                list_data [[i]] <- list_data [[i]] [rownames (list_data[[1]]),]
+                list_data [[i]] <- list_data [[i]] [common_genes,]
                 # create unique cell names
                 colnames (list_data[[i]]) <- paste (colnames (list_data[[i]]), i, sep='.')
                 meta_list [[i]] <- list_obj[[i]]@meta.data
                 meta_list[[i]]$ID_col <- colnames (list_data [[i]])
+                print (paste ('preparing dataset', i))
         }
         mismatches <- rownames (list_data[[1]]) == rownames (list_data[[2]])
         if (mean(mismatches) !=1 ){

@@ -4,7 +4,7 @@
 \alias{custom_net_diff_nets}
 \title{Multiple network graphs}
 \usage{
-custom_net_diff_nets(x, gene_list, markers, size_thres = 0, ...)
+custom_net_diff_nets(x, gene_list, markers, size_thres = 0, thres = 0.6, ...)
 }
 \arguments{
 \item{x}{a Seurat object}

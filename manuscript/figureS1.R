@@ -58,12 +58,18 @@ all_data2 <- all_data [, ! (all_data$revised %in% c(CT$non_emb_lineage,
                                                     CT$in_vitro_cells))]
 data (lineage_markers)
 show_genes <- lineage_markers [names (lineage_markers) != 'STR' ]
+show_genes <- c(show_genes, AM='ISL1', AM='GABRP', AM='VTCN1', 
+                HLA='HLA-A', HLA='HLA-B', HLA='HLA-C')
+
+data (format_conf)
+new_color <- list (color_vec=c(format_conf$color_vec, 'AM'='#0352fc', 'HLA'='#5f6675'))
+
 p3 <- seurat_heat (all_data2, color_row=show_genes, group.by = c('broad_type'), 
                    slot='data', heat_name='norm count',
                    column_legend_labels=c('cell type'),
                    row_legend_labels='lineage markers',
                    column_rotation=90, row_scale=T, center_scale=T,
-                   automatic=F)
+                   automatic=F, AP=new_color)
 
 # ----------figure M and N----------
 # volcano plot of TF

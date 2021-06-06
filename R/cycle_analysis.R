@@ -120,13 +120,16 @@ make_cycle_heat_vertical <- function (x, seurat_ob, group.by=NULL, AP=NULL, ...)
                      column_reorder_levels=list (get_cycle_order()), AP=AP, ...)
 }
 
-make_cycle_heat_horizontal <- function (x, seurat_ob, group.by=NULL, AP=NULL, ...){
+make_cycle_heat_horizontal <- function (x, seurat_ob, group.by=NULL, AP=NULL,
+                                        cluster_columns=T, cluster_rows=F,...){
         cycle_names <- factor ( colnames (x), levels=get_cycle_order() )
         meta <- seurat_ob@meta.data [match(rownames (x), colnames (seurat_ob)),]
         x_seurat <- Seurat::CreateSeuratObject (t(x), meta.data=meta)
         seurat_heat (x_seurat, color_row=cycle_names, group.by=group.by,
-                     slot_data='counts', show_column_names=F, cluster_columns=T,
-                     row_scale=F, cluster_rows=F, heat_name = 'phase score', 
+                     slot_data='counts', show_column_names=F,
+                     cluster_columns=cluster_columns,
+                     row_scale=F, cluster_rows=cluster_rows, 
+                     heat_name = 'phase score', 
                      column_legend_labels = 'cell type',
                      row_legend_labels = 'cell cycle', center_scale=T,
                      column_rotation=90, column_title_fontface='plain', AP=AP,

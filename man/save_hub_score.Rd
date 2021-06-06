@@ -10,7 +10,8 @@ save_hub_score(
   clusters,
   cell_types,
   save_dir,
-  other_celltypes = NULL
+  other_celltypes = NULL,
+  sel_columns = NULL
 )
 }
 \arguments{

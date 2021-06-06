@@ -104,16 +104,16 @@ those along the trophoblast lineage. Human embryonic stem cells (hESC) will
 also be compared.
 
 ```{r}
-in_vitro <- all_data [rownames (exp_mat),all_data$broad_type %in% c('hTSC_OKAE', 
-                                                        'hTSC_TURCO', 'hESC')]
-in_vitro_mat <- as.matrix (Seurat::GetAssayData (in_vitro, assay='RNA', slot='data'))
+in_vitro <- all_data [rownames (exp_mat),all_data$broad_type %in% c('htsc_okae', 
+                                                        'htsc_turco', 'hesc')]
+in_vitro_mat <- as.matrix (seurat::getassaydata (in_vitro, assay='rna', slot='data'))
 in_vitro_met <- in_vitro@meta.data
 fit_chance <- fitting_likelihood (data.frame (exp_mat), 
-                                  new_X = data.frame (in_vitro_mat), 
+                                  new_x = data.frame (in_vitro_mat), 
                                   new_meta = in_vitro_met, 
                                   group_by = 'broad_type',
-                                  pt_mean = data.frame (Grand_out[[2]][[1]]),
-                                  pt_var  = data.frame (Grand_out[[2]][[2]])
+                                  pt_mean = data.frame (grand_out[[2]][[1]]),
+                                  pt_var  = data.frame (grand_out[[2]][[2]])
 )
 ```
 

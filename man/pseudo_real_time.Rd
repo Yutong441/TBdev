@@ -4,7 +4,15 @@
 \alias{pseudo_real_time}
 \title{Plot pseudotimee against real time}
 \usage{
-pseudo_real_time(dat, real_time, pseudotime, color_by, AP = NULL, ...)
+pseudo_real_time(
+  dat,
+  real_time,
+  pseudotime,
+  color_by,
+  AP = NULL,
+  rotation = 90,
+  ...
+)
 }
 \arguments{
 \item{dat}{a dataframe}

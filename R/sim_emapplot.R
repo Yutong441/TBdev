@@ -307,7 +307,7 @@ sim_emap <- function(x, showCategory = 30, rename_vec=NULL, color = "p.adjust",
     if(ncol(ID_Cluster_mat) > 4) {
         p <- p + scatterpie::geom_scatterpie(aes_(x=~x,y=~y,r=~radius), data=ID_Cluster_mat,
             cols=colnames(ID_Cluster_mat)[1:(ncol(ID_Cluster_mat)-3)],color=NA) +
-            coord_equal()
+            ggplot2::coord_equal()
         if (utils::packageVersion("ggrepel") >= "0.9.0") {
             p <- p + ggraph::geom_node_text(aes_(label=~new_name), repel=repel_text,
                 size = AP$point_fontsize, bg.color = NA, vjust=vert_just, force=force_repel)
@@ -315,7 +315,7 @@ sim_emap <- function(x, showCategory = 30, rename_vec=NULL, color = "p.adjust",
             p <- p + ggraph::geom_node_text(aes_(label=~new_name), repel=repel_text,
                        size = AP$point_fontsize, vjust=vert_just, force=force_repel, segment.color=NA)
         }
-        p <- p + theme_void() 
+        p <- p + ggplot2::theme_void() 
         if (show.legend){
             p <- p+ scatterpie::geom_scatterpie_legend (
                 ID_Cluster_mat$radius, x=x_loc1, y=y_loc1,

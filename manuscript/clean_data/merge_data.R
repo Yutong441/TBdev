@@ -95,3 +95,32 @@ DEG$seurat_heat (TB_data, color_row=DE_genes, group.by = c('seurat_clusters', 'r
 select_cells <- TB_data$date == 'DNA' | TB_data$revised == 'STR'
 EM$save_to_csv (TB_data, merge_dir, assay='RNA', select_cells = !select_cells,
                 select_genes=VariableFeatures(unmerged))
+
+# ----------Combine blastoid data with the in vivo data----------
+devtools::load_all('../..', export_all=F)
+root_dir <- '/mnt/c/Users/Yutong/Documents/bioinformatics/reproduction/'
+root <- paste (root_dir, 'results/', sep='/')
+merge_dir <- paste (root, 'XLYBPZ_Dylan_dir', sep='/')
+
+blastoid <- readRDS(paste (root_dir, 'results/Yu_2021/blastoid.rds', sep='/') )
+blastoid$date <- 'in_vitro'
+blastoid$broad_type <- blastoid$Type
+blastoid$final_cluster <- blastoid$Type
+all_data_a <- get(load(file=paste (merge_dir, 'final_merged_tb.Robj', sep='/')))
+
+Yana <- readRDS(paste (root_dir, 'results/Yanagida_2021/Yanagida_R.rds', sep='/') )
+Yana <- Yana [, !Yana$broad_type %in% c('bTB', 'bEPI', 'bPE', 'bEPI-PE')]
+all_data <- TBdev::merge_seurat (list (all_data_a, blastoid), assays='RNA')
+all_data <- TBdev::merge_seurat (list (all_data, Yana), assays='RNA')
+all_data <- all_data [, !all_data$broad_type %in% c('bESC', 'hTSC-TURCO')]
+
+table (all_data$broad_type)
+in_vitro_cells <- all_data$date == 'in_vitro'
+VariableFeatures (all_data) <- VariableFeatures (all_data_a)
+all_data <- run_dim_red (all_data, run_diff_map=F, var_scale=T,cluster=F,
+                         normalize=F, find_var_features=F, run_umap=F,
+                         select_cells=!in_vitro_cells) #PCA projection for in vitro
+all_data <- all_data [, all_data$final_cluster != 'uCTB']
+
+rm (all_data_a)
+saveRDS (all_data, file=paste (merge_dir, 'merged_blastoid.rds', sep='/'))

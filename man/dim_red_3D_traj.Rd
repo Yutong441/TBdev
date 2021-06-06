@@ -24,6 +24,7 @@ dim_red_3D_traj(
   magnify_text = 1,
   label_traj_text = NULL,
   seg_color = NA,
+  traj_width = 2,
   ...
 )
 }

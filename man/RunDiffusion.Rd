@@ -4,7 +4,7 @@
 \alias{RunDiffusion}
 \title{Run diffusion map}
 \usage{
-RunDiffusion(x, reduction = "pca", dims = 1:10)
+RunDiffusion(x, reduction = "pca", dims = 1:10, select_cells = NULL)
 }
 \arguments{
 \item{x}{Seurat object}

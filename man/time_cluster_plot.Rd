@@ -16,7 +16,9 @@ time_cluster_plot(
   thickness_ratio = 0.05,
   repel_force = 1,
   repel_point = NULL,
-  AP = NULL
+  ribbon_alpha = 1,
+  AP = NULL,
+  overlap = T
 )
 }
 \arguments{

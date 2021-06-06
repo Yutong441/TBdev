@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
             for chan in args.n:
                 log_f.write ('working on channel '+chan+'\n')
-                if chan not in ['DAPI']:
+                if chan not in ['DAPI', 'bright']:
                     img_fl_filename= regex2.sub (chan, one_file)
                     img_fl = skimage.io.imread (args.f+'/'+img_fl_filename)
                     if img_fl.shape[2] < img_fl.shape[1]:
