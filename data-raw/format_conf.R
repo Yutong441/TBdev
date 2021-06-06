@@ -40,6 +40,7 @@ format_conf <- list (
         arrow_length_unit='npc',
         arrow_type = 'closed',
         arrow_thickness= 1.5,
+        arrow_font_amp=1,
         arrow_linejoin = 'mitre' #sharp border
 )
 format_conf <- append (format_conf, orders)
