@@ -35,12 +35,12 @@ format_conf <- list (
 
         remove_keys = remove_keys,
         # arrow settings
-        arrow_angle=30,
-        arrow_length=0.01, 
+        arrow_angle=15,
+        arrow_length=0.05, 
         arrow_length_unit='npc',
         arrow_type = 'closed',
-        arrow_thickness= 1.5,
-        arrow_font_amp=1,
+        arrow_thickness= 0.5,
+        arrow_font_amp=0.8,
         arrow_linejoin = 'mitre' #sharp border
 )
 format_conf <- append (format_conf, orders)

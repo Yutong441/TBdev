@@ -8,12 +8,27 @@ save_dir1 <- paste (root, 'manuscript/figure1', sep='/')
 save_dir4 <- paste (root, 'manuscript/figure4', sep='/')
 
 all_data <- readRDS(paste (merge_dir, 'merged_blastoid.rds', sep='/') )
-TB_data <- all_data [, all_data$date != 'in_vitro']
 plotlist <- list ()
 
-# ----------Aesthetic settings----------
+# ----------change labels----------
+# exclude irrelevant cells
+all_data <- all_data [, !all_data$broad_type %in% c('hTSC-TURCO', 'bPE-YANA')]
+all_data$broad_type <- gsub ('hESC', 'hPSC', all_data$broad_type)
+all_data$final_cluster <- gsub ('hESC', 'hPSC', all_data$final_cluster)
+all_data$broad_type <- gsub ('^TB$', 'TE', all_data$broad_type)
+all_data$final_cluster <- gsub ('^TB$', 'TE', all_data$final_cluster)
+
 data (format_conf)
-new_order <- c(format_conf$cell_order, 'hESC', 'nESC', 'bEPI-YANA', 'hTSC-OKAE','bTSC', 'bTB-YANA')
+ori_order <- gsub ('hESC', 'hPSC', format_conf$cell_order)
+ori_order <- gsub ('^TB$', 'TE', ori_order)
+new_order <- c(ori_order, 'hPSC', 'nPSC', 'bEPI-YANA', 'hTSC-OKAE','bTSC',
+               'bTB-YANA')
+
+all_data$broad_type <- TBdev::partial_relevel (all_data$broad_type, new_order)
+all_data$final_cluster <- TBdev::partial_relevel (all_data$final_cluster, new_order)
+TB_data <- all_data [, all_data$date != 'in_vitro']
+
+# ----------Aesthetic settings----------
 blastoid_color <- c('nESC'='#71d300', 'bTB-YANA'='#ff1900', 'bTSC'='#ff8500', 'bEPI-YANA'='#00ff9d')
 AP <- list (color_vec=c(format_conf$color_vec, blastoid_color),
             cell_order=new_order, edge_stroke=1e-5, 
@@ -33,9 +48,9 @@ plotlist [['introduction_cell']] <- png::readPNG (paste (save_dir,
 
 # ----------Poster figure 2: integration----------
 plot_dim_red (TB_data, group.by= c('broad_type', 'date'), DR='pca' , dims=c(1,2),
-              return_sep=T, nudge_ratio=0.05, plot_type='dim_red_sim',
-              seg_color='black', nudge_ortho=0.5, 
-              length_ratio=0.1, AP=AP) -> p1
+              return_sep=T, nudge_ratio=0., plot_type='dim_red_sim',
+              seg_color='black', nudge_ortho=0.7, 
+              length_ratio=0.1, AP=AP, further_repel=F) -> p1
 
 plotlist [['integrate_type']] <- p1[[1]] + labs (fill='')
 plotlist [['integrate_date']] <- p1[[2]] + labs (fill='')
@@ -122,7 +137,7 @@ show_meta %>% slice_min (PT3, n=nrow(show_meta)-3) %>%
         rename('hTSC-OKAE'='hTSC.OKAE') %>% rename ('bTB-YANA'='bTB.YANA') %>%
         dim_red_3D_traj ('PT1', 'PT2', 'PT3', c('hESC', 'hTSC-OKAE', 'bTSC', 'bTB-YANA'), 
                          epg, 'x', 'y', 'z', 'branch_name', all_theta=50, all_phi=0, 
-                         show_label=T, further_repel=T, repel_force=0.2,
+                         show_label=T, further_repel=F, 
                          lab_just=c(0.08, 0.02, 0.02), label_col='broad_type',
                          label_traj_text=label_epg, num_col=2, AP=AP,
                          hor_just=0.1, dim_vjust=3)+ coord_cartesian (clip='off')+
