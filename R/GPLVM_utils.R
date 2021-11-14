@@ -2,6 +2,26 @@
 # workflow: seurat: get expression matrix > gpflow: GPLVM > STREAM: graph based
 # trajectory inference > gpflow: BRGP > tidyverse: statistics
 
+#' Save GPLVM results for STREAM construction
+#' 
+#' @param inp_list result of `fit_model`
+#' @param inp_seurat the input expression matrix to `fit_model`
+GPLVM2csv <- function (inp_list, inp_seurat, save_dir){
+        colnames (inp_list [[1]] [[1]]) <- paste ('PT', 1:ncol(inp_list[[1]][[1]]), sep='')
+        colnames (inp_list [[1]] [[2]]) <- paste ('PT', 1:ncol(inp_list[[1]][[1]]), '_var', sep='')
+        gp_axis <- cbind (inp_list [[1]] [[1]], inp_list [[1]] [[2]])
+        rownames (gp_axis) <- rownames (inp_seurat)
+        write.csv (gp_axis, paste (save_dir, 'gp_axis.csv', sep='/'))
+
+        colnames (inp_list [[2]] [[1]]) <- colnames (inp_seurat)
+        colnames (inp_list [[2]] [[2]]) <- colnames (inp_seurat)
+        rownames (inp_list [[2]] [[1]]) <- rownames (inp_seurat)
+        rownames (inp_list [[2]] [[2]]) <- rownames (inp_seurat)
+        write.csv (inp_list [[2]][[1]], paste (save_dir, 'PT_pred_mean.csv', sep='/'))
+        write.csv (inp_list [[2]][[2]], paste (save_dir, 'PT_pred_var.csv', sep='/'))
+}
+
+
 # ----------Plotting----------
 
 #' Plot pseudotimee against real time

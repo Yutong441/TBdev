@@ -1,7 +1,16 @@
+'''
+This script performs pseudotime analysis using stream.
+Install stream using `conda install -c bioconda stream`.
+If unsuccessful, need to downgrade to python 3.7 then conda 4.6.14.
+References:
+https://github.com/pinellolab/STREAM/issues/87
+https://github.com/pinellolab/STREAM/blob/master/tutorial/1.1.STREAM_scRNA-seq%20(Bifurcation).ipynb
+'''
 import numpy as np
 import pandas as pd
 import anndata
 import stream as st
+import matplotlib.pyplot as plt
 
 def from_seurat_to_anndata (data_dir, result_dir, exp_mat_file='merged_.csv',
         meta_file='merged_meta_.csv'):
@@ -137,3 +146,34 @@ def get_traj_order (adata, traj_list):
     all_df = pd.concat (df_list, axis=0)
     return all_df
 
+def show_trajectory (root, color_by='broad_type'):
+    adata = from_seurat_to_anndata (root+'data/', root+'/STREAM')
+    adata = Epilgraph_on_GPLVM (adata, root+'GPLVM_embedding/gp_axis.csv')
+
+    st.plot_dimension_reduction(adata, color=[color_by], n_components=3,
+            show_graph=True,show_text=True)
+    plt.show ()
+
+def save_trajectory (root, stem, branch_dict):
+    branch_dict = {key:tuple (val) for key, val in branch_dict.items ()}
+
+    adata = from_seurat_to_anndata (root+'data/', root+'/STREAM')
+    adata = Epilgraph_on_GPLVM (adata, root+'GPLVM_embedding/gp_axis.csv')
+
+    adata.obs [stem+'_pseudotime'].to_csv (root+'STREAM/STREAM_pseudotime.csv')
+    branch_label = list (adata.obs.branch_id_alias)
+
+    np.unique ([str(i) for i in branch_label])
+    for key, val in branch_dict.items():
+        branch_label = [key if i == val else i for i in branch_label]
+
+    branch_label=pd.DataFrame (branch_label, index=adata.obs.index)
+    branch_label.to_csv (root+'STREAM/STREAM_branch_labels.csv')
+
+    # save expression matrix
+    exp_mat = pd.DataFrame (adata.X.T, columns=adata.obs.index, index=adata.var_names)
+    exp_mat.to_csv (root+'STREAM/STREAM_data.csv')
+
+    traj_list = [list (val) for key, val in branch_dict.items ()]
+    traj_df = get_traj_order (adata, traj_list)
+    traj_df.to_csv (root+'STREAM/STREAM_graph.csv')

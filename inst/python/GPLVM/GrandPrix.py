@@ -5,7 +5,6 @@ import pandas as pd
 from shutil import copyfile
 import tensorflow as tf
 import gpflow
-from periodicity import Periodic
 
 def MapTo01(y):
     return (y.copy() - y.min(0)) / (y.max(0) - y.min(0))

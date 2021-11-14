@@ -1,11 +1,3 @@
-'''
-This script performs pseudotime analysis using stream.
-Install stream using `conda install -c bioconda stream`.
-If unsuccessful, need to downgrade to python 3.7 then conda 4.6.14.
-References:
-https://github.com/pinellolab/STREAM/issues/87
-https://github.com/pinellolab/STREAM/blob/master/tutorial/1.1.STREAM_scRNA-seq%20(Bifurcation).ipynb
-'''
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -13,31 +5,32 @@ import anndata
 import stream as st
 import utils as pu
 
-root=''
-adata = pu.from_seurat_to_anndata (root+'data/', root+'result/')
-adata = pu.Epilgraph_on_GPLVM (adata, root+'result/PT_no_prior.csv')
+root='/mnt/c/Users/Yutong/Documents/bioinformatics/reproduction/results/manuscript/figure2/'
+adata = pu.from_seurat_to_anndata (root+'data/', root+'/STREAM')
+adata = pu.Epilgraph_on_GPLVM (adata, root+'GPLVM_embedding/gp_axis.csv')
 
-st.plot_dimension_reduction(adata,color=['revised', 'assigned_cluster'], n_components=3,
+st.plot_dimension_reduction(adata,color=['broad_type'], n_components=3,
         show_graph=True,show_text=True)
 plt.show ()
-stem = 'S2'
+stem = 'S0'
 
 # save branch point information for B-RGPLVM
-adata.obs [stem+'_pseudotime'].to_csv (root+'data/STREAM_pseudotime.csv')
+adata.obs [stem+'_pseudotime'].to_csv (root+'STREAM/STREAM_pseudotime.csv')
 branch_label = list (adata.obs.branch_id_alias)
 
 np.unique ([str(i) for i in branch_label])
-branch_dict = {'branch1': ('S2', 'S1'), 'branch2': ('S0', 'S1'), 'branch3':
+branch_dict = {'branch1': ('S0', 'S1'), 'branch2': ('S2', 'S1'), 'branch3':
         ('S3', 'S1') }
+# branch1: stem, branch2: EVT, branch3: STB
 for key, val in branch_dict.items():
     branch_label = [key if i == val else i for i in branch_label]
 
 branch_label=pd.DataFrame (branch_label, index=adata.obs.index)
-branch_label.to_csv (root+'data/STREAM_branch_labels.csv')
+branch_label.to_csv (root+'STREAM/STREAM_branch_labels.csv')
 
 # save expression matrix
 exp_mat = pd.DataFrame (adata.X.T, columns=adata.obs.index, index=adata.var_names)
-exp_mat.to_csv (root+'data/STREAM_data.csv')
+exp_mat.to_csv (root+'STREAM/STREAM_data.csv')
 
 # detect transition markers
 # this function is rather time consuming
@@ -54,14 +47,13 @@ traj_list = [ ['S2', 'S1'],
               ['S3', 'S1'],
               ['S0', 'S1']]
 traj_df = pu.get_traj_order (adata, traj_list)
-traj_df.to_csv (root+'result/STREAM_graph.csv')
+traj_df.to_csv (root+'STREAM/STREAM_graph.csv')
 
 # --------------------------------------
 # compute correlation with in vivo cells
 # --------------------------------------
-gp_root =''
-pt_mean = pd.read_csv (gp_root+'result/PT_pred_mean.csv', index_col=[0])
-pt_var  = pd.read_csv (gp_root+'result/PT_pred_var.csv', index_col=[0])
+pt_mean = pd.read_csv (root+'GPLVM_embedding/PT_pred_mean.csv', index_col=[0])
+pt_var  = pd.read_csv (root+'GPLVM_embedding/PT_pred_var.csv', index_col=[0])
 pt_mean = pt_mean.loc [ adata.obs.index]
 pt_var  = pt_var.loc  [ adata.obs.index]
 

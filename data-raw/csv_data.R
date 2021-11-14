@@ -10,4 +10,3 @@ convert_name <- read.csv (paste (data_dir, 'name_conversion.csv', sep='/'))
 GOsimp <- read.csv (paste (data_dir, 'simplify_GO_terms.csv', sep='/'))
 usethis::use_data (cell_cycle, vivo_clust, color_scheme, date2CS, KeggID,
                    convert_name, GOsimp, overwrite=T)
-

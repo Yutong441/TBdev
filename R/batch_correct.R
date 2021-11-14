@@ -61,7 +61,7 @@ merge_seurat <- function (list_obj, assays, slot_data='data'){
         if (length (assays) == 1){ assays <- rep (assays, length (list_obj)) }
         list_data <- list ()
         meta_list <- list ()
-        common_genes <- do.call (intersect, lapply (list_obj, rownames))
+        common_genes <- Reduce (intersect, lapply (list_obj, rownames))
         for (i in 1:length(list_obj)){
                 list_obj [[i]] %>%
                         GetAssayData (slot=slot_data, assay = assays[i]) -> list_data [[i]]

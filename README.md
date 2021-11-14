@@ -52,40 +52,10 @@ The scripts used to generate the figures in this paper (except for figure 4)
 are in the 'manuscript' folder. Each file creates one figure.
 
 ## Pseudotime analysis
-The pseudotime analysis workflow requires multiple steps. First, in the root
-directory, run the 'assign_label/change_labels.R' script section 'save data for
-pseudotime analysis' to obtain the input matrix to GPLVM. It generates 2 files
-in the 'data/' folder. One is 'merged_all.csv'. The other is
-'merged_meta_all.csv'. Next install tensorflow version 1.13.1 and gpflow
-version 1.0.0. In the root directory, run 'inst/python/GPLVM/tb_gplvm.py'. This
-script uses GPLVM to infer the 3D latent space for the dataset. Having run this
-file, there would be 4 files in the 'result/' folder.  The
-'model_no_prior.hdf5' file stores the GPLVM model. The 'PT_no_prior.csv' file
-contains the latent space locations for each cell. The 'PT_pred_mean.csv' and
-'PT_pred_var.csv' stores the inferred mean and variance for each latent space
-location. These data are essential for Elpigraph as implemented in the STREAM
-package. Alternatively, you may wish to follow the instruction from
-'vignettes/GPLVM.Rmd' to run it in R. However, in the original paper, it was
-done in python.
-
-Next, install the python package [STREAM](https://github.com/pinellolab/STREAM). 
-After running the file 'inst/python/STREAM/stream_GPLVM.py', 3 files in the
-'data/' folder will be generated. The 'stream_branch_labels.csv' contains
-branch information. 'stream_pseudotime' contains the pseudotime estimated by
-STREAM. Lastly, the 'STREAM_data.csv' file contains scaled expression matrix.
-These files are inputs to the B-RGPLVM algorithm.
-
-Lastly, run B-RGPLVM, using the script 'inst/python/BRGPLVM/branching_tb.py'.
-Three files will be generated in the 'result/' folder.
-'model_dict_matern.hdf5' is the B-RGPLVM model. The 'prediction_matern_500.csv'
-contains inferred gene expression from B-RGPLVM. Lastly, the
-'infer_pt_matern.csv' contains the pseudotime locations estimated by B-RGPLVM.
-
-However, it is difficult to assemble a pipeline connecting all these three
-components. First of all, it is necessary to manually inspect the trajectory
-inference results from STREAM. Secondly. GPLVM and B-RGPLVM were implemented in
-tensorflow 1. However, the STREAM package depends on tensorflow 2. We had to
-create two virtual environments as followed:
+To run pseudotime analysis, set up the following environments:
+```r
+devtools::install_github("Albluca/ElPiGraph.R")
+```
 
 ```bash
 # create environment for GPLVM and B-RGPLVM
@@ -94,6 +64,7 @@ conda activate ptime
 conda install -c conda-forge tensorflow==1.13.1
 conda install pip
 pip install gpflow==1.0.0
+pip install plotnine
 conda install -c bioconda anndata
 conda deactivate ptime
 
@@ -101,6 +72,15 @@ conda deactivate ptime
 conda create -n scrna python=3.6
 conda install -c bioconda STREAM
 conda deactivate scrna
+```
+
+Next, run the following 3 scripts in the `revision/pseudotime/` folder:
+
+```bash
+Rscript 1GPLVM.R
+Rscript 2STREAM.R # run it interactively to select the stem branch
+./3BRGP.sh 1000 'training' # do it on a GPU
+./3BRGP.sh 1000 'testing'
 ```
 
 ## Image quantification
